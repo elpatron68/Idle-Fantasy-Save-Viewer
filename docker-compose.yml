@@ -1,0 +1,13 @@
+services:
+  viewer:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - viewer-data:/data
+    restart: unless-stopped
+
+volumes:
+  viewer-data:

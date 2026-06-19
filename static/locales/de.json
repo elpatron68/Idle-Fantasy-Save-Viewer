@@ -26,6 +26,7 @@
   },
   "empty": {
     "noSave": "Kein Save importiert. Starte mit: python app.py fantasyidler_save.json",
+    "noSaveWeb": "Noch kein Save importiert. Importiere ein Backup über den Button in der Sidebar.",
     "loadError": "Fehler beim Laden: {message}",
     "unknown": "Unbekannt",
     "none": "Keine",
@@ -174,5 +175,21 @@
     "gems_jewelry": "Edelsteine & Schmuck",
     "potions_brews": "Tränke & Brauerei",
     "misc": "Sonstiges"
+  },
+  "viewer": {
+    "landingLead": "Erstelle deinen persönlichen Save-Viewer. Kein Konto – nur ein privater Link zu deinen Daten.",
+    "featureDashboard": "Skills, Inventar, Quests und Verlauf",
+    "featureUpload": "Backups im Browser importieren",
+    "featurePrivate": "Deine Daten bleiben nur in deinem Viewer",
+    "create": "Meinen Viewer erstellen",
+    "creating": "Viewer wird erstellt…",
+    "createFailed": "Viewer konnte nicht erstellt werden",
+    "warningTitle": "Wichtig",
+    "warningBody": "Es gibt keinen Login. Dein Viewer ist nur über seinen einzigartigen Link erreichbar. Link speichern oder bookmarken – ohne ihn sind deine Daten nicht wiederherstellbar.",
+    "linkTitle": "Dein persönlicher Link",
+    "linkWarning": "Link speichern – es gibt keinen Login. Ohne Link sind deine Daten weg.",
+    "copyLink": "Link kopieren",
+    "copied": "Kopiert!",
+    "copyPrompt": "Viewer-Link kopieren:"
   }
 }

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idle Fantasy Viewer</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/i18n.js" defer></script>
+  <script src="/static/landing.js" defer></script>
+</head>
+<body class="landing-page">
+  <main class="landing-card">
+    <div class="brand landing-brand">
+      <span class="brand-icon">⚔</span>
+      <div>
+        <h1 data-i18n="app.title">Idle Fantasy</h1>
+        <p class="subtitle" data-i18n="app.subtitle">Save Viewer</p>
+      </div>
+    </div>
+
+    <p class="landing-lead" data-i18n="viewer.landingLead">
+      Create your personal save viewer. No account – just a private link to your data.
+    </p>
+
+    <ul class="landing-features">
+      <li data-i18n="viewer.featureDashboard">Skills, inventory, quests and history</li>
+      <li data-i18n="viewer.featureUpload">Import backups in the browser</li>
+      <li data-i18n="viewer.featurePrivate">Your data stays in your viewer only</li>
+    </ul>
+
+    <div class="landing-actions">
+      <button type="button" class="upload-btn landing-create" id="create-viewer" data-i18n="viewer.create">
+        Create my viewer
+      </button>
+      <p class="landing-hint" id="create-status" hidden></p>
+    </div>
+
+    <div class="landing-warning">
+      <strong data-i18n="viewer.warningTitle">Important</strong>
+      <p data-i18n="viewer.warningBody">
+        There is no login. Your viewer is only accessible via its unique link.
+        Bookmark or save the link – without it, your data cannot be recovered.
+      </p>
+    </div>
+
+    <label class="lang-label landing-lang" for="locale-select">
+      <span data-i18n="settings.language">Language</span>
+      <select id="locale-select" class="select-input lang-select">
+        <option value="auto" data-i18n="settings.langAuto">Auto (browser)</option>
+        <option value="en" data-i18n="settings.langEn">English</option>
+        <option value="de" data-i18n="settings.langDe">Deutsch</option>
+      </select>
+    </label>
+  </main>
+</body>
+</html>

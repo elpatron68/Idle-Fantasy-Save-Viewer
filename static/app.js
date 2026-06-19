@@ -38,13 +38,49 @@ const CATEGORY_I18N_KEYS = {
 
 document.addEventListener("DOMContentLoaded", init);
 
+function apiBase() {
+  const vid = window.VIEWER_ID;
+  return vid ? `/v/${vid}/api` : "/api";
+}
+
+function viewerPageUrl() {
+  const vid = window.VIEWER_ID;
+  if (!vid) return window.location.href;
+  return `${window.location.origin}/v/${vid}/`;
+}
+
 async function init() {
   await I18n.init();
   applyStaticI18n();
   setupLanguage();
+  setupViewerBanner();
   setupNav();
   setupUpload();
   await loadData();
+}
+
+function setupViewerBanner() {
+  const vid = window.VIEWER_ID;
+  if (!vid || vid === "local") return;
+
+  const banner = document.getElementById("viewer-link-banner");
+  const urlEl = document.getElementById("viewer-link-url");
+  const copyBtn = document.getElementById("viewer-copy-link");
+  const url = viewerPageUrl();
+
+  banner.hidden = false;
+  urlEl.textContent = url;
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      const prev = copyBtn.textContent;
+      copyBtn.textContent = t("viewer.copied");
+      setTimeout(() => { copyBtn.textContent = prev; }, 2000);
+    } catch {
+      window.prompt(t("viewer.copyPrompt"), url);
+    }
+  });
 }
 
 function categoryLabel(cat) {
@@ -96,7 +132,7 @@ function setupUpload() {
     if (!file) return;
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/import", { method: "POST", body: fd });
+    const res = await fetch(`${apiBase()}/import`, { method: "POST", body: fd });
     const result = await res.json();
     if (!res.ok || result.error) {
       showImportFailure(result);
@@ -185,9 +221,9 @@ function renderImportReport(meta) {
 
 async function loadData() {
   try {
-    const res = await fetch("/api/snapshot/latest");
+    const res = await fetch(`${apiBase()}/snapshot/latest`);
     if (!res.ok) {
-      showEmpty(t("empty.noSave"));
+      showEmpty(window.VIEWER_ID ? t("empty.noSaveWeb") : t("empty.noSave"));
       return;
     }
     state.data = await res.json();
@@ -629,8 +665,8 @@ async function loadHistoryTab() {
   panel.innerHTML = `<p class='loading'>${esc(t("history.loading"))}</p>`;
 
   const [snapRes, tlRes] = await Promise.all([
-    fetch("/api/snapshots"),
-    fetch("/api/timeline"),
+    fetch(`${apiBase()}/snapshots`),
+    fetch(`${apiBase()}/timeline`),
   ]);
   state.snapshots = await snapRes.json();
   state.timeline = await tlRes.json();
@@ -756,7 +792,7 @@ async function runDiff() {
   }
   const older = Math.min(h.olderId, h.newerId);
   const newer = Math.max(h.olderId, h.newerId);
-  const res = await fetch(`/api/snapshots/${older}/diff/${newer}`);
+  const res = await fetch(`${apiBase()}/snapshots/${older}/diff/${newer}`);
   const diff = await res.json();
   if (diff.error) {
     el.innerHTML = `<p class='empty-state'>${esc(diff.error)}</p>`;

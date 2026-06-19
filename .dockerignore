@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+data/
+*.db
+fantasyidler_save.json
+*.md
+.dockerignore
+Dockerfile
+docker-compose.yml

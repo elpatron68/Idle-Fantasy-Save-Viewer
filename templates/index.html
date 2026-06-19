@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
   <script src="/static/i18n.js" defer></script>
+  <script>window.VIEWER_ID = {{ viewer_id|tojson }};</script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
@@ -46,6 +47,16 @@
 
     <main class="main">
       <header class="topbar">
+        <div id="viewer-link-banner" class="viewer-banner" hidden>
+          <div class="viewer-banner-text">
+            <strong data-i18n="viewer.linkTitle">Your personal link</strong>
+            <p class="viewer-banner-warning" data-i18n="viewer.linkWarning">
+              Save this link – there is no login. Without it, your data is lost.
+            </p>
+            <code id="viewer-link-url" class="viewer-link-url"></code>
+          </div>
+          <button type="button" class="viewer-copy-btn" id="viewer-copy-link" data-i18n="viewer.copyLink">Copy link</button>
+        </div>
         <div id="import-report" class="import-report" hidden></div>
         <div id="character-header" class="character-header">
           <span class="loading" data-i18n="app.loading">Loading save…</span>
