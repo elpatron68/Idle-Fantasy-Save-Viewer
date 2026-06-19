@@ -36,6 +36,7 @@ from viewers import (
     LOCAL_VIEWER_ID,
     create_viewer,
     ensure_local_viewer,
+    get_or_create_cli_viewer,
     is_valid_viewer_id,
     viewer_db_path,
 )
@@ -193,7 +194,11 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1", help="Bind host (use 0.0.0.0 in Docker)")
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--db", type=Path, help="SQLite path (legacy single-file mode)")
-    parser.add_argument("--viewer", default=LOCAL_VIEWER_ID, help="Viewer id for CLI (default: local)")
+    parser.add_argument(
+        "--viewer",
+        metavar="ID",
+        help="Viewer id for CLI (default: persistent personal viewer; use 'local' for shared dev viewer)",
+    )
     args = parser.parse_args()
 
     global DATA_DIR, DB_PATH
@@ -204,7 +209,12 @@ def main() -> int:
         db_path = DB_PATH
         viewer_id = None
     else:
-        viewer_id = ensure_local_viewer(DATA_DIR) if args.viewer == LOCAL_VIEWER_ID else args.viewer
+        if args.viewer == LOCAL_VIEWER_ID:
+            viewer_id = ensure_local_viewer(DATA_DIR)
+        elif args.viewer:
+            viewer_id = args.viewer
+        else:
+            viewer_id = get_or_create_cli_viewer(DATA_DIR)
         if not is_valid_viewer_id(viewer_id):
             print(f"Error: invalid viewer id: {viewer_id}", file=sys.stderr)
             return 1
@@ -250,6 +260,8 @@ def main() -> int:
     else:
         url = f"http://{args.host}:{args.port}/"
     print(f"Starting server at {url}")
+    if viewer_id and viewer_id != LOCAL_VIEWER_ID:
+        print(f"Personal viewer URL: {url}")
     if not args.no_browser and args.host in ("127.0.0.1", "localhost"):
         webbrowser.open(url)
     app.run(host=args.host, port=args.port, debug=False)

@@ -33,7 +33,7 @@ pip install -r requirements.txt
 python app.py fantasyidler_save.json
 ```
 
-The browser opens automatically at `http://127.0.0.1:5000/v/local/`.
+The browser opens automatically at your personal viewer URL (e.g. `http://127.0.0.1:5000/v/<id>/`). The id is stored in `data/cli-viewer-id` and reused on the next start.
 
 ### Docker (host for other players)
 
@@ -93,7 +93,7 @@ Each viewer has its own SQLite database at `data/viewers/<viewer_id>.db`.
 
 The `viewer_id` is a random URL-safe token. Anyone with the link has access — there is no password and no recovery if the link is lost.
 
-Local CLI usage defaults to the `local` viewer (`/v/local/`). In Docker/production, `/v/local/` is disabled (`DISABLE_LOCAL_VIEWER=1`).
+Local CLI usage creates a persistent personal viewer (`data/cli-viewer-id`). Use `--viewer local` for the shared dev viewer at `/v/local/`. In Docker/production, `/v/local/` is disabled (`DISABLE_LOCAL_VIEWER=1`).
 
 ## Security
 

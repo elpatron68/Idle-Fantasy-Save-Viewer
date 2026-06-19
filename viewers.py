@@ -53,7 +53,7 @@ def create_viewer(data_dir: Path) -> str:
 
 
 def ensure_local_viewer(data_dir: Path) -> str:
-    """CLI default viewer – not secret, for local single-user use."""
+    """Shared dev viewer – predictable path, not secret."""
     db_path = viewer_db_path(LOCAL_VIEWER_ID, data_dir)
     if db_path.exists():
         return LOCAL_VIEWER_ID
@@ -61,3 +61,21 @@ def ensure_local_viewer(data_dir: Path) -> str:
     init_db(conn)
     conn.close()
     return LOCAL_VIEWER_ID
+
+
+def cli_viewer_marker(data_dir: Path) -> Path:
+    return data_dir / "cli-viewer-id"
+
+
+def get_or_create_cli_viewer(data_dir: Path) -> str:
+    """Persistent personal viewer for local CLI starts."""
+    data_dir.mkdir(parents=True, exist_ok=True)
+    marker = cli_viewer_marker(data_dir)
+    if marker.exists():
+        viewer_id = marker.read_text(encoding="utf-8").strip()
+        if is_valid_viewer_id(viewer_id) and viewer_exists(viewer_id, data_dir):
+            return viewer_id
+
+    viewer_id = create_viewer(data_dir)
+    marker.write_text(viewer_id, encoding="utf-8")
+    return viewer_id
