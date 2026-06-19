@@ -136,6 +136,7 @@ function setupNav() {
       btn.classList.add("active");
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
       if (btn.dataset.tab === "history") loadHistoryTab();
+      if (btn.dataset.tab === "goals") trackEvent("Goals Tab");
     });
   });
 }
@@ -773,7 +774,10 @@ function bindGoalActions(panel) {
     btn.addEventListener("click", async () => {
       if (!confirm(t("goals.deleteConfirm"))) return;
       const res = await fetch(`${apiBase()}/goals/${btn.dataset.goalId}`, { method: "DELETE" });
-      if (res.ok) await loadGoals();
+      if (res.ok) {
+        trackEvent("Goal Delete");
+        await loadGoals();
+      }
       renderGoals();
     });
   });
@@ -783,7 +787,10 @@ function bindGoalActions(panel) {
       const name = btn.dataset.groupName;
       if (!confirm(t("goals.deleteGroupConfirm", { name }))) return;
       const res = await fetch(`${apiBase()}/goal-groups/${btn.dataset.groupId}`, { method: "DELETE" });
-      if (res.ok) await loadGoals();
+      if (res.ok) {
+        trackEvent("Goal Group Delete");
+        await loadGoals();
+      }
       renderGoals();
     });
   });
@@ -793,6 +800,9 @@ function bindGoalActions(panel) {
       const ids = (btn.dataset.goalIds || "").split(",").filter(Boolean);
       for (const id of ids) {
         await fetch(`${apiBase()}/goals/${id}`, { method: "DELETE" });
+      }
+      if (ids.length) {
+        trackEvent("Goals Clear Completed", { count: String(ids.length) });
       }
       await loadGoals();
       renderGoals();
@@ -903,6 +913,7 @@ function renderGoals() {
       alert(t("goals.groupCreateFailed"));
       return;
     }
+    trackEvent("Goal Group Create", { source: "goals_tab" });
     await loadGoals();
     renderGoals();
   });
@@ -954,6 +965,7 @@ async function openGoalModal(item) {
     <option value="new">${esc(t("goals.newGroup"))}</option>`;
 
   modal.hidden = false;
+  trackEvent("Goal Modal Open");
 }
 
 function closeGoalModal() {
@@ -975,6 +987,7 @@ async function submitGoalModal() {
   }
 
   let groupId = null;
+  let newGroupFromModal = false;
   const groupVal = document.getElementById("goal-modal-group").value;
   if (groupVal === "new") {
     const name = document.getElementById("goal-modal-new-group").value.trim();
@@ -995,6 +1008,7 @@ async function submitGoalModal() {
     }
     const gData = await gRes.json();
     groupId = gData.id;
+    newGroupFromModal = true;
   } else if (groupVal) {
     groupId = parseInt(groupVal, 10);
   }
@@ -1011,6 +1025,15 @@ async function submitGoalModal() {
     return;
   }
 
+  if (newGroupFromModal) {
+    trackEvent("Goal Group Create", { source: "modal" });
+  }
+  trackEvent("Goal Create", {
+    source: "inventory",
+    group: newGroupFromModal ? "new" : groupId ? "existing" : "none",
+    immediate: result.completed_at ? "true" : "false",
+  });
+
   closeGoalModal();
   await loadGoals();
   renderGoals();
@@ -1025,6 +1048,11 @@ function showGoalsCompletedBanner(result) {
     el.innerHTML = "";
     return;
   }
+
+  trackEvent("Goals Reached", {
+    goals: String(completed.length),
+    groups: String(groupsDone.length),
+  });
 
   const items = completed.map((goal) => {
     const groupPrefix = goal.group_name
