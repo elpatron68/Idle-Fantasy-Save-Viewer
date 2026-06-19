@@ -9,6 +9,7 @@ Lokaler Web-Viewer für Backups des Android-Spiels **Idle Fantasy**. Parst `fant
 - **SQLite-Verlauf** – mehrere Backups importieren, Snapshots vergleichen, Coins-/Level-Charts
 - **Import** per CLI oder Upload im Browser
 - Läuft nur lokal (`127.0.0.1`)
+- **i18n** – Englisch als Standard/Fallback, Deutsch optional; automatische Browser-Sprache oder manuelle Auswahl in der Sidebar
 
 ## Voraussetzungen
 
@@ -50,6 +51,14 @@ python app.py --db data\meine_history.db fantasyidler_save.json
 
 Im Tab **Inventar** (Sidebar unten): **Backup importieren** – wählt eine `.json`-Datei. Duplikate (gleicher Datei-Hash) werden übersprungen.
 
+## Sprache / i18n
+
+- **Standard:** Englisch (`en`) – auch Fallback, wenn ein Übersetzungsschlüssel fehlt
+- **Automatisch:** Sidebar → Sprache → *Automatisch (Browser)* – nutzt `navigator.language` (`de` → Deutsch, sonst Englisch)
+- **Manuell:** *English* oder *Deutsch* – Einstellung wird in `localStorage` gespeichert
+- Übersetzungsdateien: `static/locales/en.json`, `static/locales/de.json`
+- Import-Warnungen vom Server sind auf Englisch codiert (`code` + `params`); die UI übersetzt sie clientseitig
+
 ## Projektstruktur
 
 ```
@@ -59,7 +68,10 @@ idle-fantasy-viewer/
 ├── categories.py       # Item-Kategorien (Heuristiken)
 ├── db.py               # SQLite Snapshots, Diff, Timeline
 ├── requirements.txt
-├── static/             # CSS und JavaScript
+├── static/
+│   ├── i18n.js           # Locale-Laden, t(), Fallback en
+│   ├── locales/          # en.json, de.json
+│   └── app.js            # Dashboard-UI
 ├── templates/          # HTML
 └── data/               # history.db (wird angelegt, gitignored)
 ```
@@ -83,6 +95,17 @@ Die Backup-Datei enthält u. a. doppelt JSON-kodierte Felder (`skillLevels`, `in
 
 - `data/history.db` speichert importierte Snapshots lokal; nicht mit ins Repo committen (steht in `.gitignore`).
 - Der Viewer ist ein inoffizielles Hilfstool, nicht mit dem Spiel verbunden.
+
+## Robustheit bei Spiel-Updates
+
+Das Spiel wird aktiv weiterentwickelt – Save-Dateien können neue Felder, Items oder Quest-Typen enthalten. Der Viewer:
+
+- **Parst tolerant:** unbekannte Top-Level-Felder werden in `extensions` durchgereicht und als Info gemeldet
+- **Überspringt defekte Einträge** (z. B. einzelne Quests/Sessions) statt abzubrechen
+- **Meldet Warnungen** bei fehlenden Kernfeldern, nicht lesbarem JSON in verschachtelten Feldern oder ungültigen Zahlen
+- **Blockiert den Import** nur bei schwerwiegenden Problemen (keine gültige JSON-Datei, leeres Objekt)
+
+Nach dem Import erscheinen Fehler und Warnungen als Banner im Dashboard; in der CLI unter stderr.
 
 ## Lizenz
 

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Idle Fantasy Viewer</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="/static/i18n.js" defer></script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
@@ -14,22 +15,30 @@
       <div class="brand">
         <span class="brand-icon">⚔</span>
         <div>
-          <h1>Idle Fantasy</h1>
-          <p class="subtitle">Save Viewer</p>
+          <h1 data-i18n="app.title">Idle Fantasy Viewer</h1>
+          <p class="subtitle" data-i18n="app.subtitle">Save Viewer</p>
         </div>
       </div>
       <nav class="nav" id="nav">
-        <button class="nav-btn active" data-tab="overview">Übersicht</button>
-        <button class="nav-btn" data-tab="skills">Skills</button>
-        <button class="nav-btn" data-tab="inventory">Inventar</button>
-        <button class="nav-btn" data-tab="equipment">Ausrüstung</button>
-        <button class="nav-btn" data-tab="quests">Quests</button>
-        <button class="nav-btn" data-tab="combat">Kampf</button>
-        <button class="nav-btn" data-tab="history">Verlauf</button>
+        <button class="nav-btn active" data-tab="overview" data-i18n="nav.overview">Overview</button>
+        <button class="nav-btn" data-tab="skills" data-i18n="nav.skills">Skills</button>
+        <button class="nav-btn" data-tab="inventory" data-i18n="nav.inventory">Inventory</button>
+        <button class="nav-btn" data-tab="equipment" data-i18n="nav.equipment">Equipment</button>
+        <button class="nav-btn" data-tab="quests" data-i18n="nav.quests">Quests</button>
+        <button class="nav-btn" data-tab="combat" data-i18n="nav.combat">Combat</button>
+        <button class="nav-btn" data-tab="history" data-i18n="nav.history">History</button>
       </nav>
       <div class="sidebar-footer">
+        <label class="lang-label" for="locale-select">
+          <span data-i18n="settings.language">Language</span>
+          <select id="locale-select" class="select-input lang-select">
+            <option value="auto" data-i18n="settings.langAuto">Auto (browser)</option>
+            <option value="en" data-i18n="settings.langEn">English</option>
+            <option value="de" data-i18n="settings.langDe">Deutsch</option>
+          </select>
+        </label>
         <label class="upload-btn">
-          Backup importieren
+          <span data-i18n="actions.importBackup">Import backup</span>
           <input type="file" id="file-upload" accept=".json" hidden>
         </label>
       </div>
@@ -37,8 +46,9 @@
 
     <main class="main">
       <header class="topbar">
+        <div id="import-report" class="import-report" hidden></div>
         <div id="character-header" class="character-header">
-          <span class="loading">Lade Save…</span>
+          <span class="loading" data-i18n="app.loading">Loading save…</span>
         </div>
         <div class="kpi-row" id="kpi-row"></div>
       </header>

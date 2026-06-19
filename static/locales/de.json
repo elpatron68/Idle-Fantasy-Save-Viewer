@@ -1,0 +1,178 @@
+{
+  "app": {
+    "title": "Idle Fantasy",
+    "subtitle": "Save Viewer",
+    "loading": "Lade Save…"
+  },
+  "nav": {
+    "overview": "Übersicht",
+    "skills": "Skills",
+    "inventory": "Inventar",
+    "equipment": "Ausrüstung",
+    "quests": "Quests",
+    "combat": "Kampf",
+    "history": "Verlauf"
+  },
+  "settings": {
+    "language": "Sprache",
+    "langAuto": "Automatisch (Browser)",
+    "langEn": "English",
+    "langDe": "Deutsch"
+  },
+  "actions": {
+    "importBackup": "Backup importieren",
+    "compare": "Vergleichen",
+    "dismiss": "Schließen"
+  },
+  "empty": {
+    "noSave": "Kein Save importiert. Starte mit: python app.py fantasyidler_save.json",
+    "loadError": "Fehler beim Laden: {message}",
+    "unknown": "Unbekannt",
+    "none": "Keine",
+    "empty": "Leer",
+    "noItems": "Keine Items gefunden",
+    "noSnapshots": "Noch keine Snapshots. Importiere ein Backup.",
+    "noChanges": "Keine Änderungen",
+    "pickTwoSnapshots": "Wähle zwei verschiedene Snapshots."
+  },
+  "import": {
+    "failed": "Import fehlgeschlagen",
+    "duplicate": "Backup bereits vorhanden (Duplikat).",
+    "success": "Importiert: Snapshot #{id}",
+    "successWithNotes": "Importiert: Snapshot #{id}\n\n{warnings} Warnung(en), {infos} Hinweis(e) – Details im Dashboard-Banner.",
+    "titleError": "Import-Fehler",
+    "titleWarning": "Import-Warnungen",
+    "titleInfo": "Import-Hinweise",
+    "countErrors": "{count} Fehler",
+    "countWarnings": "{count} Warnung(en)",
+    "countInfos": "{count} Hinweis(e)",
+    "newFieldsSummary": "{count} neue/unbekannte Feld(er) aus dem Spiel",
+    "invalid_root": "Die Datei ist kein JSON-Objekt – kein gültiges Idle-Fantasy-Backup.",
+    "empty_save": "Die Save-Datei ist leer.",
+    "unknown_top_level": "Unbekanntes Feld im Backup: „{field}“ (Spiel-Update?).",
+    "missing_field": "Erwartetes Feld fehlt: „{field}“ – zugehörige Daten werden leer angezeigt.",
+    "nested_json_invalid": "Feld „{field}“ konnte nicht als JSON gelesen werden – Rohwert ignoriert.",
+    "invalid_coins": "Feld „coins“ ist nicht numerisch.",
+    "invalid_exported_at": "Feld „exported_at“ ist kein gültiger Zeitstempel.",
+    "missing_exported_at": "Kein Export-Zeitstempel – Verlaufsvergleiche können ungenau sein.",
+    "skill_xp_mismatch": "{count} Skill(s) ohne XP-Eintrag (z. B. {examples}).",
+    "skill_level_mismatch": "{count} XP-Einträge ohne Skill-Level.",
+    "unparsed_nested_json": "Feld „{field}“ ist noch Text – JSON-Inhalt konnte nicht gelesen werden.",
+    "invalid_type": "Feld „{field}“ hat unerwarteten Typ ({type}).",
+    "coerced_empty_dict": "Feld „{field}“ ist kein Objekt – wird als leer behandelt.",
+    "coerced_empty_list": "Feld „{field}“ ist keine Liste – wird übersprungen.",
+    "invalid_number": "Ungültiger Zahlenwert in „{field}“{detail}.",
+    "invalid_quest_entry": "Quest-Eintrag #{index} ist kein Objekt und wurde übersprungen.",
+    "invalid_session_entry": "Session-Eintrag #{index} ist kein Objekt und wurde übersprungen.",
+    "unparsed_session_frames": "Session #{index}: Aktivitäts-Frames konnten nicht gelesen werden.",
+    "invalid_pets": "Feld „pets“ ist keine Liste.",
+    "invalid_farming_patch": "Farming-Patch #{index} wurde übersprungen.",
+    "missing_character_name": "Kein Charaktername im Save gefunden.",
+    "invalid_quest_ids": "Quest-IDs ({label}) sind keine Liste.",
+    "invalid_quest_progress": "Quest-Fortschritt ({label}) ist kein Objekt."
+  },
+  "meta": {
+    "export": "Export",
+    "points": "Punkte"
+  },
+  "kpi": {
+    "coins": "Münzen",
+    "totalLevel": "Gesamtlevel",
+    "items": "Items",
+    "totalQty": "Gesamtmenge"
+  },
+  "overview": {
+    "character": "Charakter",
+    "hp": "HP",
+    "activePotion": "Aktiver Trank",
+    "activeSpell": "Aktiver Zauber",
+    "weaponSlot": "Waffenslot",
+    "blessing": "Segen",
+    "sessionQueue": "Session-Warteschlange",
+    "slayer": "Slayer",
+    "noSlayerTask": "Keine aktive Slayer-Aufgabe",
+    "pets": "Haustiere",
+    "farming": "Farming",
+    "patch": "Patch {n}",
+    "guildRep": "Gilden-Ruf"
+  },
+  "skills": {
+    "search": "Skill suchen…",
+    "sortLevel": "Nach Level",
+    "sortXp": "Nach XP",
+    "sortName": "Nach Name",
+    "skill": "Skill",
+    "level": "Level",
+    "progress": "Fortschritt"
+  },
+  "inventory": {
+    "search": "Item suchen…",
+    "sortCategory": "Nach Kategorie",
+    "sortName": "Nach Name",
+    "sortQty": "Nach Menge",
+    "highlightEquipped": "Ausgerüstete hervorheben",
+    "item": "Item",
+    "qty": "Menge",
+    "id": "ID",
+    "equipped": "Ausgerüstet",
+    "groupMeta": "{count} Items · {qty} Stk."
+  },
+  "equipment": {
+    "title": "Ausrüstung"
+  },
+  "quests": {
+    "story": "Story",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "guild": "Gilde",
+    "filterAll": "Alle",
+    "filterOpen": "Offen",
+    "filterDone": "Erledigt",
+    "quest": "Quest",
+    "progress": "Fortschritt",
+    "status": "Status",
+    "done": "Erledigt",
+    "open": "Offen"
+  },
+  "combat": {
+    "enemyKills": "Gegner-Kills",
+    "dungeonRuns": "Dungeon-Läufe",
+    "runs": "{count} Läufe",
+    "recentActivity": "Letzte Aktivität",
+    "activeSessions": "Aktive Sessions",
+    "sessionDone": "fertig",
+    "sessionRunning": "läuft"
+  },
+  "history": {
+    "loading": "Lade Verlauf…",
+    "coinsChart": "Münzen über Zeit",
+    "levelChart": "Gesamtlevel über Zeit",
+    "snapshotCompare": "Snapshot-Vergleich",
+    "allSnapshots": "Alle Snapshots",
+    "character": "Charakter",
+    "file": "Datei",
+    "inventoryChanges": "Inventar-Änderungen ({count})",
+    "skillChanges": "Skill-Änderungen ({count})",
+    "delta": "Delta",
+    "xpDelta": "XP-Delta",
+    "coinsSummary": "Münzen: {delta} · Gesamtlevel: {levelDelta}"
+  },
+  "category": {
+    "currency": "Währung",
+    "ores_mining": "Erze & Mining",
+    "bars_smithing": "Barren & Schmieden",
+    "wood_planks": "Holz & Bretter",
+    "runes": "Runen",
+    "raw_food": "Rohkost",
+    "cooked_food": "Gekochtes",
+    "seeds_farming": "Samen & Farming",
+    "melee_weapons": "Nahkampfwaffen",
+    "ranged": "Fernkampf",
+    "magic": "Magie",
+    "armor": "Rüstung",
+    "bones_hides": "Knochen & Felle",
+    "gems_jewelry": "Edelsteine & Schmuck",
+    "potions_brews": "Tränke & Brauerei",
+    "misc": "Sonstiges"
+  }
+}

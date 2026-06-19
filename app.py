@@ -77,6 +77,8 @@ def api_import():
             result = import_save(tmp, db_path=DB_PATH)
         finally:
             tmp.unlink(missing_ok=True)
+        if result.get("error"):
+            return jsonify(result), 422
         return jsonify(result)
 
     body = request.get_json(silent=True) or {}
@@ -86,7 +88,19 @@ def api_import():
     path = Path(path)
     if not path.exists():
         return jsonify({"error": f"File not found: {path}"}), 404
-    return jsonify(import_save(path, db_path=DB_PATH))
+    result = import_save(path, db_path=DB_PATH)
+    if result.get("error"):
+        return jsonify(result), 422
+    return jsonify(result)
+
+
+def _print_import_report(result: dict) -> None:
+    report = result.get("import_report") or []
+    if not report:
+        return
+    for item in report:
+        level = item.get("level", "info").upper()
+        print(f"  [{level}] {item.get('message')}", file=sys.stderr)
 
 
 def main() -> int:
@@ -112,8 +126,20 @@ def main() -> int:
             print(f"Error: file not found: {path}", file=sys.stderr)
             return 1
         result = import_save(path, db_path=DB_PATH)
+        if result.get("error"):
+            print(f"Import failed: {result['error']}", file=sys.stderr)
+            _print_import_report(result)
+            return 1
         if result.get("imported"):
             print(f"Imported snapshot #{result['snapshot_id']} from {path.name}")
+            summary = result.get("import_summary") or {}
+            if summary.get("warnings") or summary.get("infos"):
+                print(
+                    f"Notes: {summary.get('warnings', 0)} warning(s), "
+                    f"{summary.get('infos', 0)} info(s)",
+                    file=sys.stderr,
+                )
+            _print_import_report(result)
         else:
             print(f"Skipped duplicate: {path.name} (snapshot #{result['snapshot_id']})")
 

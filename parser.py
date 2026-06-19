@@ -7,29 +7,96 @@ from pathlib import Path
 from typing import Any
 
 from categories import categorize_item
+from validation import Issue, analyze_save, has_errors, issue
 
 
-def _maybe_parse_json(value: Any) -> Any:
+class SaveParseError(Exception):
+    """Save cannot be imported."""
+
+    def __init__(self, message: str, issues: list[Issue] | None = None):
+        super().__init__(message)
+        self.issues = issues or []
+
+
+def _maybe_parse_json(value: Any, field_path: str, failures: list[str]) -> Any:
     if isinstance(value, str):
         stripped = value.strip()
         if stripped.startswith(("{", "[")):
             try:
                 return json.loads(stripped)
             except json.JSONDecodeError:
+                failures.append(field_path)
                 return value
     return value
 
 
-def _deep_parse(obj: Any) -> Any:
+def _deep_parse(obj: Any, path: str = "", failures: list[str] | None = None) -> Any:
+    failures = failures if failures is not None else []
     if isinstance(obj, dict):
-        return {k: _deep_parse(_maybe_parse_json(v)) for k, v in obj.items()}
+        return {
+            k: _deep_parse(_maybe_parse_json(v, f"{path}.{k}" if path else k, failures), f"{path}.{k}" if path else k, failures)
+            for k, v in obj.items()
+        }
     if isinstance(obj, list):
-        return [_deep_parse(_maybe_parse_json(v)) for v in obj]
+        return [
+            _deep_parse(_maybe_parse_json(v, f"{path}[{i}]", failures), f"{path}[{i}]", failures)
+            for i, v in enumerate(obj)
+        ]
     return obj
 
 
+def _ensure_dict(value: Any, field: str, issues: list[Issue]) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    issues.append(issue(
+        "warning", "coerced_empty_dict",
+        f'Field "{field}" is not an object – treated as empty.',
+        field=field,
+        params={"field": field},
+    ))
+    return {}
+
+
+def _ensure_list(value: Any, field: str, issues: list[Issue]) -> list[Any]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    issues.append(issue(
+        "warning", "coerced_empty_list",
+        f'Field "{field}" is not a list – skipped.',
+        field=field,
+        params={"field": field},
+    ))
+    return []
+
+
+def _safe_int(value: Any, field: str, issues: list[Issue], default: int = 0) -> int:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        issues.append(issue(
+            "warning", "invalid_number",
+            f'Invalid number in "{field}".',
+            field=field,
+            params={"field": field, "detail": ""},
+        ))
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        issues.append(issue(
+            "warning", "invalid_number",
+            f'Invalid number in "{field}": {value!r}.',
+            field=field,
+            params={"field": field, "detail": f": {value!r}"},
+        ))
+        return default
+
+
 def xp_for_level(level: int) -> int:
-    """Approximate cumulative XP threshold (OSRS-style curve)."""
     if level <= 1:
         return 0
     total = 0
@@ -38,7 +105,7 @@ def xp_for_level(level: int) -> int:
     return total // 4
 
 
-def xp_to_next_level(level: int, xp: int) -> dict[str, int]:
+def xp_to_next_level(level: int, xp: int) -> dict[str, int | float]:
     current_threshold = xp_for_level(level)
     next_threshold = xp_for_level(level + 1)
     span = max(next_threshold - current_threshold, 1)
@@ -51,50 +118,77 @@ def xp_to_next_level(level: int, xp: int) -> dict[str, int]:
 
 
 def format_item_name(key: str) -> str:
-    return key.replace("_", " ").title()
+    return str(key).replace("_", " ").title()
 
 
 def format_key(key: str) -> str:
-    return key.replace("_", " ").title()
+    return str(key).replace("_", " ").title()
 
 
-def load_save(path: str | Path) -> dict[str, Any]:
+def load_save(path: str | Path) -> tuple[dict[str, Any], list[str]]:
     path = Path(path)
-    with path.open(encoding="utf-8") as f:
-        raw = json.load(f)
-    return _deep_parse(raw)
+    try:
+        with path.open(encoding="utf-8") as f:
+            raw = json.load(f)
+    except json.JSONDecodeError as exc:
+        raise SaveParseError(f"Invalid JSON file: {exc}") from exc
+    except OSError as exc:
+        raise SaveParseError(f"Could not read file: {exc}") from exc
+
+    failures: list[str] = []
+    parsed = _deep_parse(raw, failures=failures)
+    if not isinstance(parsed, dict):
+        raise SaveParseError("The file must contain a JSON object.")
+    return parsed, failures
 
 
-def normalize_save(raw: dict[str, Any], source_file: str = "") -> dict[str, Any]:
-    flags = raw.get("flags") or {}
-    skill_levels = raw.get("skillLevels") or {}
-    skill_xp = raw.get("skillXp") or {}
-    inventory = raw.get("inventory") or {}
-    equipped = raw.get("equipped") or {}
+def normalize_save(
+    raw: dict[str, Any],
+    source_file: str = "",
+    issues: list[Issue] | None = None,
+    nested_failures: list[str] | None = None,
+) -> dict[str, Any]:
+    issues = list(issues or [])
+    issues.extend(analyze_save(raw, nested_failures))
+
+    if has_errors(issues):
+        fatal = next(i for i in issues if i["level"] == "error")
+        raise SaveParseError(fatal["message"], issues)
+
+    flags = _ensure_dict(raw.get("flags"), "flags", issues)
+    skill_levels = _ensure_dict(raw.get("skillLevels"), "skillLevels", issues)
+    skill_xp = _ensure_dict(raw.get("skillXp"), "skillXp", issues)
+    inventory = _ensure_dict(raw.get("inventory"), "inventory", issues)
+    equipped = _ensure_dict(raw.get("equipped"), "equipped", issues)
     equipped_values = {v for v in equipped.values() if v}
 
     inventory_items = []
-    for key, qty in sorted(inventory.items()):
+    for key, qty_raw in sorted(inventory.items()):
+        qty = _safe_int(qty_raw, f"inventory.{key}", issues, default=-1)
         if qty <= 0:
+            if qty < 0:
+                continue
             continue
+        item_key = str(key)
         inventory_items.append({
-            "key": key,
-            "name": format_item_name(key),
+            "key": item_key,
+            "name": format_item_name(item_key),
             "qty": qty,
-            "category": categorize_item(key),
-            "equipped": key in equipped_values,
+            "category": categorize_item(item_key),
+            "equipped": item_key in equipped_values,
         })
 
+    all_skill_keys = set(skill_levels) | set(skill_xp)
     skills = []
     total_level = 0
-    for key in sorted(skill_levels.keys()):
-        level = int(skill_levels[key])
-        xp = int(skill_xp.get(key, 0))
+    for key in sorted(all_skill_keys):
+        level = _safe_int(skill_levels.get(key, 1), f"skillLevels.{key}", issues, default=1)
+        xp = _safe_int(skill_xp.get(key, 0), f"skillXp.{key}", issues, default=0)
         total_level += level
         prog = xp_to_next_level(level, xp)
         skills.append({
-            "key": key,
-            "name": format_key(key),
+            "key": str(key),
+            "name": format_key(str(key)),
             "level": level,
             "xp": xp,
             **prog,
@@ -103,43 +197,73 @@ def normalize_save(raw: dict[str, Any], source_file: str = "") -> dict[str, Any]
     equipment = []
     for slot, item_key in equipped.items():
         equipment.append({
-            "slot": slot,
-            "slot_name": format_key(slot),
+            "slot": str(slot),
+            "slot_name": format_key(str(slot)),
             "key": item_key,
-            "name": format_item_name(item_key) if item_key else None,
+            "name": format_item_name(str(item_key)) if item_key else None,
         })
 
     story_quests = []
-    for q in raw.get("questProgress") or []:
+    for idx, q in enumerate(_ensure_list(raw.get("questProgress"), "questProgress", issues)):
+        if not isinstance(q, dict):
+            issues.append(issue(
+                "warning", "invalid_quest_entry",
+                f"Quest entry #{idx + 1} is not an object and was skipped.",
+                field="questProgress",
+                params={"index": idx + 1},
+            ))
+            continue
+        quest_id = q.get("questId") or q.get("id") or f"unknown_{idx}"
         story_quests.append({
-            "id": q.get("questId"),
-            "name": format_key(q.get("questId", "")),
-            "progress": q.get("progress", 0),
+            "id": quest_id,
+            "name": format_key(str(quest_id)),
+            "progress": _safe_int(q.get("progress"), f"questProgress[{idx}].progress", issues),
             "completed": bool(q.get("completed")),
             "completed_at": q.get("completedAt"),
         })
 
     daily_quests = _build_flag_quests(
-        flags.get("daily_quest_ids") or [],
-        flags.get("daily_quest_progress") or {},
-        flags.get("daily_quest_claimed") or [],
+        flags.get("daily_quest_ids"),
+        flags.get("daily_quest_progress"),
+        flags.get("daily_quest_claimed"),
+        "daily_quest", issues,
     )
     weekly_quests = _build_flag_quests(
-        flags.get("weekly_quest_ids") or [],
-        flags.get("weekly_quest_progress") or {},
-        flags.get("weekly_quest_claimed") or [],
+        flags.get("weekly_quest_ids"),
+        flags.get("weekly_quest_progress"),
+        flags.get("weekly_quest_claimed"),
+        "weekly_quest", issues,
     )
     guild_quests = _build_flag_quests(
-        flags.get("guild_daily_ids") or [],
-        flags.get("guild_daily_progress") or {},
-        flags.get("guild_daily_claimed") or [],
+        flags.get("guild_daily_ids"),
+        flags.get("guild_daily_progress"),
+        flags.get("guild_daily_claimed"),
+        "guild_daily", issues,
     )
 
     sessions = []
-    for s in raw.get("sessions") or []:
-        frames = s.get("frames") or []
-        total_xp = sum(f.get("xp_gain", 0) for f in frames) if isinstance(frames, list) else 0
-        total_kills = sum(f.get("kills", 0) for f in frames) if isinstance(frames, list) else 0
+    for idx, s in enumerate(_ensure_list(raw.get("sessions"), "sessions", issues)):
+        if not isinstance(s, dict):
+            issues.append(issue(
+                "warning", "invalid_session_entry",
+                f"Session entry #{idx + 1} is not an object and was skipped.",
+                field="sessions",
+                params={"index": idx + 1},
+            ))
+            continue
+        frames = s.get("frames")
+        if isinstance(frames, str):
+            issues.append(issue(
+                "warning", "unparsed_session_frames",
+                f"Session #{idx + 1}: activity frames could not be read.",
+                field="sessions",
+                params={"index": idx + 1},
+            ))
+            frames = []
+        elif not isinstance(frames, list):
+            frames = []
+        total_xp = sum(_safe_int(f.get("xp_gain"), f"sessions[{idx}].xp", issues) for f in frames if isinstance(f, dict))
+        total_kills = sum(_safe_int(f.get("kills"), f"sessions[{idx}].kills", issues) for f in frames if isinstance(f, dict))
         sessions.append({
             "id": s.get("session_id"),
             "skill": s.get("skill_name"),
@@ -149,8 +273,46 @@ def normalize_save(raw: dict[str, Any], source_file: str = "") -> dict[str, Any]
             "completed": s.get("completed"),
             "total_xp": total_xp,
             "total_kills": total_kills,
-            "frame_count": len(frames) if isinstance(frames, list) else 0,
+            "frame_count": len(frames),
         })
+
+    pets_raw = raw.get("pets")
+    pets: list[Any] = []
+    if isinstance(pets_raw, list):
+        pets = pets_raw
+    elif pets_raw is not None:
+        issues.append(issue("warning", "invalid_pets", 'Field "pets" is not a list.', field="pets"))
+
+    farming = []
+    for idx, patch in enumerate(_ensure_list(raw.get("farmingPatches"), "farmingPatches", issues)):
+        if isinstance(patch, dict):
+            farming.append(patch)
+        else:
+            issues.append(issue(
+                "warning", "invalid_farming_patch",
+                f"Farming patch #{idx + 1} was skipped.",
+                field="farmingPatches",
+                params={"index": idx + 1},
+            ))
+
+    if not flags.get("character_name"):
+        issues.append(issue(
+            "warning", "missing_character_name",
+            "No character name found in save.",
+            field="flags.character_name",
+        ))
+
+    # Deduplizieren (gleicher code+field+message)
+    seen = set()
+    unique_issues: list[Issue] = []
+    for item in issues:
+        key = (item["level"], item["code"], item.get("field"), item["message"])
+        if key not in seen:
+            seen.add(key)
+            unique_issues.append(item)
+
+    warning_count = sum(1 for i in unique_issues if i["level"] == "warning")
+    info_count = sum(1 for i in unique_issues if i["level"] == "info")
 
     return {
         "character": {
@@ -175,50 +337,85 @@ def normalize_save(raw: dict[str, Any], source_file: str = "") -> dict[str, Any]
             "guild": guild_quests,
         },
         "combat": {
-            "enemy_kills": flags.get("enemy_kills") or {},
-            "dungeon_runs": flags.get("dungeon_runs") or {},
-            "slayer_task": flags.get("active_slayer_task"),
-            "slayer_points": flags.get("slayer_points", 0),
+            "enemy_kills": _ensure_dict(flags.get("enemy_kills"), "flags.enemy_kills", issues),
+            "dungeon_runs": _ensure_dict(flags.get("dungeon_runs"), "flags.dungeon_runs", issues),
+            "slayer_task": flags.get("active_slayer_task") if isinstance(flags.get("active_slayer_task"), dict) else None,
+            "slayer_points": _safe_int(flags.get("slayer_points"), "flags.slayer_points", issues),
         },
-        "guild_reputation": flags.get("guild_reputation") or {},
-        "pets": raw.get("pets") or [],
-        "farming": raw.get("farmingPatches") or [],
-        "farming_fertilizer": flags.get("farming_fertilizer") or {},
-        "session_queue": flags.get("session_queue") or [],
-        "recent_sessions": flags.get("recent_sessions") or [],
+        "guild_reputation": _ensure_dict(flags.get("guild_reputation"), "flags.guild_reputation", issues),
+        "pets": pets,
+        "farming": farming,
+        "farming_fertilizer": _ensure_dict(flags.get("farming_fertilizer"), "flags.farming_fertilizer", issues),
+        "session_queue": _ensure_list(flags.get("session_queue"), "flags.session_queue", issues),
+        "recent_sessions": _ensure_list(flags.get("recent_sessions"), "flags.recent_sessions", issues),
         "sessions": sessions,
-        "town_buildings": flags.get("town_building_tiers") or {},
+        "town_buildings": _ensure_dict(flags.get("town_building_tiers"), "flags.town_building_tiers", issues),
         "meta": {
             "source_file": source_file,
             "exported_at": raw.get("exported_at"),
-            "coins": raw.get("coins", 0),
-            "inventory_coins": inventory.get("coins", 0),
+            "coins": _safe_int(raw.get("coins"), "coins", issues),
+            "inventory_coins": _safe_int(inventory.get("coins"), "inventory.coins", issues),
             "total_level": total_level,
             "item_count": len(inventory_items),
             "total_items": sum(i["qty"] for i in inventory_items),
             "version_code": flags.get("last_seen_version_code"),
+            "import_report": unique_issues,
+            "import_summary": {
+                "ok": True,
+                "warnings": warning_count,
+                "infos": info_count,
+            },
         },
+        # Unbekannte Top-Level-Felder für spätere Auswertung durchreichen
+        "extensions": {
+            k: raw[k] for k in raw if k not in {
+                "skillLevels", "skillXp", "inventory", "equipped", "flags",
+                "pets", "coins", "questProgress", "farmingPatches", "sessions", "exported_at",
+            }
+        } if isinstance(raw, dict) else {},
     }
 
 
 def _build_flag_quests(
-    ids: list[str],
-    progress: dict[str, int],
-    claimed: list[str],
+    ids: Any,
+    progress: Any,
+    claimed: Any,
+    label: str,
+    issues: list[Issue],
 ) -> list[dict[str, Any]]:
-    claimed_set = set(claimed or [])
+    id_list = ids if isinstance(ids, list) else []
+    if ids is not None and not isinstance(ids, list):
+        issues.append(issue(
+            "warning", "invalid_quest_ids",
+            f"Quest IDs ({label}) are not a list.",
+            field=label,
+            params={"label": label},
+        ))
+    progress_map = progress if isinstance(progress, dict) else {}
+    if progress is not None and not isinstance(progress, dict):
+        issues.append(issue(
+            "warning", "invalid_quest_progress",
+            f"Quest progress ({label}) is not an object.",
+            field=label,
+            params={"label": label},
+        ))
+    claimed_list = claimed if isinstance(claimed, list) else []
+    claimed_set = set(claimed_list)
+
     result = []
-    for qid in ids:
+    for qid in id_list:
+        qid_str = str(qid)
         result.append({
-            "id": qid,
-            "name": format_key(qid),
-            "progress": progress.get(qid, 0),
-            "claimed": qid in claimed_set,
+            "id": qid_str,
+            "name": format_key(qid_str),
+            "progress": _safe_int(progress_map.get(qid), f"{label}.{qid_str}", issues),
+            "claimed": qid_str in claimed_set or qid in claimed_set,
         })
     return result
 
 
-def parse_save_file(path: str | Path) -> dict[str, Any]:
+def parse_save_file(path: str | Path) -> tuple[dict[str, Any], list[Issue]]:
     path = Path(path)
-    raw = load_save(path)
-    return normalize_save(raw, source_file=path.name)
+    raw, failures = load_save(path)
+    data = normalize_save(raw, source_file=path.name, nested_failures=failures)
+    return data, data["meta"]["import_report"]

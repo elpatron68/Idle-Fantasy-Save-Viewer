@@ -94,6 +94,22 @@ body {
 .sidebar-footer {
   padding: 12px;
   border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lang-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.lang-select {
+  width: 100%;
+  font-size: 0.85rem;
 }
 
 .upload-btn {
@@ -120,6 +136,72 @@ body {
 }
 
 .topbar { margin-bottom: 24px; }
+
+.import-report {
+  margin-bottom: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  background: var(--bg-card);
+}
+
+.import-report-error {
+  border-color: var(--danger);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.import-report-warning {
+  border-color: var(--warning);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.import-report-info {
+  border-color: var(--accent-dim);
+  background: rgba(108, 140, 255, 0.08);
+}
+
+.import-report-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.import-report-counts {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  flex: 1;
+}
+
+.import-report-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.import-report-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+}
+
+.import-issue-warning { color: var(--warning); }
+.import-issue-error { color: var(--danger); }
+
+.import-issue-info-collapsed details {
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.import-issue-info-collapsed ul {
+  margin: 8px 0 0;
+  padding-left: 1.2rem;
+  color: var(--text-muted);
+}
 
 .character-header h2 {
   margin: 0 0 4px;

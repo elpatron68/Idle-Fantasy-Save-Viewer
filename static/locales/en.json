@@ -1,0 +1,178 @@
+{
+  "app": {
+    "title": "Idle Fantasy",
+    "subtitle": "Save Viewer",
+    "loading": "Loading save…"
+  },
+  "nav": {
+    "overview": "Overview",
+    "skills": "Skills",
+    "inventory": "Inventory",
+    "equipment": "Equipment",
+    "quests": "Quests",
+    "combat": "Combat",
+    "history": "History"
+  },
+  "settings": {
+    "language": "Language",
+    "langAuto": "Auto (browser)",
+    "langEn": "English",
+    "langDe": "Deutsch"
+  },
+  "actions": {
+    "importBackup": "Import backup",
+    "compare": "Compare",
+    "dismiss": "Dismiss"
+  },
+  "empty": {
+    "noSave": "No save imported. Start with: python app.py fantasyidler_save.json",
+    "loadError": "Failed to load: {message}",
+    "unknown": "Unknown",
+    "none": "None",
+    "empty": "Empty",
+    "noItems": "No items found",
+    "noSnapshots": "No snapshots yet. Import a backup.",
+    "noChanges": "No changes",
+    "pickTwoSnapshots": "Select two different snapshots."
+  },
+  "import": {
+    "failed": "Import failed",
+    "duplicate": "Backup already exists (duplicate).",
+    "success": "Imported: Snapshot #{id}",
+    "successWithNotes": "Imported: Snapshot #{id}\n\n{warnings} warning(s), {infos} note(s) – see dashboard banner for details.",
+    "titleError": "Import errors",
+    "titleWarning": "Import warnings",
+    "titleInfo": "Import notes",
+    "countErrors": "{count} error(s)",
+    "countWarnings": "{count} warning(s)",
+    "countInfos": "{count} info(s)",
+    "newFieldsSummary": "{count} new/unknown field(s) from the game",
+    "invalid_root": "The file is not a JSON object – not a valid Idle Fantasy backup.",
+    "empty_save": "The save file is empty.",
+    "unknown_top_level": "Unknown field in backup: \"{field}\" (added by a game update?).",
+    "missing_field": "Expected field missing: \"{field}\" – related data will be shown empty.",
+    "nested_json_invalid": "Field \"{field}\" could not be read as JSON – raw value ignored.",
+    "invalid_coins": "Field \"coins\" is not numeric.",
+    "invalid_exported_at": "Field \"exported_at\" is not a valid timestamp.",
+    "missing_exported_at": "No export timestamp – history comparisons may be inaccurate.",
+    "skill_xp_mismatch": "{count} skill(s) without XP entry (e.g. {examples}).",
+    "skill_level_mismatch": "{count} XP entries without skill level.",
+    "unparsed_nested_json": "Field \"{field}\" is still a text string – JSON content could not be read.",
+    "invalid_type": "Field \"{field}\" has unexpected type ({type}).",
+    "coerced_empty_dict": "Field \"{field}\" is not an object – treated as empty.",
+    "coerced_empty_list": "Field \"{field}\" is not a list – skipped.",
+    "invalid_number": "Invalid number in \"{field}\"{detail}.",
+    "invalid_quest_entry": "Quest entry #{index} is not an object and was skipped.",
+    "invalid_session_entry": "Session entry #{index} is not an object and was skipped.",
+    "unparsed_session_frames": "Session #{index}: activity frames could not be read.",
+    "invalid_pets": "Field \"pets\" is not a list.",
+    "invalid_farming_patch": "Farming patch #{index} was skipped.",
+    "missing_character_name": "No character name found in save.",
+    "invalid_quest_ids": "Quest IDs ({label}) are not a list.",
+    "invalid_quest_progress": "Quest progress ({label}) is not an object."
+  },
+  "meta": {
+    "export": "Export",
+    "points": "points"
+  },
+  "kpi": {
+    "coins": "Coins",
+    "totalLevel": "Total level",
+    "items": "Items",
+    "totalQty": "Total quantity"
+  },
+  "overview": {
+    "character": "Character",
+    "hp": "HP",
+    "activePotion": "Active potion",
+    "activeSpell": "Active spell",
+    "weaponSlot": "Weapon slot",
+    "blessing": "Blessing",
+    "sessionQueue": "Session queue",
+    "slayer": "Slayer",
+    "noSlayerTask": "No active slayer task",
+    "pets": "Pets",
+    "farming": "Farming",
+    "patch": "Patch {n}",
+    "guildRep": "Guild reputation"
+  },
+  "skills": {
+    "search": "Search skills…",
+    "sortLevel": "By level",
+    "sortXp": "By XP",
+    "sortName": "By name",
+    "skill": "Skill",
+    "level": "Level",
+    "progress": "Progress"
+  },
+  "inventory": {
+    "search": "Search items…",
+    "sortCategory": "By category",
+    "sortName": "By name",
+    "sortQty": "By quantity",
+    "highlightEquipped": "Highlight equipped",
+    "item": "Item",
+    "qty": "Qty",
+    "id": "ID",
+    "equipped": "Equipped",
+    "groupMeta": "{count} items · {qty} pcs"
+  },
+  "equipment": {
+    "title": "Equipment"
+  },
+  "quests": {
+    "story": "Story",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "guild": "Guild",
+    "filterAll": "All",
+    "filterOpen": "Open",
+    "filterDone": "Completed",
+    "quest": "Quest",
+    "progress": "Progress",
+    "status": "Status",
+    "done": "Done",
+    "open": "Open"
+  },
+  "combat": {
+    "enemyKills": "Enemy kills",
+    "dungeonRuns": "Dungeon runs",
+    "runs": "{count} runs",
+    "recentActivity": "Recent activity",
+    "activeSessions": "Active sessions",
+    "sessionDone": "done",
+    "sessionRunning": "running"
+  },
+  "history": {
+    "loading": "Loading history…",
+    "coinsChart": "Coins over time",
+    "levelChart": "Total level over time",
+    "snapshotCompare": "Snapshot comparison",
+    "allSnapshots": "All snapshots",
+    "character": "Character",
+    "file": "File",
+    "inventoryChanges": "Inventory changes ({count})",
+    "skillChanges": "Skill changes ({count})",
+    "delta": "Delta",
+    "xpDelta": "XP delta",
+    "coinsSummary": "Coins: {delta} · Total level: {levelDelta}"
+  },
+  "category": {
+    "currency": "Currency",
+    "ores_mining": "Ores & Mining",
+    "bars_smithing": "Bars & Smithing",
+    "wood_planks": "Wood & Planks",
+    "runes": "Runes",
+    "raw_food": "Raw Food",
+    "cooked_food": "Cooked Food",
+    "seeds_farming": "Seeds & Farming",
+    "melee_weapons": "Melee Weapons",
+    "ranged": "Ranged",
+    "magic": "Magic",
+    "armor": "Armor",
+    "bones_hides": "Bones & Hides",
+    "gems_jewelry": "Gems & Jewelry",
+    "potions_brews": "Potions & Brews",
+    "misc": "Misc"
+  }
+}

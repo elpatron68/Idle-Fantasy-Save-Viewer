@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from parser import normalize_save, load_save
+from parser import SaveParseError, normalize_save, load_save
 
 DEFAULT_DB = Path(__file__).parent / "data" / "history.db"
 
@@ -88,15 +88,31 @@ def import_save(
         "SELECT id FROM snapshots WHERE file_hash = ?", (digest,)
     ).fetchone()
     if existing:
-        result = {"imported": False, "snapshot_id": existing["id"], "reason": "duplicate"}
+        result = {
+            "imported": False,
+            "snapshot_id": existing["id"],
+            "reason": "duplicate",
+            "import_report": [],
+        }
         if own_conn:
             conn.close()
         return result
 
-    raw = load_save(path)
-    normalized = normalize_save(raw, source_file=path.name)
-    meta = normalized["meta"]
+    try:
+        raw, failures = load_save(path)
+        normalized = normalize_save(raw, source_file=path.name, nested_failures=failures)
+    except SaveParseError as exc:
+        if own_conn:
+            conn.close()
+        return {
+            "imported": False,
+            "error": str(exc),
+            "import_report": exc.issues,
+        }
+
+    import_report = normalized["meta"].get("import_report", [])
     character = normalized["character"]
+    meta = normalized["meta"]
 
     cur = conn.execute(
         """
@@ -130,7 +146,12 @@ def import_save(
     if own_conn:
         conn.close()
 
-    return {"imported": True, "snapshot_id": snapshot_id}
+    return {
+        "imported": True,
+        "snapshot_id": snapshot_id,
+        "import_report": import_report,
+        "import_summary": meta.get("import_summary"),
+    }
 
 
 def list_snapshots(conn: sqlite3.Connection | None = None, db_path: Path | str = DEFAULT_DB) -> list[dict]:
