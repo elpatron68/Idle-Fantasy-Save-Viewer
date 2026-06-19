@@ -38,13 +38,17 @@ const CATEGORY_I18N_KEYS = {
 
 document.addEventListener("DOMContentLoaded", init);
 
+function getViewerId() {
+  return document.body?.dataset?.viewerId || "";
+}
+
 function apiBase() {
-  const vid = window.VIEWER_ID;
+  const vid = getViewerId();
   return vid ? `/v/${vid}/api` : "/api";
 }
 
 function viewerPageUrl() {
-  const vid = window.VIEWER_ID;
+  const vid = getViewerId();
   if (!vid) return window.location.href;
   return `${window.location.origin}/v/${vid}/`;
 }
@@ -60,7 +64,7 @@ async function init() {
 }
 
 function setupViewerBanner() {
-  const vid = window.VIEWER_ID;
+  const vid = getViewerId();
   if (!vid || vid === "local") return;
 
   const banner = document.getElementById("viewer-link-banner");
@@ -223,7 +227,7 @@ async function loadData() {
   try {
     const res = await fetch(`${apiBase()}/snapshot/latest`);
     if (!res.ok) {
-      showEmpty(window.VIEWER_ID ? t("empty.noSaveWeb") : t("empty.noSave"));
+      showEmpty(getViewerId() ? t("empty.noSaveWeb") : t("empty.noSave"));
       return;
     }
     state.data = await res.json();

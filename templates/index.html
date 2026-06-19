@@ -7,10 +7,9 @@
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/vendor/chart.umd.min.js" defer></script>
   <script src="/static/i18n.js" defer></script>
-  <script>window.VIEWER_ID = {{ viewer_id|tojson }};</script>
   <script src="/static/app.js" defer></script>
 </head>
-<body>
+<body data-viewer-id="{{ viewer_id }}">
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">
