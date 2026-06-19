@@ -37,17 +37,18 @@ The browser opens automatically at `http://127.0.0.1:5000/v/local/`.
 
 ### Docker (host for other players)
 
-Designed to run **behind nginx Proxy Manager** — the container port is not published publicly by default.
+Runs behind **nginx Proxy Manager**. By default the container publishes port **5000** on the host so NPM can forward to `http://<docker-host>:5000` (e.g. `http://172.16.10.20:5000`).
 
 ```powershell
 docker compose up -d --build
 ```
 
-1. Attach the `viewer` service to your NPM Docker network (see `docker-compose.yml` comments).
-2. In NPM: new Proxy Host → forward to `viewer:5000`, enable SSL.
-3. Open your public URL → **Create my viewer**
-4. Save the personal link (bookmark) — **without the link, data cannot be recovered** (no login)
-5. Import backups in the browser
+1. In NPM: Proxy Host → `http://<docker-host-ip>:5000`, enable SSL, Force SSL.
+2. Open your public URL → **Create my viewer**
+3. Save the personal link (bookmark) — **without the link, data cannot be recovered** (no login)
+4. Import backups in the browser
+
+**Alternative:** If NPM runs on the **same Docker host**, you can remove the `ports` mapping, attach the `viewer` service to the NPM network (see `docker-compose.yml` comments), and proxy to `http://viewer:5000` instead.
 
 Data is stored in the Docker volume `viewer-data` (`/data/viewers/<id>.db`).
 
@@ -57,13 +58,6 @@ docker compose logs -f
 
 # Stop
 docker compose down
-```
-
-For local Docker testing without NPM, temporarily add to `docker-compose.yml`:
-
-```yaml
-ports:
-  - "5000:5000"
 ```
 
 ### More options
@@ -158,7 +152,7 @@ location / {
 }
 ```
 
-Do **not** expose port `5000` publicly — only NPM should reach the container.
+Bind port `5000` only on your internal network (firewall), not on the public internet — NPM terminates TLS and proxies internally.
 
 ## Language / i18n
 

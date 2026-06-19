@@ -1,8 +1,8 @@
 services:
   viewer:
     build: .
-    expose:
-      - "5000"
+    ports:
+      - "5000:5000"
     environment:
       DATA_DIR: /data
       TRUST_PROXY: "1"
