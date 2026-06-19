@@ -3,20 +3,6 @@
 
 $ErrorActionPreference = "Stop"
 
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$BashScript = Join-Path $ScriptDir "deploy.sh"
-
-if (Get-Command bash -ErrorAction SilentlyContinue) {
-    & bash $BashScript
-    exit $LASTEXITCODE
-}
-
-$DeployHost = if ($env:DEPLOY_HOST) { $env:DEPLOY_HOST } else { "root@10.0.0.5" }
-$DeployDir = if ($env:DEPLOY_DIR) { $env:DEPLOY_DIR } else { "/opt/apps/Idle-Fantasy-Save-Viewer" }
-$HealthUrl = if ($env:DEPLOY_HEALTH_URL) { $env:DEPLOY_HEALTH_URL } else { "http://127.0.0.1:5000/" }
-$HealthRetries = if ($env:DEPLOY_HEALTH_RETRIES) { [int]$env:DEPLOY_HEALTH_RETRIES } else { 20 }
-$HealthInterval = if ($env:DEPLOY_HEALTH_INTERVAL) { [int]$env:DEPLOY_HEALTH_INTERVAL } else { 2 }
-
 function Write-Step([string]$Message) {
     Write-Host "==> $Message"
 }
@@ -29,6 +15,18 @@ function Fail([string]$Message) {
 $RepoRoot = git rev-parse --show-toplevel 2>$null
 if (-not $RepoRoot) { Fail "Not inside a git repository." }
 Set-Location $RepoRoot
+
+# Git Bash on Windows mangles C:\... paths – use a repo-relative script path.
+if (Get-Command bash -ErrorAction SilentlyContinue) {
+    & bash "./scripts/deploy.sh"
+    exit $LASTEXITCODE
+}
+
+$DeployHost = if ($env:DEPLOY_HOST) { $env:DEPLOY_HOST } else { "root@10.0.0.5" }
+$DeployDir = if ($env:DEPLOY_DIR) { $env:DEPLOY_DIR } else { "/opt/apps/Idle-Fantasy-Save-Viewer" }
+$HealthUrl = if ($env:DEPLOY_HEALTH_URL) { $env:DEPLOY_HEALTH_URL } else { "http://127.0.0.1:5000/" }
+$HealthRetries = if ($env:DEPLOY_HEALTH_RETRIES) { [int]$env:DEPLOY_HEALTH_RETRIES } else { 20 }
+$HealthInterval = if ($env:DEPLOY_HEALTH_INTERVAL) { [int]$env:DEPLOY_HEALTH_INTERVAL } else { 2 }
 
 $Branch = git rev-parse --abbrev-ref HEAD
 if ($Branch -eq "HEAD") { Fail "Detached HEAD – checkout a branch before deploying." }
