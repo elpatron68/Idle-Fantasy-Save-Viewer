@@ -499,6 +499,20 @@ def list_goals_structured(db_path: Path | str = DEFAULT_DB) -> dict[str, Any]:
         if goal["completed_at"]:
             groups_map[gid]["completed"] += 1
 
+    empty_groups = conn.execute(
+        "SELECT id, name FROM goal_groups ORDER BY created_at ASC, id ASC"
+    ).fetchall()
+    for row in empty_groups:
+        gid = row["id"]
+        if gid not in groups_map:
+            groups_map[gid] = {
+                "id": gid,
+                "name": row["name"],
+                "total": 0,
+                "completed": 0,
+                "goals": [],
+            }
+
     conn.close()
     return {
         "groups": list(groups_map.values()),
