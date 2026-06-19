@@ -16,8 +16,10 @@ $RepoRoot = git rev-parse --show-toplevel 2>$null
 if (-not $RepoRoot) { Fail "Not inside a git repository." }
 Set-Location $RepoRoot
 
-# Git Bash on Windows mangles C:\... paths – use a repo-relative script path.
-if (Get-Command bash -ErrorAction SilentlyContinue) {
+# On Windows use native OpenSSH (same client as interactive "ssh" in PowerShell).
+# Git Bash ships its own ssh/known_hosts and breaks host key verification.
+$IsWindows = ($env:OS -match "Windows") -or ($PSVersionTable.PSPlatform -eq "Win32NT")
+if (-not $IsWindows -and (Get-Command bash -ErrorAction SilentlyContinue)) {
     & bash "./scripts/deploy.sh"
     exit $LASTEXITCODE
 }
@@ -27,6 +29,7 @@ $DeployDir = if ($env:DEPLOY_DIR) { $env:DEPLOY_DIR } else { "/opt/apps/Idle-Fan
 $HealthUrl = if ($env:DEPLOY_HEALTH_URL) { $env:DEPLOY_HEALTH_URL } else { "http://127.0.0.1:5000/" }
 $HealthRetries = if ($env:DEPLOY_HEALTH_RETRIES) { [int]$env:DEPLOY_HEALTH_RETRIES } else { 20 }
 $HealthInterval = if ($env:DEPLOY_HEALTH_INTERVAL) { [int]$env:DEPLOY_HEALTH_INTERVAL } else { 2 }
+$SshOpts = @("-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=accept-new")
 
 $Branch = git rev-parse --abbrev-ref HEAD
 if ($Branch -eq "HEAD") { Fail "Detached HEAD – checkout a branch before deploying." }
@@ -44,15 +47,6 @@ git push origin $Branch
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Step "Deploying to ${DeployHost}:${DeployDir}"
-
-$RemoteArgs = @(
-    $DeployDir,
-    $Branch,
-    $LocalSha,
-    $HealthUrl,
-    [string]$HealthRetries,
-    [string]$HealthInterval
-) -join " "
 
 $RemoteScript = @'
 set -euo pipefail
@@ -124,10 +118,13 @@ info "Service status:"
 docker compose ps
 '@
 
-$EncodedScript = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($RemoteScript))
-$SshCommand = "echo $EncodedScript | base64 -d | bash -s -- $RemoteArgs"
-
-ssh -o BatchMode=yes $DeployHost $SshCommand
+$RemoteScript | & ssh @SshOpts $DeployHost bash -s -- `
+    $DeployDir `
+    $Branch `
+    $LocalSha `
+    $HealthUrl `
+    "$HealthRetries" `
+    "$HealthInterval"
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Step "Deployment finished successfully."

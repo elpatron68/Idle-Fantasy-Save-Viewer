@@ -9,6 +9,7 @@ REMOTE_DIR="${DEPLOY_DIR:-/opt/apps/Idle-Fantasy-Save-Viewer}"
 HEALTH_URL="${DEPLOY_HEALTH_URL:-http://127.0.0.1:5000/}"
 HEALTH_RETRIES="${DEPLOY_HEALTH_RETRIES:-20}"
 HEALTH_INTERVAL="${DEPLOY_HEALTH_INTERVAL:-2}"
+SSH_OPTS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new)
 
 info() { printf '==> %s\n' "$*"; }
 err() { printf 'ERROR: %s\n' "$*" >&2; }
@@ -52,7 +53,7 @@ REMOTE_SHA="$(git rev-parse HEAD)"
 
 info "Deploying to $REMOTE_HOST:$REMOTE_DIR"
 
-ssh -o BatchMode=yes "$REMOTE_HOST" bash -s -- \
+ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" bash -s -- \
   "$REMOTE_DIR" \
   "$BRANCH" \
   "$REMOTE_SHA" \
