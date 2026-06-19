@@ -5,7 +5,7 @@ set -euo pipefail
 REMOTE_DIR="$1"
 BRANCH="$2"
 EXPECTED_SHA="$3"
-HEALTH_URL="$4"
+COMPOSE_SERVICE="$4"
 HEALTH_RETRIES="$5"
 HEALTH_INTERVAL="$6"
 
@@ -14,7 +14,6 @@ die() { printf 'ERROR: [remote] %s\n' "$*" >&2; exit 1; }
 
 command -v docker >/dev/null 2>&1 || die "docker not found on remote host"
 docker compose version >/dev/null 2>&1 || die "docker compose not available on remote host"
-command -v curl >/dev/null 2>&1 || die "curl not found on remote host"
 
 [[ -d "$REMOTE_DIR/.git" ]] || die "Directory is not a git repo: $REMOTE_DIR"
 
@@ -44,21 +43,38 @@ fi
 info "Rebuilding and starting containers…"
 docker compose up -d --build --remove-orphans
 
-info "Waiting for health check ($HEALTH_URL)…"
-ok=0
-for ((i = 1; i <= HEALTH_RETRIES; i++)); do
-  if curl -fsS -o /dev/null "$HEALTH_URL" 2>/dev/null; then
-    ok=1
-    break
-  fi
-  sleep "$HEALTH_INTERVAL"
-done
+wait_for_docker_health() {
+  info "Waiting for Docker health check (service: $COMPOSE_SERVICE)…"
+  local cid=""
+  local status="starting"
 
-if [[ "$ok" -ne 1 ]]; then
-  die "Health check failed after $((HEALTH_RETRIES * HEALTH_INTERVAL))s."
-fi
+  for ((i = 1; i <= HEALTH_RETRIES; i++)); do
+    cid="$(docker compose ps -q "$COMPOSE_SERVICE" 2>/dev/null | head -1)"
+    if [[ -z "$cid" ]]; then
+      status="no container"
+      sleep "$HEALTH_INTERVAL"
+      continue
+    fi
 
-info "Health check OK"
+    status="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid")"
+
+    case "$status" in
+      healthy)
+        info "Docker health check OK"
+        return 0
+        ;;
+      unhealthy)
+        die "Docker health check reported unhealthy."
+        ;;
+    esac
+
+    sleep "$HEALTH_INTERVAL"
+  done
+
+  die "Docker health check did not become healthy after $((HEALTH_RETRIES * HEALTH_INTERVAL))s (last status: $status)."
+}
+
+wait_for_docker_health
 
 info "Pruning stopped containers…"
 docker container prune -f >/dev/null

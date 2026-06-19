@@ -8,8 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 REMOTE_HOST="${DEPLOY_HOST:-root@10.0.0.5}"
 REMOTE_DIR="${DEPLOY_DIR:-/opt/apps/Idle-Fantasy-Save-Viewer}"
-HEALTH_URL="${DEPLOY_HEALTH_URL:-http://127.0.0.1:5000/}"
-HEALTH_RETRIES="${DEPLOY_HEALTH_RETRIES:-20}"
+COMPOSE_SERVICE="${DEPLOY_SERVICE:-viewer}"
+HEALTH_RETRIES="${DEPLOY_HEALTH_RETRIES:-30}"
 HEALTH_INTERVAL="${DEPLOY_HEALTH_INTERVAL:-2}"
 SSH_OPTS=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new)
 
@@ -57,7 +57,7 @@ ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" bash -s -- \
   "$REMOTE_DIR" \
   "$BRANCH" \
   "$LOCAL_SHA" \
-  "$HEALTH_URL" \
+  "$COMPOSE_SERVICE" \
   "$HEALTH_RETRIES" \
   "$HEALTH_INTERVAL" < "$SCRIPT_DIR/deploy-remote.sh"
 
