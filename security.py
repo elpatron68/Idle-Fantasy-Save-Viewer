@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 
+from urllib.parse import urlparse
+
 from flask import Flask, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -34,6 +36,7 @@ def configure_app(flask_app: Flask) -> None:
             x_for=1,
             x_proto=1,
             x_host=1,
+            x_port=1,
         )
 
     limiter.init_app(flask_app)
@@ -56,7 +59,14 @@ def configure_app(flask_app: Flask) -> None:
 
 def external_base_url() -> str:
     """Build public base URL (respects reverse proxy and PREFERRED_URL_SCHEME)."""
-    preferred = os.environ.get("PREFERRED_URL_SCHEME", "").strip()
-    if preferred:
-        return f"{preferred}://{request.host}"
-    return request.host_url.rstrip("/")
+    host_url = request.host_url.rstrip("/")
+    preferred = os.environ.get("PREFERRED_URL_SCHEME", "").strip().lower()
+    if not preferred:
+        return host_url
+
+    # Use netloc from host_url (honours ProxyFix / X-Forwarded-Host), not request.host
+    # alone, which can still include the internal upstream port behind a reverse proxy.
+    netloc = urlparse(host_url).netloc
+    if not netloc:
+        netloc = request.host
+    return f"{preferred}://{netloc}"
