@@ -9,7 +9,7 @@ A web viewer for backups of the Android game **Idle Fantasy**. Parses `fantasyid
 - **SQLite history** — import multiple backups, compare snapshots, coins/level charts
 - **Import** via CLI or browser upload
 - **Multi-user** without login — each player gets their own viewer via a secret link
-- **Docker** — ready to run on a server
+- **Docker** — ready to run behind nginx Proxy Manager
 - **i18n** — English as default/fallback, German optional; automatic browser language or manual selection in the sidebar
 
 ## Requirements
@@ -37,15 +37,17 @@ The browser opens automatically at `http://127.0.0.1:5000/v/local/`.
 
 ### Docker (host for other players)
 
+Designed to run **behind nginx Proxy Manager** — the container port is not published publicly by default.
+
 ```powershell
 docker compose up -d --build
 ```
 
-The viewer is then available at `http://localhost:5000`:
-
-1. Landing page → **Create my viewer**
-2. Save the personal link (bookmark) — **without the link, data cannot be recovered** (no login)
-3. Import backups in the browser
+1. Attach the `viewer` service to your NPM Docker network (see `docker-compose.yml` comments).
+2. In NPM: new Proxy Host → forward to `viewer:5000`, enable SSL.
+3. Open your public URL → **Create my viewer**
+4. Save the personal link (bookmark) — **without the link, data cannot be recovered** (no login)
+5. Import backups in the browser
 
 Data is stored in the Docker volume `viewer-data` (`/data/viewers/<id>.db`).
 
@@ -57,7 +59,12 @@ docker compose logs -f
 docker compose down
 ```
 
-The `DATA_DIR` environment variable (default in Docker: `/data`) sets the storage location.
+For local Docker testing without NPM, temporarily add to `docker-compose.yml`:
+
+```yaml
+ports:
+  - "5000:5000"
+```
 
 ### More options
 
@@ -92,7 +99,66 @@ Each viewer has its own SQLite database at `data/viewers/<viewer_id>.db`.
 
 The `viewer_id` is a random URL-safe token. Anyone with the link has access — there is no password and no recovery if the link is lost.
 
-Local CLI usage defaults to the `local` viewer (`/v/local/`).
+Local CLI usage defaults to the `local` viewer (`/v/local/`). In Docker/production, `/v/local/` is disabled (`DISABLE_LOCAL_VIEWER=1`).
+
+## Security
+
+The app uses **secret-link access** (no accounts). Suitable for sharing with trusted players when deployed behind HTTPS.
+
+### Built-in protections
+
+| Measure | Default (Docker) |
+|---------|------------------|
+| Upload size limit | 10 MB (`MAX_UPLOAD_MB`) |
+| Viewer creation rate limit | 5 / minute per IP |
+| Import rate limit | 20 / hour per IP |
+| Path-based import | **Removed** (upload only) |
+| `/v/local/` in production | Disabled |
+| Reverse-proxy headers | `TRUST_PROXY=1` (ProxyFix) |
+| HTTPS links | `PREFERRED_URL_SCHEME=https` |
+| Security headers | CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy` |
+| Chart.js | Bundled locally (no CDN) |
+| Container user | Non-root (`appuser`, uid 1000) |
+
+### Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATA_DIR` | `./data` | SQLite and upload storage |
+| `TRUST_PROXY` | `1` in Docker | Trust `X-Forwarded-*` from nginx |
+| `PREFERRED_URL_SCHEME` | `https` in Docker | Scheme for generated viewer URLs |
+| `DISABLE_LOCAL_VIEWER` | `1` in Docker | Block predictable `/v/local/` |
+| `MAX_UPLOAD_MB` | `10` | Max upload body size |
+| `RATE_LIMIT_VIEWER_CREATE` | `5 per minute` | Limit for `POST /api/viewers` |
+| `RATE_LIMIT_IMPORT` | `20 per hour` | Limit for `POST .../import` |
+
+### nginx Proxy Manager
+
+Recommended NPM settings:
+
+- **SSL** with Force SSL
+- **Block Common Exploits** enabled
+- Forward headers: `X-Forwarded-For`, `X-Forwarded-Proto`, `X-Real-IP` (default)
+- Optional **Advanced** config:
+
+```nginx
+client_max_body_size 10m;
+
+limit_req_zone $binary_remote_addr zone=viewer_create:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=viewer_api:10m rate=30r/s;
+
+location /api/viewers {
+    limit_req zone=viewer_create burst=2 nodelay;
+    proxy_pass http://viewer:5000;
+}
+
+location / {
+    limit_req zone=viewer_api burst=50 nodelay;
+    proxy_pass http://viewer:5000;
+}
+```
+
+Do **not** expose port `5000` publicly — only NPM should reach the container.
 
 ## Language / i18n
 
@@ -107,6 +173,7 @@ Local CLI usage defaults to the `local` viewer (`/v/local/`).
 ```
 idle-fantasy-viewer/
 ├── app.py              # Flask server and CLI
+├── security.py         # Rate limits, headers, proxy trust
 ├── viewers.py          # Viewer IDs and isolation
 ├── parser.py           # Parse and normalize saves
 ├── categories.py       # Item categories (heuristics)
@@ -115,6 +182,7 @@ idle-fantasy-viewer/
 ├── docker-compose.yml
 ├── requirements.txt
 ├── static/
+│   ├── vendor/           # chart.umd.min.js (bundled)
 │   ├── i18n.js           # Locale loading, t(), en fallback
 │   ├── locales/          # en.json, de.json
 │   ├── landing.js        # Landing page
@@ -128,12 +196,12 @@ idle-fantasy-viewer/
 | Endpoint | Description |
 |----------|-------------|
 | `GET /` | Landing page |
-| `POST /api/viewers` | Create a new viewer |
+| `POST /api/viewers` | Create a new viewer (rate limited) |
 | `GET /v/<id>/api/snapshot/latest` | Latest save for the viewer |
 | `GET /v/<id>/api/snapshots` | All snapshots |
 | `GET /v/<id>/api/snapshots/<older>/diff/<newer>` | Compare two snapshots |
 | `GET /v/<id>/api/timeline` | Time series for charts |
-| `POST /v/<id>/api/import` | JSON upload |
+| `POST /v/<id>/api/import` | JSON file upload (`.json` only, rate limited) |
 
 ## Save format
 

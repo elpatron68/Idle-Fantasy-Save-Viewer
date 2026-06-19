@@ -23,6 +23,14 @@ from db import (
     get_connection,
     timeline,
 )
+from security import (
+    IMPORT_LIMIT,
+    VIEWER_CREATE_LIMIT,
+    configure_app,
+    external_base_url,
+    limiter,
+    local_viewer_disabled,
+)
 from viewers import (
     LOCAL_VIEWER_ID,
     create_viewer,
@@ -32,6 +40,7 @@ from viewers import (
 )
 
 app = Flask(__name__)
+configure_app(app)
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", Path(__file__).parent / "data"))
 DB_PATH = DEFAULT_DB
@@ -42,11 +51,12 @@ def get_data_dir() -> Path:
 
 
 def _viewer_url(viewer_id: str) -> str:
-    base = request.host_url.rstrip("/")
-    return f"{base}/v/{viewer_id}/"
+    return f"{external_base_url()}/v/{viewer_id}/"
 
 
 def _resolve_viewer_db(viewer_id: str) -> Path:
+    if viewer_id == LOCAL_VIEWER_ID and local_viewer_disabled():
+        abort(404)
     if not is_valid_viewer_id(viewer_id):
         abort(404)
     db_path = viewer_db_path(viewer_id, get_data_dir())
@@ -93,8 +103,8 @@ def api_diff(viewer_id: str, older_id: int, newer_id: int):
     db_path = _resolve_viewer_db(viewer_id)
     try:
         return jsonify(diff_snapshots(older_id, newer_id, db_path=db_path))
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 404
+    except ValueError:
+        return jsonify({"error": "Snapshot not found"}), 404
 
 
 @viewer_bp.route("/api/timeline")
@@ -104,34 +114,28 @@ def api_timeline(viewer_id: str):
 
 
 @viewer_bp.route("/api/import", methods=["POST"])
+@limiter.limit(IMPORT_LIMIT)
 def api_import(viewer_id: str):
     db_path = _resolve_viewer_db(viewer_id)
 
-    if "file" in request.files:
-        f = request.files["file"]
-        if not f.filename:
-            return jsonify({"error": "No file selected"}), 400
-        upload_dir = get_data_dir() / "uploads"
-        upload_dir.mkdir(parents=True, exist_ok=True)
-        safe_name = secure_filename(f.filename) or "upload.json"
-        tmp = upload_dir / f"_upload_{viewer_id}_{safe_name}"
-        f.save(tmp)
-        try:
-            result = import_save(tmp, db_path=db_path)
-        finally:
-            tmp.unlink(missing_ok=True)
-        if result.get("error"):
-            return jsonify(result), 422
-        return jsonify(result)
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "No file selected"}), 400
 
-    body = request.get_json(silent=True) or {}
-    path = body.get("path")
-    if not path:
-        return jsonify({"error": "Provide file upload or JSON body with path"}), 400
-    path = Path(path)
-    if not path.exists():
-        return jsonify({"error": f"File not found: {path}"}), 404
-    result = import_save(path, db_path=db_path)
+    upload_dir = get_data_dir() / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    safe_name = secure_filename(f.filename) or "upload.json"
+    if not safe_name.lower().endswith(".json"):
+        return jsonify({"error": "Only .json files are accepted"}), 400
+
+    tmp = upload_dir / f"_upload_{viewer_id}_{safe_name}"
+    f.save(tmp)
+    try:
+        result = import_save(tmp, db_path=db_path)
+    finally:
+        tmp.unlink(missing_ok=True)
     if result.get("error"):
         return jsonify(result), 422
     return jsonify(result)
@@ -146,12 +150,23 @@ def landing():
 
 
 @app.post("/api/viewers")
+@limiter.limit(VIEWER_CREATE_LIMIT)
 def api_create_viewer():
     viewer_id = create_viewer(get_data_dir())
     return jsonify({
         "viewer_id": viewer_id,
         "url": _viewer_url(viewer_id),
     }), 201
+
+
+@app.errorhandler(413)
+def request_too_large(_exc):
+    return jsonify({"error": "Upload too large"}), 413
+
+
+@app.errorhandler(429)
+def rate_limit_exceeded(_exc):
+    return jsonify({"error": "Too many requests"}), 429
 
 
 def _print_import_report(result: dict) -> None:
