@@ -38,7 +38,7 @@ DB_PATH = DEFAULT_DB
 
 
 def get_data_dir() -> Path:
-    return DATA_DIR
+    return Path(os.environ.get("DATA_DIR", Path(__file__).parent / "data"))
 
 
 def _viewer_url(viewer_id: str) -> str:

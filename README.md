@@ -1,21 +1,21 @@
 # Idle Fantasy Save Viewer
 
-Lokaler Web-Viewer für Backups des Android-Spiels **Idle Fantasy**. Parst `fantasyidler_save.json`, zeigt Skills, Inventar, Quests und Kampfstatistiken in einem dunklen Dashboard – inklusive Filter, Item-Gruppierung und Verlaufsvergleich über SQLite.
+A web viewer for backups of the Android game **Idle Fantasy**. Parses `fantasyidler_save.json` and displays skills, inventory, quests, and combat stats in a dark dashboard — with filters, item grouping, and history comparison via SQLite.
 
 ## Features
 
-- **Dashboard** mit Charakter, Coins, Skills, Inventar, Ausrüstung, Quests und Kampf
-- **Inventar** mit Textsuche, Kategorie-Filtern, Sortierung und gruppierten Tabellen
-- **SQLite-Verlauf** – mehrere Backups importieren, Snapshots vergleichen, Coins-/Level-Charts
-- **Import** per CLI oder Upload im Browser
-- **Multi-User** ohne Login – jeder Spieler erhält einen eigenen Viewer über einen geheimen Link
-- **Docker** – für Betrieb auf einem Server
-- **i18n** – Englisch als Standard/Fallback, Deutsch optional; automatische Browser-Sprache oder manuelle Auswahl in der Sidebar
+- **Dashboard** with character, coins, skills, inventory, equipment, quests, and combat
+- **Inventory** with text search, category filters, sorting, and grouped tables
+- **SQLite history** — import multiple backups, compare snapshots, coins/level charts
+- **Import** via CLI or browser upload
+- **Multi-user** without login — each player gets their own viewer via a secret link
+- **Docker** — ready to run on a server
+- **i18n** — English as default/fallback, German optional; automatic browser language or manual selection in the sidebar
 
-## Voraussetzungen
+## Requirements
 
 - Python 3.11+
-- Ein Idle-Fantasy-Backup (`fantasyidler_save.json` vom Spielexport)
+- An Idle Fantasy backup (`fantasyidler_save.json` from the in-game export)
 
 ## Installation
 
@@ -25,136 +25,136 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Nutzung
+## Usage
 
-### Server starten und Backup importieren
+### Start server and import a backup
 
 ```powershell
 python app.py fantasyidler_save.json
 ```
 
-Der Browser öffnet sich automatisch unter `http://127.0.0.1:5000/v/local/`.
+The browser opens automatically at `http://127.0.0.1:5000/v/local/`.
 
-### Docker (für andere Spieler hosten)
+### Docker (host for other players)
 
 ```powershell
 docker compose up -d --build
 ```
 
-Der Viewer ist dann unter `http://localhost:5000` erreichbar:
+The viewer is then available at `http://localhost:5000`:
 
-1. Startseite → **Meinen Viewer erstellen**
-2. Persönlichen Link speichern (Bookmark) – **ohne Link sind die Daten nicht wiederherstellbar** (kein Login)
-3. Backups im Browser importieren
+1. Landing page → **Create my viewer**
+2. Save the personal link (bookmark) — **without the link, data cannot be recovered** (no login)
+3. Import backups in the browser
 
-Daten liegen im Docker-Volume `viewer-data` (`/data/viewers/<id>.db`).
+Data is stored in the Docker volume `viewer-data` (`/data/viewers/<id>.db`).
 
 ```powershell
 # Logs
 docker compose logs -f
 
-# Stoppen
+# Stop
 docker compose down
 ```
 
-Umgebungsvariable `DATA_DIR` (Standard in Docker: `/data`) legt den Speicherort fest.
+The `DATA_DIR` environment variable (default in Docker: `/data`) sets the storage location.
 
-### Weitere Optionen
+### More options
 
 ```powershell
-# Nur importieren, kein Server
+# Import only, no server
 python app.py --import backup2.json
 
-# Anderen Port, Browser nicht öffnen
+# Different port, don't open browser
 python app.py fantasyidler_save.json --port 8080 --no-browser
 
-# Eigene SQLite-Datenbank (Legacy, ein Datei-Modus)
-python app.py --db data\meine_history.db fantasyidler_save.json
+# Custom SQLite database (legacy single-file mode)
+python app.py --db data\my_history.db fantasyidler_save.json
 
-# Server für Netzwerk/Docker binden
+# Bind server for network/Docker
 python app.py --host 0.0.0.0 --no-browser
 ```
 
-### Backups im Browser importieren
+### Import backups in the browser
 
-Sidebar unten: **Backup importieren** – wählt eine `.json`-Datei. Duplikate (gleicher Datei-Hash) werden übersprungen.
+Sidebar at the bottom: **Import backup** — selects a `.json` file. Duplicates (same file hash) are skipped.
 
-## Multi-User (ohne Login)
+## Multi-user (no login)
 
-Jeder Viewer hat eine eigene SQLite-Datenbank unter `data/viewers/<viewer_id>.db`.
+Each viewer has its own SQLite database at `data/viewers/<viewer_id>.db`.
 
-| Route | Beschreibung |
-|-------|--------------|
-| `GET /` | Startseite – neuen Viewer anlegen |
-| `POST /api/viewers` | Erstellt Viewer, liefert `{ viewer_id, url }` |
-| `GET /v/<viewer_id>/` | Persönliches Dashboard |
-| `GET /v/<viewer_id>/api/...` | API für diesen Viewer |
+| Route | Description |
+|-------|-------------|
+| `GET /` | Landing page — create a new viewer |
+| `POST /api/viewers` | Creates a viewer, returns `{ viewer_id, url }` |
+| `GET /v/<viewer_id>/` | Personal dashboard |
+| `GET /v/<viewer_id>/api/...` | API for this viewer |
 
-Die `viewer_id` ist ein zufälliges Token (URL-safe). Wer den Link kennt, hat Zugriff – es gibt kein Passwort und keine Wiederherstellung bei verlorenem Link.
+The `viewer_id` is a random URL-safe token. Anyone with the link has access — there is no password and no recovery if the link is lost.
 
-Lokale CLI-Nutzung nutzt standardmäßig den Viewer `local` (`/v/local/`).
+Local CLI usage defaults to the `local` viewer (`/v/local/`).
 
-## Sprache / i18n
+## Language / i18n
 
-- **Standard:** Englisch (`en`) – auch Fallback, wenn ein Übersetzungsschlüssel fehlt
-- **Automatisch:** Sidebar → Sprache → *Automatisch (Browser)* – nutzt `navigator.language` (`de` → Deutsch, sonst Englisch)
-- **Manuell:** *English* oder *Deutsch* – Einstellung wird in `localStorage` gespeichert
-- Übersetzungsdateien: `static/locales/en.json`, `static/locales/de.json`
-- Import-Warnungen vom Server sind auf Englisch codiert (`code` + `params`); die UI übersetzt sie clientseitig
+- **Default:** English (`en`) — also the fallback when a translation key is missing
+- **Automatic:** Sidebar → Language → *Auto (browser)* — uses `navigator.language` (`de` → German, otherwise English)
+- **Manual:** *English* or *Deutsch* — preference is stored in `localStorage`
+- Translation files: `static/locales/en.json`, `static/locales/de.json`
+- Import warnings from the server are coded in English (`code` + `params`); the UI translates them client-side
 
-## Projektstruktur
+## Project structure
 
 ```
 idle-fantasy-viewer/
-├── app.py              # Flask-Server und CLI
-├── viewers.py          # Viewer-IDs und Isolation
-├── parser.py           # Save parsen und normalisieren
-├── categories.py       # Item-Kategorien (Heuristiken)
-├── db.py               # SQLite Snapshots, Diff, Timeline
+├── app.py              # Flask server and CLI
+├── viewers.py          # Viewer IDs and isolation
+├── parser.py           # Parse and normalize saves
+├── categories.py       # Item categories (heuristics)
+├── db.py               # SQLite snapshots, diff, timeline
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
 ├── static/
-│   ├── i18n.js           # Locale-Laden, t(), Fallback en
+│   ├── i18n.js           # Locale loading, t(), en fallback
 │   ├── locales/          # en.json, de.json
-│   ├── landing.js        # Startseite
-│   └── app.js            # Dashboard-UI
+│   ├── landing.js        # Landing page
+│   └── app.js            # Dashboard UI
 ├── templates/          # HTML
 └── data/               # viewers/*.db (gitignored)
 ```
 
 ## API
 
-| Endpunkt | Beschreibung |
-|----------|--------------|
-| `GET /` | Startseite |
-| `POST /api/viewers` | Neuen Viewer erstellen |
-| `GET /v/<id>/api/snapshot/latest` | Neuester Save des Viewers |
-| `GET /v/<id>/api/snapshots` | Alle Snapshots |
-| `GET /v/<id>/api/snapshots/<älter>/diff/<neuer>` | Vergleich |
-| `GET /v/<id>/api/timeline` | Zeitreihe für Charts |
-| `POST /v/<id>/api/import` | JSON-Upload |
+| Endpoint | Description |
+|----------|-------------|
+| `GET /` | Landing page |
+| `POST /api/viewers` | Create a new viewer |
+| `GET /v/<id>/api/snapshot/latest` | Latest save for the viewer |
+| `GET /v/<id>/api/snapshots` | All snapshots |
+| `GET /v/<id>/api/snapshots/<older>/diff/<newer>` | Compare two snapshots |
+| `GET /v/<id>/api/timeline` | Time series for charts |
+| `POST /v/<id>/api/import` | JSON upload |
 
-## Save-Format
+## Save format
 
-Die Backup-Datei enthält u. a. doppelt JSON-kodierte Felder (`skillLevels`, `inventory`, `flags`, …). Der Parser löst diese automatisch auf.
+The backup file contains doubly JSON-encoded fields (`skillLevels`, `inventory`, `flags`, …). The parser decodes these automatically.
 
-## Hinweise
+## Notes
 
-- `data/viewers/` speichert pro Spieler eine SQLite-Datei; nicht mit ins Repo committen (steht in `.gitignore`).
-- Der Viewer ist ein inoffizielles Hilfstool, nicht mit dem Spiel verbunden.
+- `data/viewers/` stores one SQLite file per player; do not commit to the repo (listed in `.gitignore`).
+- This viewer is an unofficial helper tool, not affiliated with the game.
 
-## Robustheit bei Spiel-Updates
+## Robustness for game updates
 
-Das Spiel wird aktiv weiterentwickelt – Save-Dateien können neue Felder, Items oder Quest-Typen enthalten. Der Viewer:
+The game is actively developed — save files may contain new fields, items, or quest types. The viewer:
 
-- **Parst tolerant:** unbekannte Top-Level-Felder werden in `extensions` durchgereicht und als Info gemeldet
-- **Überspringt defekte Einträge** (z. B. einzelne Quests/Sessions) statt abzubrechen
-- **Meldet Warnungen** bei fehlenden Kernfeldern, nicht lesbarem JSON in verschachtelten Feldern oder ungültigen Zahlen
-- **Blockiert den Import** nur bei schwerwiegenden Problemen (keine gültige JSON-Datei, leeres Objekt)
+- **Parses tolerantly:** unknown top-level fields are passed through in `extensions` and reported as info
+- **Skips broken entries** (e.g. individual quests/sessions) instead of aborting
+- **Reports warnings** for missing core fields, unreadable JSON in nested fields, or invalid numbers
+- **Blocks import** only for serious issues (invalid JSON file, empty object)
 
-Nach dem Import erscheinen Fehler und Warnungen als Banner im Dashboard; in der CLI unter stderr.
+After import, errors and warnings appear as a banner in the dashboard; in the CLI on stderr.
 
-## Lizenz
+## License
 
-Privates Projekt – Nutzung auf eigene Verantwortung.
+Private project — use at your own risk.
