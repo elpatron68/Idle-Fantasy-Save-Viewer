@@ -14,6 +14,12 @@ services:
     volumes:
       - viewer-data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     # Attach to your nginx Proxy Manager network (uncomment and set name):
     # networks:
     #   - npm
