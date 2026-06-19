@@ -18,8 +18,8 @@ Set-Location $RepoRoot
 
 # On Windows use native OpenSSH (same client as interactive "ssh" in PowerShell).
 # Git Bash ships its own ssh/known_hosts and breaks host key verification.
-$IsWindows = ($env:OS -match "Windows") -or ($PSVersionTable.PSPlatform -eq "Win32NT")
-if (-not $IsWindows -and (Get-Command bash -ErrorAction SilentlyContinue)) {
+$OnWindows = ($env:OS -match "Windows") -or ($PSVersionTable.PSPlatform -eq "Win32NT")
+if (-not $OnWindows -and (Get-Command bash -ErrorAction SilentlyContinue)) {
     & bash "./scripts/deploy.sh"
     exit $LASTEXITCODE
 }
