@@ -22,6 +22,7 @@
   },
   "actions": {
     "importBackup": "Backup importieren",
+    "exportViewer": "Viewer exportieren",
     "compare": "Vergleichen",
     "dismiss": "Schließen"
   },
@@ -42,6 +43,13 @@
     "duplicate": "Backup bereits vorhanden (Duplikat).",
     "success": "Importiert: Snapshot #{id}",
     "successWithNotes": "Importiert: Snapshot #{id}\n\n{warnings} Warnung(en), {infos} Hinweis(e) – Details im Dashboard-Banner.",
+    "changesTitle": "Änderungen seit letztem Import",
+    "changesSummary": "Münzen {coins} · Level {level} · {inv} Inventar-Änderungen · {skills} Skill-Änderungen",
+    "questsCompleted": "Story-Quests abgeschlossen",
+    "slayerKills": "Slayer-Kills",
+    "dungeonRuns": "Dungeon-Läufe",
+    "topInventory": "Größte Inventar-Änderungen",
+    "topSkills": "Größte Skill-Änderungen",
     "titleError": "Import-Fehler",
     "titleWarning": "Import-Warnungen",
     "titleInfo": "Import-Hinweise",
@@ -81,7 +89,8 @@
     "coins": "Münzen",
     "totalLevel": "Gesamtlevel",
     "items": "Items",
-    "totalQty": "Gesamtmenge"
+    "totalQty": "Gesamtmenge",
+    "goalsOpen": "Offene Ziele"
   },
   "overview": {
     "character": "Charakter",
@@ -105,7 +114,9 @@
     "sortName": "Nach Name",
     "skill": "Skill",
     "level": "Level",
-    "progress": "Fortschritt"
+    "progress": "Fortschritt",
+    "addGoal": "Ziel hinzufügen",
+    "addGoalFor": "Ziel für {name} hinzufügen"
   },
   "inventory": {
     "search": "Item suchen…",
@@ -162,7 +173,21 @@
     "skillChanges": "Skill-Änderungen ({count})",
     "delta": "Delta",
     "xpDelta": "XP-Delta",
+    "skillLevelChart": "Top-Skills über Zeit",
+    "delete": "Löschen",
+    "deleteSnapshot": "Snapshot löschen",
+    "deleteSnapshotConfirm": "Diesen Snapshot wirklich löschen?",
+    "deleteSnapshotFailed": "Snapshot konnte nicht gelöscht werden",
     "coinsSummary": "Münzen: {delta} · Gesamtlevel: {levelDelta}"
+  },
+  "search": {
+    "global": "Items, Skills und Ziele suchen…",
+    "noResults": "Keine Treffer",
+    "type": {
+      "item": "Item",
+      "skill": "Skill",
+      "goal": "Ziel"
+    }
   },
   "category": {
     "currency": "Währung",
@@ -218,13 +243,28 @@
     "deleteGroupConfirm": "Gruppe „{name}“ löschen? Ziele bleiben ohne Gruppe erhalten.",
     "deleteConfirm": "Dieses Ziel löschen?",
     "clearCompleted": "Erledigte entfernen",
-    "empty": "Noch keine Ziele. Lege Ziele im Inventar-Tab an.",
+    "empty": "Noch keine Ziele. Lege Ziele im Inventar- oder Skills-Tab an.",
     "loadError": "Ziele konnten nicht geladen werden",
     "createFailed": "Ziel konnte nicht angelegt werden",
     "groupCreateFailed": "Gruppe konnte nicht angelegt werden",
-    "modalTitle": "Ziel hinzufügen",
+    "modalTitle": "Item-Ziel hinzufügen",
+    "modalTitleSkill": "Skill-Ziel hinzufügen",
     "cancel": "Abbrechen",
     "targetQty": "Zielmenge",
+    "targetLevel": "Ziel-Level",
+    "mode": "Modus",
+    "modeAbsolute": "Absolut (Gesamtmenge/Level)",
+    "modeRelative": "Relativ (seit Anlegen)",
+    "modeRelativeHint": "Relatives Ziel – Fortschritt seit Anlegen",
+    "typeSkill": "Skill",
+    "currentLevel": "Aktuell: Level {level}",
+    "missing": "Noch {qty} fehlen",
+    "missingShort": "−{qty}",
+    "etaSnapshots": "ca. {n} Import(e)",
+    "hasGoal": "Offenes Ziel",
+    "total": "gesamt",
+    "renameGroup": "Umbenennen",
+    "renameGroupPrompt": "Neuer Gruppenname:",
     "selectGroup": "Gruppe",
     "noGroup": "Keine Gruppe",
     "newGroup": "Neue Gruppe…",

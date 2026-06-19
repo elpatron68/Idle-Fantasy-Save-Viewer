@@ -8,10 +8,14 @@ let state = {
   skills: { search: "", sort: "level", sortAsc: false },
   quests: { tab: "story", filter: "all" },
   goals: { filter: "all", collapsedGroups: new Set(), data: { groups: [], ungrouped: [] } },
+  goalsOverview: null,
   goalModalItem: null,
   history: { olderId: null, newerId: null, diff: null },
   charts: {},
   inventoryTimeline: null,
+  skillTimeline: null,
+  lastImportChanges: null,
+  globalSearch: "",
 };
 
 const CATEGORY_ORDER = [
@@ -69,6 +73,8 @@ async function init() {
   setupViewerBanner();
   setupNav();
   setupUpload();
+  setupExport();
+  setupGlobalSearch();
   setupGoalModal();
   await loadData();
 }
@@ -116,6 +122,8 @@ function setupLanguage() {
     applyStaticI18n();
     resetLocaleDependentPanels();
     if (state.data) renderAll();
+    const gs = document.getElementById("global-search");
+    if (gs) gs.placeholder = t("search.global");
     if (document.getElementById("tab-history").classList.contains("active")) {
       loadHistoryTab();
     }
@@ -128,15 +136,132 @@ function resetLocaleDependentPanels() {
   });
 }
 
+function activateTab(tab) {
+  const btn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+  if (!btn) return;
+  document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+  document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById(`tab-${tab}`).classList.add("active");
+  if (tab === "history") loadHistoryTab();
+  if (tab === "goals") trackEvent("Goals Tab");
+}
+
 function setupNav() {
   document.querySelectorAll(".nav-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
-      if (btn.dataset.tab === "history") loadHistoryTab();
-      if (btn.dataset.tab === "goals") trackEvent("Goals Tab");
+      const tab = btn.dataset.tab;
+      activateTab(tab);
+      history.replaceState(null, "", `#${tab}`);
+    });
+  });
+  const hash = (location.hash || "#overview").slice(1).split("?")[0] || "overview";
+  if (document.querySelector(`.nav-btn[data-tab="${hash}"]`)) activateTab(hash);
+}
+
+function setupExport() {
+  const el = document.getElementById("export-viewer");
+  if (!el) return;
+  el.href = `${apiBase()}/export`;
+  el.addEventListener("click", () => trackEvent("Viewer Export"));
+}
+
+function setupGlobalSearch() {
+  const input = document.getElementById("global-search");
+  if (!input) return;
+  input.placeholder = t("search.global");
+  input.addEventListener("input", (e) => {
+    state.globalSearch = e.target.value;
+    renderGlobalSearchResults();
+  });
+  document.addEventListener("click", (e) => {
+    const wrap = document.querySelector(".global-search-wrap");
+    const results = document.getElementById("global-search-results");
+    if (!wrap || !results || wrap.contains(e.target) || results.contains(e.target)) return;
+    results.hidden = true;
+  });
+}
+
+function collectAllGoals() {
+  const data = state.goals.data || { groups: [], ungrouped: [] };
+  return [
+    ...(data.ungrouped || []),
+    ...(data.groups || []).flatMap((g) => g.goals || []),
+  ];
+}
+
+function collectOpenGoalKeys() {
+  const keys = { items: new Set(), skills: new Set() };
+  for (const goal of collectAllGoals()) {
+    if (goal.completed_at) continue;
+    if (goal.goal_type === "skill") keys.skills.add(goal.skill_key || goal.item_key);
+    else keys.items.add(goal.item_key);
+  }
+  return keys;
+}
+
+function renderGlobalSearchResults() {
+  const el = document.getElementById("global-search-results");
+  const q = state.globalSearch.trim().toLowerCase();
+  if (!el || !q || !state.data) {
+    if (el) el.hidden = true;
+    return;
+  }
+
+  const hits = [];
+  for (const item of state.data.inventory) {
+    if (item.name.toLowerCase().includes(q) || item.key.toLowerCase().includes(q)) {
+      hits.push({ type: "item", tab: "inventory", key: item.key, name: item.name, sub: fmt(item.qty) });
+    }
+  }
+  for (const sk of state.data.skills) {
+    if (sk.name.toLowerCase().includes(q) || sk.key.toLowerCase().includes(q)) {
+      hits.push({ type: "skill", tab: "skills", key: sk.key, name: sk.name, sub: `Lv ${sk.level}` });
+    }
+  }
+  for (const goal of collectAllGoals()) {
+    if (goal.item_name.toLowerCase().includes(q)) {
+      hits.push({
+        type: "goal",
+        tab: "goals",
+        key: String(goal.id),
+        name: goal.item_name,
+        sub: goal.completed_at ? t("goals.done") : t("goals.open"),
+      });
+    }
+  }
+
+  if (!hits.length) {
+    el.hidden = false;
+    el.innerHTML = `<p class="global-search-empty">${esc(t("search.noResults"))}</p>`;
+    return;
+  }
+
+  el.hidden = false;
+  el.innerHTML = hits.slice(0, 15).map((hit) => `
+    <button type="button" class="global-search-hit" data-tab="${esc(hit.tab)}" data-type="${esc(hit.type)}" data-key="${esc(hit.key)}">
+      <span class="global-search-hit-type">${esc(t(`search.type.${hit.type}`))}</span>
+      <span class="global-search-hit-name">${esc(hit.name)}</span>
+      <span class="global-search-hit-sub">${esc(hit.sub)}</span>
+    </button>`).join("");
+
+  el.querySelectorAll(".global-search-hit").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab;
+      const type = btn.dataset.type;
+      const key = btn.dataset.key;
+      activateTab(tab);
+      history.replaceState(null, "", `#${tab}`);
+      if (type === "item") {
+        state.inventory.search = key;
+        renderInventory(state.data);
+      } else if (type === "skill") {
+        state.skills.search = key;
+        renderSkills(state.data);
+      }
+      el.hidden = true;
+      document.getElementById("global-search").value = "";
+      state.globalSearch = "";
     });
   });
 }
@@ -156,6 +281,7 @@ function setupUpload() {
     }
     trackEvent("JSON Upload", { status: result.imported ? "imported" : result.reason || "ok" });
     if (result.imported) {
+      state.lastImportChanges = result.import_changes || null;
       await loadData();
       notifyImportSuccess(result);
       showGoalsCompletedBanner(result);
@@ -238,10 +364,12 @@ function renderImportReport(meta) {
 
 async function loadData() {
   try {
-    const [res] = await Promise.all([
+    const [res, , overviewRes] = await Promise.all([
       fetch(`${apiBase()}/snapshot/latest`),
       loadGoals(),
+      fetch(`${apiBase()}/goals/overview`),
     ]);
+    state.goalsOverview = overviewRes.ok ? await overviewRes.json() : null;
     if (!res.ok) {
       showEmpty(getViewerId() ? t("empty.noSaveWeb") : t("empty.noSave"));
       renderGoals();
@@ -249,6 +377,7 @@ async function loadData() {
     }
     state.data = await res.json();
     state.inventoryTimeline = null;
+    state.skillTimeline = null;
     renderAll();
   } catch (err) {
     showEmpty(t("empty.loadError", { message: err.message }));
@@ -267,6 +396,7 @@ function renderAll() {
   renderHeader(d);
   renderImportReport(d.meta);
   renderOverview(d);
+  bindImportChangesCard();
   renderSkills(d);
   renderInventory(d);
   renderGoals();
@@ -288,7 +418,8 @@ function renderHeader(d) {
     <div class="kpi"><div class="kpi-label">${esc(t("kpi.coins"))}</div><div class="kpi-value">${fmt(m.coins)}</div></div>
     <div class="kpi"><div class="kpi-label">${esc(t("kpi.totalLevel"))}</div><div class="kpi-value">${m.total_level}</div></div>
     <div class="kpi"><div class="kpi-label">${esc(t("kpi.items"))}</div><div class="kpi-value">${m.item_count}</div></div>
-    <div class="kpi"><div class="kpi-label">${esc(t("kpi.totalQty"))}</div><div class="kpi-value">${fmt(m.total_items)}</div></div>`;
+    <div class="kpi"><div class="kpi-label">${esc(t("kpi.totalQty"))}</div><div class="kpi-value">${fmt(m.total_items)}</div></div>
+    ${state.goalsOverview ? `<div class="kpi kpi-goals"><div class="kpi-label">${esc(t("kpi.goalsOpen"))}</div><div class="kpi-value">${state.goalsOverview.open}</div></div>` : ""}`;
 }
 
 function renderOverview(d) {
@@ -311,6 +442,7 @@ function renderOverview(d) {
   ).join("");
 
   document.getElementById("tab-overview").innerHTML = `
+    ${renderImportChangesCard(state.lastImportChanges)}
     <div class="grid-2">
       <div class="card">
         <h3>${esc(t("overview.character"))}</h3>
@@ -346,6 +478,47 @@ function renderOverview(d) {
     </div>`;
 }
 
+function renderImportChangesCard(changes) {
+  if (!changes?.has_previous) return "";
+  const invTop = (changes.top_inventory || []).map((i) =>
+    `<li><span>${esc(i.name)}</span><span class="${i.delta >= 0 ? "delta-pos" : "delta-neg"}">${i.delta >= 0 ? "+" : ""}${fmt(i.delta)}</span></li>`
+  ).join("");
+  const skTop = (changes.top_skills || []).map((s) =>
+    `<li><span>${esc(s.name)}</span><span class="${s.xp_delta >= 0 ? "delta-pos" : "delta-neg"}">+${fmt(s.xp_delta)} XP</span></li>`
+  ).join("");
+
+  return `
+    <div class="card import-changes-card" id="import-changes-card">
+      <div class="import-report-header">
+        <h3>${esc(t("import.changesTitle"))}</h3>
+        <button type="button" class="import-report-dismiss" id="import-changes-dismiss" title="${esc(t("actions.dismiss"))}">×</button>
+      </div>
+      <p class="import-changes-summary">${esc(t("import.changesSummary", {
+        coins: `${changes.coins_delta >= 0 ? "+" : ""}${fmt(changes.coins_delta)}`,
+        level: `${changes.total_level_delta >= 0 ? "+" : ""}${changes.total_level_delta}`,
+        inv: changes.inventory_changes,
+        skills: changes.skill_changes,
+      }))}</p>
+      <ul class="list-compact import-changes-stats">
+        ${changes.quests_completed ? `<li><span>${esc(t("import.questsCompleted"))}</span><span>${changes.quests_completed}</span></li>` : ""}
+        ${changes.slayer_kills_delta ? `<li><span>${esc(t("import.slayerKills"))}</span><span>+${changes.slayer_kills_delta}</span></li>` : ""}
+        ${changes.dungeon_runs_delta ? `<li><span>${esc(t("import.dungeonRuns"))}</span><span>+${changes.dungeon_runs_delta}</span></li>` : ""}
+      </ul>
+      ${invTop ? `<h4>${esc(t("import.topInventory"))}</h4><ul class="list-compact">${invTop}</ul>` : ""}
+      ${skTop ? `<h4>${esc(t("import.topSkills"))}</h4><ul class="list-compact">${skTop}</ul>` : ""}
+    </div>`;
+}
+
+function bindImportChangesCard() {
+  const dismiss = document.getElementById("import-changes-dismiss");
+  if (!dismiss) return;
+  dismiss.addEventListener("click", () => {
+    state.lastImportChanges = null;
+    const card = document.getElementById("import-changes-card");
+    if (card) card.remove();
+  });
+}
+
 function renderSkills(d) {
   const panel = document.getElementById("tab-skills");
   const s = state.skills;
@@ -367,6 +540,7 @@ function renderSkills(d) {
             <th data-sort="level"></th>
             <th data-sort="xp">XP</th>
             <th></th>
+            <th class="col-actions"></th>
           </tr></thead>
           <tbody id="skill-tbody"></tbody>
         </table>
@@ -396,7 +570,8 @@ function renderSkills(d) {
   document.getElementById("skill-sort").options[2].textContent = t("skills.sortName");
   panel.querySelector('th[data-sort="name"]').textContent = t("skills.skill");
   panel.querySelector('th[data-sort="level"]').textContent = t("skills.level");
-  panel.querySelector("thead tr th:last-child").textContent = t("skills.progress");
+  panel.querySelectorAll("thead tr th")[3].textContent = t("skills.progress");
+  panel.querySelector("thead tr th.col-actions").textContent = t("goals.actions");
 
   document.getElementById("skill-search").value = s.search;
   document.getElementById("skill-sort").value = s.sort;
@@ -405,6 +580,7 @@ function renderSkills(d) {
 
 function renderSkillsBody(d) {
   const s = state.skills;
+  const openGoals = collectOpenGoalKeys();
   let items = [...d.skills];
   if (s.search) {
     const q = s.search.toLowerCase();
@@ -418,16 +594,33 @@ function renderSkillsBody(d) {
     return s.sortAsc ? cmp : -cmp;
   });
 
-  document.getElementById("skill-tbody").innerHTML = items.map((sk) => `
-    <tr>
-      <td>${esc(sk.name)}</td>
+  document.getElementById("skill-tbody").innerHTML = items.map((sk) => {
+    const hasGoal = openGoals.skills.has(sk.key);
+    return `
+    <tr class="${hasGoal ? "has-goal" : ""}">
+      <td>${esc(sk.name)}${hasGoal ? `<span class="goal-mark" title="${esc(t("goals.hasGoal"))}">🎯</span>` : ""}</td>
       <td>${sk.level}</td>
       <td>${fmt(sk.xp)}</td>
       <td style="min-width:140px">
         ${sk.progress_pct}%
         <div class="progress-bar"><div class="progress-fill" style="width:${sk.progress_pct}%"></div></div>
       </td>
-    </tr>`).join("");
+      <td class="col-actions">
+        <button type="button" class="goal-add-btn" data-skill-key="${esc(sk.key)}" data-skill-name="${esc(sk.name)}" data-skill-level="${sk.level}" title="${esc(t("skills.addGoalFor", { name: sk.name }))}" aria-label="${esc(t("skills.addGoalFor", { name: sk.name }))}">+</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("skill-tbody").querySelectorAll(".goal-add-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openGoalModal({
+        key: btn.dataset.skillKey,
+        name: btn.dataset.skillName,
+        level: Number(btn.dataset.skillLevel),
+        goalType: "skill",
+      });
+    });
+  });
 }
 
 function getFilteredInventoryItems(d, inv) {
@@ -572,6 +765,7 @@ function renderInventoryTable(d, inv) {
   const items = getFilteredInventoryItems(d, inv);
   const showTrend = inventoryTrendEnabled();
   const colSpan = showTrend ? 5 : 4;
+  const openGoals = collectOpenGoalKeys();
   const grouped = {};
   for (const item of items) {
     if (!grouped[item.category]) grouped[item.category] = [];
@@ -591,16 +785,19 @@ function renderInventoryTable(d, inv) {
           </button>
         </td>
       </tr>`;
-    const rows = catItems.map((i) => `
-      <tr class="inv-item-row ${i.equipped && inv.highlightEquipped ? "item-equipped" : ""} ${expanded ? "" : "collapsed"}" data-group="${esc(cat)}">
-        <td class="col-name">${esc(i.name)}${i.equipped ? `<span class="equipped-mark" title="${esc(t("inventory.equipped"))}">⚡</span>` : ""}</td>
+    const rows = catItems.map((i) => {
+      const hasGoal = openGoals.items.has(i.key);
+      return `
+      <tr class="inv-item-row ${i.equipped && inv.highlightEquipped ? "item-equipped" : ""} ${hasGoal ? "has-goal" : ""} ${expanded ? "" : "collapsed"}" data-group="${esc(cat)}">
+        <td class="col-name">${esc(i.name)}${i.equipped ? `<span class="equipped-mark" title="${esc(t("inventory.equipped"))}">⚡</span>` : ""}${hasGoal ? `<span class="goal-mark" title="${esc(t("goals.hasGoal"))}">🎯</span>` : ""}</td>
         ${showTrend ? renderItemSparkCell(i) : ""}
         <td class="col-qty">${fmt(i.qty)}</td>
         <td class="col-key"><code>${esc(i.key)}</code></td>
         <td class="col-actions">
           <button type="button" class="goal-add-btn" data-item-key="${esc(i.key)}" data-item-name="${esc(i.name)}" data-item-qty="${i.qty}" title="${esc(t("inventory.addGoalFor", { name: i.name }))}" aria-label="${esc(t("inventory.addGoalFor", { name: i.name }))}">+</button>
         </td>
-      </tr>`).join("");
+      </tr>`;
+    }).join("");
     return header + rows;
   }).join("");
 
@@ -646,6 +843,7 @@ function renderInventoryTable(d, inv) {
         key: btn.dataset.itemKey,
         name: btn.dataset.itemName,
         qty: Number(btn.dataset.itemQty),
+        goalType: "item",
       });
     });
   });
@@ -748,14 +946,29 @@ function goalMatchesFilter(goal, filter) {
 
 function renderGoalRow(goal) {
   const done = !!goal.completed_at;
+  const isSkill = goal.goal_type === "skill";
+  const modeHint = goal.mode === "relative"
+    ? `<span class="goal-mode-badge" title="${esc(t("goals.modeRelativeHint"))}">+${isSkill ? goal.target_qty : fmt(goal.target_qty)}</span>`
+    : "";
+  const typeBadge = isSkill ? `<span class="goal-type-badge">${esc(t("goals.typeSkill"))}</span> ` : "";
+  const progressText = isSkill
+    ? `${goal.current_qty} / ${goal.target_display}`
+    : `${fmt(goal.current_qty)} / ${fmt(goal.target_display)}`;
+  const eta = !done && goal.eta_snapshots
+    ? `<div class="goal-eta">${esc(t("goals.etaSnapshots", { n: goal.eta_snapshots }))}</div>`
+    : "";
+  const missing = !done && goal.missing_qty > 0
+    ? `<div class="goal-missing">${esc(t("goals.missing", { qty: isSkill ? goal.missing_qty : fmt(goal.missing_qty) }))}</div>`
+    : "";
   const deleteBtn = done
     ? `<button type="button" class="goal-delete-btn" data-goal-id="${goal.id}">${esc(t("goals.delete"))}</button>`
     : "";
   return `<tr>
-    <td>${esc(goal.item_name)}</td>
+    <td>${typeBadge}${esc(goal.item_name)}</td>
     <td>
-      <div class="goal-progress-text">${fmt(goal.current_qty)} / ${fmt(goal.target_qty)}</div>
+      <div class="goal-progress-text">${progressText} ${modeHint}</div>
       <div class="progress-bar"><div class="progress-fill" style="width:${goal.progress_pct}%"></div></div>
+      ${missing}${eta}
     </td>
     <td><span class="badge ${done ? "badge-success" : "badge-warning"}">${esc(done ? t("goals.done") : t("goals.open"))}</span></td>
     <td class="goal-actions-cell">${deleteBtn}</td>
@@ -777,8 +990,35 @@ function bindGoalActions(panel) {
       if (res.ok) {
         trackEvent("Goal Delete");
         await loadGoals();
+        const overviewRes = await fetch(`${apiBase()}/goals/overview`);
+        if (overviewRes.ok) state.goalsOverview = await overviewRes.json();
       }
       renderGoals();
+      if (state.data) {
+        renderHeader(state.data);
+        renderSkills(state.data);
+        renderInventory(state.data);
+      }
+    });
+  });
+
+  panel.querySelectorAll(".goal-group-rename").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const name = prompt(t("goals.renameGroupPrompt"), btn.dataset.groupName);
+      if (!name || !name.trim() || name.trim() === btn.dataset.groupName) return;
+      const res = await fetch(`${apiBase()}/goal-groups/${btn.dataset.groupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      if (res.ok) {
+        trackEvent("Goal Group Rename");
+        await loadGoals();
+        const overviewRes = await fetch(`${apiBase()}/goals/overview`);
+        if (overviewRes.ok) state.goalsOverview = await overviewRes.json();
+      }
+      renderGoals();
+      if (state.data) renderHeader(state.data);
     });
   });
 
@@ -837,8 +1077,16 @@ function renderGoals() {
     const sectionKey = `group-${group.id}`;
     const expanded = !g.collapsedGroups.has(sectionKey);
     const completedIds = goals.filter((goal) => goal.completed_at).map((goal) => goal.id);
+    const missingGoals = goals.filter((goal) => !goal.completed_at && goal.missing_qty > 0);
+    const missingSummary = missingGoals.length
+      ? `<div class="goal-missing-summary">${missingGoals.map((goal) => {
+          const qty = goal.goal_type === "skill" ? goal.missing_qty : fmt(goal.missing_qty);
+          return `<span>${esc(goal.item_name)}: ${esc(t("goals.missingShort", { qty }))}</span>`;
+        }).join(" · ")}</div>`
+      : "";
     const headerActions = `
       ${completedIds.length ? `<button type="button" class="goal-clear-completed" data-goal-ids="${completedIds.join(",")}">${esc(t("goals.clearCompleted"))}</button>` : ""}
+      <button type="button" class="goal-group-rename" data-group-id="${group.id}" data-group-name="${esc(group.name)}">${esc(t("goals.renameGroup"))}</button>
       <button type="button" class="goal-group-delete" data-group-id="${group.id}" data-group-name="${esc(group.name)}">${esc(t("goals.deleteGroup"))}</button>`;
     const rows = goals.length
       ? goals.map((goal) => {
@@ -858,6 +1106,7 @@ function renderGoals() {
                   <span class="inv-group-meta">${esc(t("goals.groupProgress", { completed, total }))}</span>
                 </button>
                 <span class="goal-group-actions">${headerActions}</span>
+                ${missingSummary}
               </td>
             </tr>
             ${rows}
@@ -885,8 +1134,17 @@ function renderGoals() {
 
   const hasAny = groupSections || ungrouped.length || filter === "all";
 
+  const overview = state.goalsOverview;
+  const overviewHtml = overview ? `
+    <div class="goals-overview-kpi">
+      <span class="goals-kpi-item"><strong>${overview.open}</strong> ${esc(t("goals.filterOpen"))}</span>
+      <span class="goals-kpi-item"><strong>${overview.completed}</strong> ${esc(t("goals.filterDone"))}</span>
+      <span class="goals-kpi-item"><strong>${overview.total}</strong> ${esc(t("goals.total"))}</span>
+    </div>` : "";
+
   panel.innerHTML = `
     <div class="toolbar goals-toolbar">
+      ${overviewHtml}
       <select class="select-input" id="goals-filter">
         <option value="all" ${filter === "all" ? "selected" : ""}>${esc(t("goals.filterAll"))}</option>
         <option value="open" ${filter === "open" ? "selected" : ""}>${esc(t("goals.filterOpen"))}</option>
@@ -936,12 +1194,17 @@ function setupGoalModal() {
 }
 
 function applyGoalModalI18n() {
-  document.getElementById("goal-modal-title").textContent = t("goals.modalTitle");
-  document.getElementById("goal-modal-qty-label").textContent = t("goals.targetQty");
+  const item = state.goalModalItem;
+  const isSkill = item?.goalType === "skill";
+  document.getElementById("goal-modal-title").textContent = isSkill ? t("goals.modalTitleSkill") : t("goals.modalTitle");
+  document.getElementById("goal-modal-mode-label").textContent = t("goals.mode");
+  document.getElementById("goal-modal-mode").options[0].textContent = t("goals.modeAbsolute");
+  document.getElementById("goal-modal-mode").options[1].textContent = t("goals.modeRelative");
+  document.getElementById("goal-modal-qty-label").textContent = isSkill ? t("goals.targetLevel") : t("goals.targetQty");
   document.getElementById("goal-modal-group-label").textContent = t("goals.selectGroup");
   document.getElementById("goal-modal-new-group-label").textContent = t("goals.newGroupName");
   document.getElementById("goal-modal-cancel").textContent = t("goals.cancel");
-  document.getElementById("goal-modal-submit").textContent = t("inventory.addGoal");
+  document.getElementById("goal-modal-submit").textContent = isSkill ? t("skills.addGoal") : t("inventory.addGoal");
 }
 
 async function openGoalModal(item) {
@@ -952,8 +1215,14 @@ async function openGoalModal(item) {
   errEl.hidden = true;
   errEl.textContent = "";
 
-  document.getElementById("goal-modal-item").textContent = `${item.name} — ${t("goals.currentQty", { qty: fmt(item.qty) })}`;
-  document.getElementById("goal-modal-qty").value = Math.max(item.qty + 1, 1);
+  const isSkill = item.goalType === "skill";
+  const currentVal = isSkill ? item.level : item.qty;
+  const currentLabel = isSkill
+    ? t("goals.currentLevel", { level: currentVal })
+    : t("goals.currentQty", { qty: fmt(currentVal) });
+  document.getElementById("goal-modal-item").textContent = `${item.name} — ${currentLabel}`;
+  document.getElementById("goal-modal-qty").value = Math.max(currentVal + 1, 1);
+  document.getElementById("goal-modal-mode").value = "absolute";
   document.getElementById("goal-modal-new-group").value = "";
   document.getElementById("goal-modal-new-group-wrap").hidden = true;
 
@@ -980,6 +1249,8 @@ async function submitGoalModal() {
   errEl.hidden = true;
 
   const targetQty = parseInt(document.getElementById("goal-modal-qty").value, 10);
+  const mode = document.getElementById("goal-modal-mode").value;
+  const isSkill = item.goalType === "skill";
   if (!targetQty || targetQty <= 0) {
     errEl.textContent = t("goals.createFailed");
     errEl.hidden = false;
@@ -1013,10 +1284,14 @@ async function submitGoalModal() {
     groupId = parseInt(groupVal, 10);
   }
 
+  const body = isSkill
+    ? { goal_type: "skill", skill_key: item.key, target_level: targetQty, group_id: groupId, mode }
+    : { item_key: item.key, target_qty: targetQty, group_id: groupId, mode };
+
   const res = await fetch(`${apiBase()}/goals`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ item_key: item.key, target_qty: targetQty, group_id: groupId }),
+    body: JSON.stringify(body),
   });
   const result = await res.json();
   if (!res.ok) {
@@ -1029,14 +1304,23 @@ async function submitGoalModal() {
     trackEvent("Goal Group Create", { source: "modal" });
   }
   trackEvent("Goal Create", {
-    source: "inventory",
+    source: isSkill ? "skills" : "inventory",
+    type: isSkill ? "skill" : "item",
+    mode,
     group: newGroupFromModal ? "new" : groupId ? "existing" : "none",
     immediate: result.completed_at ? "true" : "false",
   });
 
   closeGoalModal();
   await loadGoals();
+  const overviewRes = await fetch(`${apiBase()}/goals/overview`);
+  if (overviewRes.ok) state.goalsOverview = await overviewRes.json();
   renderGoals();
+  if (state.data) {
+    renderHeader(state.data);
+    renderSkills(state.data);
+    renderInventory(state.data);
+  }
 }
 
 function showGoalsCompletedBanner(result) {
@@ -1184,6 +1468,17 @@ function renderCombat(d) {
     </div>`;
 }
 
+async function ensureSkillTimeline() {
+  if (state.skillTimeline) return state.skillTimeline;
+  try {
+    const res = await fetch(`${apiBase()}/skills/timeline`);
+    state.skillTimeline = res.ok ? await res.json() : { snapshots: [], series: {} };
+  } catch {
+    state.skillTimeline = { snapshots: [], series: {} };
+  }
+  return state.skillTimeline;
+}
+
 async function loadHistoryTab() {
   const panel = document.getElementById("tab-history");
   panel.innerHTML = `<p class='loading'>${esc(t("history.loading"))}</p>`;
@@ -1194,6 +1489,7 @@ async function loadHistoryTab() {
   ]);
   state.snapshots = await snapRes.json();
   state.timeline = await tlRes.json();
+  await ensureSkillTimeline();
 
   if (state.snapshots.length === 0) {
     panel.innerHTML = `<p class='empty-state'>${esc(t("empty.noSnapshots"))}</p>`;
@@ -1214,6 +1510,10 @@ async function loadHistoryTab() {
         <h3>${esc(t("history.levelChart"))}</h3>
         <div class="chart-wrap"><canvas id="chart-level"></canvas></div>
       </div>
+    </div>
+    <div class="card">
+      <h3>${esc(t("history.skillLevelChart"))}</h3>
+      <div class="chart-wrap"><canvas id="chart-skills"></canvas></div>
     </div>
     <div class="card">
       <h3>${esc(t("history.snapshotCompare"))}</h3>
@@ -1239,6 +1539,7 @@ async function loadHistoryTab() {
           <th>${esc(t("kpi.totalLevel"))}</th>
           <th>${esc(t("meta.export"))}</th>
           <th>${esc(t("history.file"))}</th>
+          <th>${esc(t("goals.actions"))}</th>
         </tr></thead>
         <tbody>${state.snapshots.map((s) => `
           <tr>
@@ -1248,6 +1549,9 @@ async function loadHistoryTab() {
             <td>${s.total_level}</td>
             <td>${formatTs(s.exported_at)}</td>
             <td>${esc(s.source_file)}</td>
+            <td>
+              <button type="button" class="snapshot-delete-btn" data-snapshot-id="${s.id}" ${state.snapshots.length <= 1 ? "disabled" : ""} title="${esc(t("history.deleteSnapshot"))}">${esc(t("history.delete"))}</button>
+            </td>
           </tr>`).join("")}
         </tbody>
       </table>
@@ -1257,6 +1561,21 @@ async function loadHistoryTab() {
   document.getElementById("diff-older").addEventListener("change", (e) => { h.olderId = +e.target.value; });
   document.getElementById("diff-newer").addEventListener("change", (e) => { h.newerId = +e.target.value; });
   document.getElementById("diff-run").addEventListener("click", runDiff);
+  panel.querySelectorAll(".snapshot-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm(t("history.deleteSnapshotConfirm"))) return;
+      const res = await fetch(`${apiBase()}/snapshots/${btn.dataset.snapshotId}`, { method: "DELETE" });
+      if (!res.ok) {
+        alert(t("history.deleteSnapshotFailed"));
+        return;
+      }
+      trackEvent("Snapshot Delete");
+      state.inventoryTimeline = null;
+      state.skillTimeline = null;
+      await loadData();
+      loadHistoryTab();
+    });
+  });
   if (h.olderId && h.newerId && h.olderId !== h.newerId) runDiff();
 }
 
@@ -1275,6 +1594,7 @@ function renderTimelineCharts() {
 
   destroyChart("coins");
   destroyChart("level");
+  destroyChart("skills");
 
   state.charts.coins = new Chart(document.getElementById("chart-coins"), {
     type: "line",
@@ -1284,6 +1604,37 @@ function renderTimelineCharts() {
   state.charts.level = new Chart(document.getElementById("chart-level"), {
     type: "line",
     data: { labels, datasets: [{ label: t("kpi.totalLevel"), data: levels, borderColor: "#4ade80", tension: 0.3, fill: false }] },
+    options: chartOpts(),
+  });
+
+  const skillTl = state.skillTimeline;
+  const skillCanvas = document.getElementById("chart-skills");
+  if (!skillCanvas || !skillTl?.snapshots?.length) return;
+
+  const skillLabels = skillTl.snapshots.map((s) => formatTs(s.exported_at));
+  const skillEntries = Object.entries(skillTl.series || {})
+    .map(([key, values]) => ({ key, values, latest: values[values.length - 1] || 0 }))
+    .sort((a, b) => b.latest - a.latest)
+    .slice(0, 5);
+
+  const colors = ["#6c8cff", "#4ade80", "#fbbf24", "#f87171", "#a78bfa"];
+  const skillName = (key) => {
+    const sk = state.data?.skills?.find((s) => s.key === key);
+    return sk?.name || key.replace(/_/g, " ");
+  };
+
+  state.charts.skills = new Chart(skillCanvas, {
+    type: "line",
+    data: {
+      labels: skillLabels,
+      datasets: skillEntries.map((entry, idx) => ({
+        label: skillName(entry.key),
+        data: entry.values,
+        borderColor: colors[idx % colors.length],
+        tension: 0.3,
+        fill: false,
+      })),
+    },
     options: chartOpts(),
   });
 }

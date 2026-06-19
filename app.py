@@ -9,18 +9,21 @@ import sys
 import webbrowser
 from pathlib import Path
 
-from flask import Blueprint, Flask, abort, jsonify, render_template, request
+from flask import Blueprint, Flask, abort, jsonify, render_template, request, send_file
 from werkzeug.utils import secure_filename
 
 from db import (
     DEFAULT_DB,
     create_goal,
     create_goal_group,
+    create_skill_goal,
     delete_goal,
     delete_goal_group,
+    delete_snapshot,
     diff_snapshots,
     get_latest_snapshot,
     get_snapshot,
+    goals_overview,
     import_save,
     init_db,
     inventory_timeline,
@@ -28,6 +31,8 @@ from db import (
     list_goals_structured,
     list_snapshots,
     get_connection,
+    rename_goal_group,
+    skill_timeline,
     timeline,
 )
 from security import (
@@ -106,6 +111,14 @@ def api_snapshots(viewer_id: str):
     return jsonify(list_snapshots(db_path=db_path))
 
 
+@viewer_bp.route("/api/snapshots/<int:snapshot_id>", methods=["DELETE"])
+def api_delete_snapshot(viewer_id: str, snapshot_id: int):
+    db_path = _resolve_viewer_db(viewer_id)
+    if not delete_snapshot(snapshot_id, db_path=db_path):
+        return jsonify({"error": "Snapshot not found"}), 404
+    return jsonify({"deleted": True})
+
+
 @viewer_bp.route("/api/snapshots/<int:older_id>/diff/<int:newer_id>")
 def api_diff(viewer_id: str, older_id: int, newer_id: int):
     db_path = _resolve_viewer_db(viewer_id)
@@ -125,6 +138,29 @@ def api_timeline(viewer_id: str):
 def api_inventory_timeline(viewer_id: str):
     db_path = _resolve_viewer_db(viewer_id)
     return jsonify(inventory_timeline(db_path=db_path))
+
+
+@viewer_bp.route("/api/skills/timeline")
+def api_skill_timeline(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    return jsonify(skill_timeline(db_path=db_path))
+
+
+@viewer_bp.route("/api/goals/overview")
+def api_goals_overview(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    return jsonify(goals_overview(db_path=db_path))
+
+
+@viewer_bp.route("/api/export")
+def api_export_viewer(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    return send_file(
+        db_path,
+        as_attachment=True,
+        download_name=f"idle-fantasy-viewer-{viewer_id}.db",
+        mimetype="application/octet-stream",
+    )
 
 
 @viewer_bp.route("/api/goal-groups")
@@ -155,6 +191,21 @@ def api_delete_goal_group(viewer_id: str, group_id: int):
     return jsonify({"deleted": True})
 
 
+@viewer_bp.route("/api/goal-groups/<int:group_id>", methods=["PATCH"])
+def api_rename_goal_group(viewer_id: str, group_id: int):
+    db_path = _resolve_viewer_db(viewer_id)
+    body = request.get_json(silent=True) or {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "Group name is required"}), 400
+    try:
+        if not rename_goal_group(group_id, name, db_path=db_path):
+            return jsonify({"error": "Goal group not found"}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"id": group_id, "name": name})
+
+
 @viewer_bp.route("/api/goals")
 def api_goals(viewer_id: str):
     db_path = _resolve_viewer_db(viewer_id)
@@ -165,16 +216,10 @@ def api_goals(viewer_id: str):
 def api_create_goal(viewer_id: str):
     db_path = _resolve_viewer_db(viewer_id)
     body = request.get_json(silent=True) or {}
-    item_key = (body.get("item_key") or "").strip()
-    target_qty = body.get("target_qty")
+    goal_type = (body.get("goal_type") or "item").strip().lower()
+    mode = (body.get("mode") or "absolute").strip().lower()
     group_id = body.get("group_id")
 
-    if not item_key:
-        return jsonify({"error": "item_key is required"}), 400
-    try:
-        target_qty = int(target_qty)
-    except (TypeError, ValueError):
-        return jsonify({"error": "target_qty must be a positive integer"}), 400
     if group_id is not None:
         try:
             group_id = int(group_id)
@@ -185,7 +230,30 @@ def api_create_goal(viewer_id: str):
         return jsonify({"error": "No snapshots imported yet"}), 404
 
     try:
-        goal = create_goal(item_key, target_qty, group_id=group_id, db_path=db_path)
+        if goal_type == "skill":
+            skill_key = (body.get("skill_key") or "").strip()
+            target_level = body.get("target_level", body.get("target_qty"))
+            if not skill_key:
+                return jsonify({"error": "skill_key is required"}), 400
+            try:
+                target_level = int(target_level)
+            except (TypeError, ValueError):
+                return jsonify({"error": "target_level must be a positive integer"}), 400
+            goal = create_skill_goal(
+                skill_key, target_level, group_id=group_id, mode=mode, db_path=db_path
+            )
+        else:
+            item_key = (body.get("item_key") or "").strip()
+            target_qty = body.get("target_qty")
+            if not item_key:
+                return jsonify({"error": "item_key is required"}), 400
+            try:
+                target_qty = int(target_qty)
+            except (TypeError, ValueError):
+                return jsonify({"error": "target_qty must be a positive integer"}), 400
+            goal = create_goal(
+                item_key, target_qty, group_id=group_id, mode=mode, db_path=db_path
+            )
     except ValueError as exc:
         msg = str(exc)
         status = 404 if "not found" in msg.lower() else 409 if "already exists" in msg.lower() else 400

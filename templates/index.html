@@ -43,6 +43,7 @@
           <span data-i18n="actions.importBackup">Import backup</span>
           <input type="file" id="file-upload" accept=".json" hidden>
         </label>
+        <a class="upload-btn export-btn" id="export-viewer" href="#" data-i18n="actions.exportViewer">Export viewer</a>
       </div>
     </aside>
 
@@ -60,6 +61,10 @@
         </div>
         <div id="import-report" class="import-report" hidden></div>
         <div id="goals-completed-banner" class="goals-completed-banner" hidden></div>
+        <div class="global-search-wrap">
+          <input type="search" class="search-input global-search" id="global-search" placeholder="">
+        </div>
+        <div id="global-search-results" class="global-search-results" hidden></div>
         <div id="character-header" class="character-header">
           <span class="loading" data-i18n="app.loading">Loading save…</span>
         </div>
@@ -81,6 +86,13 @@
     <div class="goal-modal-card" role="dialog" aria-labelledby="goal-modal-title">
       <h3 id="goal-modal-title"></h3>
       <p class="goal-modal-item" id="goal-modal-item"></p>
+      <label class="goal-modal-field">
+        <span id="goal-modal-mode-label"></span>
+        <select class="select-input" id="goal-modal-mode">
+          <option value="absolute"></option>
+          <option value="relative"></option>
+        </select>
+      </label>
       <label class="goal-modal-field">
         <span id="goal-modal-qty-label"></span>
         <input type="number" class="search-input" id="goal-modal-qty" min="1" step="1">

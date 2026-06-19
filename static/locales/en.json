@@ -22,6 +22,7 @@
   },
   "actions": {
     "importBackup": "Import backup",
+    "exportViewer": "Export viewer",
     "compare": "Compare",
     "dismiss": "Dismiss"
   },
@@ -42,6 +43,13 @@
     "duplicate": "Backup already exists (duplicate).",
     "success": "Imported: Snapshot #{id}",
     "successWithNotes": "Imported: Snapshot #{id}\n\n{warnings} warning(s), {infos} note(s) – see dashboard banner for details.",
+    "changesTitle": "Changes since last import",
+    "changesSummary": "Coins {coins} · Level {level} · {inv} inventory changes · {skills} skill changes",
+    "questsCompleted": "Story quests completed",
+    "slayerKills": "Slayer kills",
+    "dungeonRuns": "Dungeon runs",
+    "topInventory": "Largest inventory changes",
+    "topSkills": "Largest skill changes",
     "titleError": "Import errors",
     "titleWarning": "Import warnings",
     "titleInfo": "Import notes",
@@ -81,7 +89,8 @@
     "coins": "Coins",
     "totalLevel": "Total level",
     "items": "Items",
-    "totalQty": "Total quantity"
+    "totalQty": "Total quantity",
+    "goalsOpen": "Open goals"
   },
   "overview": {
     "character": "Character",
@@ -105,7 +114,9 @@
     "sortName": "By name",
     "skill": "Skill",
     "level": "Level",
-    "progress": "Progress"
+    "progress": "Progress",
+    "addGoal": "Add goal",
+    "addGoalFor": "Add goal for {name}"
   },
   "inventory": {
     "search": "Search items…",
@@ -162,7 +173,21 @@
     "skillChanges": "Skill changes ({count})",
     "delta": "Delta",
     "xpDelta": "XP delta",
+    "skillLevelChart": "Top skills over time",
+    "delete": "Delete",
+    "deleteSnapshot": "Delete snapshot",
+    "deleteSnapshotConfirm": "Really delete this snapshot?",
+    "deleteSnapshotFailed": "Could not delete snapshot",
     "coinsSummary": "Coins: {delta} · Total level: {levelDelta}"
+  },
+  "search": {
+    "global": "Search items, skills and goals…",
+    "noResults": "No results",
+    "type": {
+      "item": "Item",
+      "skill": "Skill",
+      "goal": "Goal"
+    }
   },
   "category": {
     "currency": "Currency",
@@ -218,13 +243,28 @@
     "deleteGroupConfirm": "Delete group \"{name}\"? Goals will be kept as ungrouped.",
     "deleteConfirm": "Delete this goal?",
     "clearCompleted": "Remove completed",
-    "empty": "No goals yet. Add goals from the Inventory tab.",
+    "empty": "No goals yet. Add goals from the Inventory or Skills tab.",
     "loadError": "Failed to load goals",
     "createFailed": "Could not create goal",
     "groupCreateFailed": "Could not create group",
-    "modalTitle": "Add goal",
+    "modalTitle": "Add item goal",
+    "modalTitleSkill": "Add skill goal",
     "cancel": "Cancel",
     "targetQty": "Target quantity",
+    "targetLevel": "Target level",
+    "mode": "Mode",
+    "modeAbsolute": "Absolute (total qty/level)",
+    "modeRelative": "Relative (since creation)",
+    "modeRelativeHint": "Relative goal – progress since creation",
+    "typeSkill": "Skill",
+    "currentLevel": "Current: level {level}",
+    "missing": "{qty} still needed",
+    "missingShort": "−{qty}",
+    "etaSnapshots": "~{n} import(s)",
+    "hasGoal": "Open goal",
+    "total": "total",
+    "renameGroup": "Rename",
+    "renameGroupPrompt": "New group name:",
     "selectGroup": "Group",
     "noGroup": "No group",
     "newGroup": "New group…",

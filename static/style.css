@@ -918,6 +918,116 @@ body.inv-chart-modal-open {
 .col-actions { width: 48px; text-align: center; }
 .goals-completed-banner { margin-bottom: 12px; }
 .goal-group-completed-line { font-weight: 600; }
+.goal-mode-badge,
+.goal-type-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+.goal-eta,
+.goal-missing {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.goal-missing-summary {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.goal-missing-summary span + span::before { content: " · "; }
+.goals-overview-kpi {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-right: auto;
+}
+.goals-kpi-item { font-size: 0.85rem; color: var(--text-muted); }
+.goals-kpi-item strong { color: var(--text); margin-right: 4px; }
+.goal-group-rename,
+.snapshot-delete-btn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.78rem;
+  margin-left: 6px;
+}
+.goal-group-rename:hover,
+.snapshot-delete-btn:hover:not(:disabled) { background: var(--accent-dim); color: #fff; }
+.snapshot-delete-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.goal-mark {
+  margin-left: 6px;
+  font-size: 0.85rem;
+}
+tr.has-goal .col-name,
+tr.has-goal td:first-child { font-weight: 600; }
+.kpi-goals .kpi-value { color: var(--accent); }
+
+.global-search-wrap {
+  margin-bottom: 12px;
+  max-width: 480px;
+}
+.global-search-results {
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  max-width: 480px;
+}
+.global-search-hit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 0.85rem;
+}
+.global-search-hit:hover { background: var(--bg-hover); }
+.global-search-hit-type {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  min-width: 48px;
+}
+.global-search-hit-name { flex: 1; font-weight: 600; }
+.global-search-hit-sub { color: var(--text-muted); font-size: 0.8rem; }
+.global-search-empty {
+  margin: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.import-changes-card { margin-bottom: 16px; }
+.import-changes-card h3 { margin: 0; font-size: 1rem; }
+.import-changes-summary { margin: 8px 0; font-size: 0.9rem; }
+.import-changes-stats { margin-bottom: 8px; }
+.import-changes-card h4 {
+  margin: 12px 0 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.export-btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  margin-top: 8px;
+}
 
 .goal-modal {
   position: fixed;
