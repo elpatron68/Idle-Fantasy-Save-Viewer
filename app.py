@@ -49,6 +49,7 @@ from viewers import (
     ensure_local_viewer,
     get_or_create_cli_viewer,
     is_valid_viewer_id,
+    restore_viewer_db,
     viewer_db_path,
 )
 
@@ -268,6 +269,37 @@ def api_delete_goal(viewer_id: str, goal_id: int):
     if not delete_goal(goal_id, db_path=db_path):
         return jsonify({"error": "Goal not found"}), 404
     return jsonify({"deleted": True})
+
+
+@viewer_bp.route("/api/import-viewer", methods=["POST"])
+@limiter.limit(IMPORT_LIMIT)
+def api_import_viewer(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    safe_name = secure_filename(f.filename) or "viewer.db"
+    if not safe_name.lower().endswith(".db"):
+        return jsonify({"error": "Only .db files are accepted"}), 400
+
+    upload_dir = get_data_dir() / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    tmp = upload_dir / f"_viewer_db_{viewer_id}_{safe_name}"
+    f.save(tmp)
+    try:
+        stats = restore_viewer_db(tmp, db_path)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except OSError:
+        return jsonify({"error": "Could not restore viewer database"}), 500
+    finally:
+        tmp.unlink(missing_ok=True)
+
+    return jsonify({"restored": True, **stats})
 
 
 @viewer_bp.route("/api/import", methods=["POST"])

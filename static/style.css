@@ -1029,6 +1029,34 @@ tr.has-goal td:first-child { font-weight: 600; }
   margin-top: 8px;
 }
 
+.sidebar-backup-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-backup-label {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.sidebar-backup-help {
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.sidebar-backup-help summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+}
+.sidebar-backup-help p {
+  margin: 8px 0 0;
+  line-height: 1.45;
+}
+
 .goal-modal {
   position: fixed;
   inset: 0;

@@ -10,7 +10,7 @@ A web viewer for backups of the Android game **Idle Fantasy**. Parses `fantasyid
 - **Global search** across items, skills, and goals; deep links to tabs (`#overview`, `#goals`, …)
 - **SQLite history** — import multiple backups, compare snapshots, coins/level/skill charts, delete snapshots
 - **Import summary** — dashboard card with changes since the previous snapshot (coins, level, top deltas)
-- **Viewer export** — download the viewer SQLite database from the sidebar
+- **Viewer backup** — export/import the viewer SQLite database (snapshots, history, goals)
 - **Import** via CLI or browser upload
 - **Multi-user** without login — each player gets their own viewer via a secret link
 - **Docker** — ready to run behind nginx Proxy Manager
@@ -98,9 +98,19 @@ Create targets from the **Inventory** or **Skills** tab (+ button per row), or m
 
 Tabs support URL hashes for bookmarking, e.g. `http://127.0.0.1:5000/v/<id>/#goals`. The global search field above the KPI row jumps to matching items, skills, or goals.
 
-### Export viewer database
+### Export / import viewer database
 
-Sidebar: **Export viewer** — downloads `idle-fantasy-viewer-<id>.db` (SQLite backup of all snapshots and goals).
+The sidebar section **Viewer backup** is separate from **Import backup** (game `.json`):
+
+| Action | File | Effect |
+|--------|------|--------|
+| **Import backup** | `.json` from Idle Fantasy | Adds a new snapshot to the current viewer |
+| **Export viewer** | `.db` download | Full backup of snapshots, history, and goals |
+| **Import viewer** | `.db` from a previous export | **Replaces** all data in the current viewer |
+
+Use export/import to move your history and goals to another machine, keep an offline backup, or recover after data loss — as long as you still have your personal viewer link (or use the same viewer id locally).
+
+The `.db` file contains all stored save data; treat it as private. Import asks for confirmation because it overwrites the current viewer database.
 
 ## Multi-user (no login)
 
@@ -230,6 +240,7 @@ idle-fantasy-viewer/
 | `PATCH /v/<id>/api/goal-groups/<id>` | Rename a goal group |
 | `DELETE /v/<id>/api/goal-groups/<id>` | Delete a goal group (goals become ungrouped) |
 | `GET /v/<id>/api/export` | Download viewer SQLite database |
+| `POST /v/<id>/api/import-viewer` | Restore viewer from exported `.db` (replaces all data, rate limited) |
 | `POST /v/<id>/api/import` | JSON file upload (`.json` only, rate limited) |
 
 ## Save format

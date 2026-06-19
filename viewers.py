@@ -2,14 +2,24 @@
 
 from __future__ import annotations
 
+import os
 import re
 import secrets
+import shutil
+import sqlite3
 from pathlib import Path
 
 from db import get_connection, init_db
 
 VIEWER_ID_RE = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 LOCAL_VIEWER_ID = "local"
+VIEWER_DB_TABLES = frozenset({
+    "snapshots",
+    "inventory_snapshots",
+    "skill_snapshots",
+    "goals",
+    "goal_groups",
+})
 
 
 def generate_viewer_id() -> str:
@@ -79,3 +89,49 @@ def get_or_create_cli_viewer(data_dir: Path) -> str:
     viewer_id = create_viewer(data_dir)
     marker.write_text(viewer_id, encoding="utf-8")
     return viewer_id
+
+
+def inspect_viewer_db(db_path: Path) -> dict[str, int]:
+    """Validate a viewer SQLite file and apply schema migrations."""
+    if not db_path.is_file():
+        raise ValueError("Database file not found")
+    try:
+        conn = get_connection(db_path)
+    except sqlite3.DatabaseError as exc:
+        raise ValueError("Not a valid SQLite database") from exc
+    try:
+        tables = {
+            row[0]
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            )
+        }
+        missing = VIEWER_DB_TABLES - tables
+        if missing:
+            raise ValueError("Not a valid Idle Fantasy viewer database")
+        init_db(conn)
+        conn.commit()
+        snapshots = conn.execute("SELECT COUNT(*) AS c FROM snapshots").fetchone()["c"]
+        goals = conn.execute("SELECT COUNT(*) AS c FROM goals").fetchone()["c"]
+        goal_groups = conn.execute("SELECT COUNT(*) AS c FROM goal_groups").fetchone()["c"]
+        return {
+            "snapshots": snapshots,
+            "goals": goals,
+            "goal_groups": goal_groups,
+        }
+    finally:
+        conn.close()
+
+
+def restore_viewer_db(source: Path, target: Path) -> dict[str, int]:
+    """Replace a viewer database with a validated copy."""
+    stats = inspect_viewer_db(source)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    staging = target.with_suffix(".db.importing")
+    shutil.copy2(source, staging)
+    try:
+        os.replace(staging, target)
+    except OSError:
+        staging.unlink(missing_ok=True)
+        raise
+    return stats

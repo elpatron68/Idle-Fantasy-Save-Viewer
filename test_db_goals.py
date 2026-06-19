@@ -20,6 +20,7 @@ from db import (
     skill_timeline,
     summarize_import_changes,
 )
+from viewers import inspect_viewer_db, restore_viewer_db
 
 
 def _minimal_save(coins: int = 100, level: int = 5) -> dict:
@@ -77,6 +78,13 @@ def test_relative_and_skill_goals() -> None:
         assert delete_snapshot(snaps - 1, db_path=db)
         changes = summarize_import_changes(snaps, db_path=db)
         assert changes["has_previous"] is False
+
+        db2 = Path(td) / "restored.db"
+        stats = restore_viewer_db(db, db2)
+        assert stats["snapshots"] >= 1
+        assert stats["goals"] == 2
+        inspected = inspect_viewer_db(db2)
+        assert inspected["goal_groups"] == 1
 
         print("all tests passed")
 

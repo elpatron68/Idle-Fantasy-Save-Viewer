@@ -74,6 +74,7 @@ async function init() {
   setupNav();
   setupUpload();
   setupExport();
+  setupViewerDbImport();
   setupGlobalSearch();
   setupGoalModal();
   await loadData();
@@ -163,7 +164,45 @@ function setupExport() {
   const el = document.getElementById("export-viewer");
   if (!el) return;
   el.href = `${apiBase()}/export`;
+  el.title = t("viewerDb.exportHint");
   el.addEventListener("click", () => trackEvent("Viewer Export"));
+}
+
+function setupViewerDbImport() {
+  const input = document.getElementById("viewer-db-upload");
+  if (!input) return;
+  input.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".db")) {
+      alert(t("viewerDb.invalidFile"));
+      return;
+    }
+    if (!confirm(t("viewerDb.importConfirm"))) return;
+
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${apiBase()}/import-viewer`, { method: "POST", body: fd });
+    const result = await res.json();
+    if (!res.ok || result.error) {
+      alert(result.error || t("viewerDb.importFailed"));
+      return;
+    }
+
+    trackEvent("Viewer Import", {
+      snapshots: String(result.snapshots || 0),
+      goals: String(result.goals || 0),
+    });
+    state.lastImportChanges = null;
+    state.inventoryTimeline = null;
+    state.skillTimeline = null;
+    await loadData();
+    alert(t("viewerDb.importSuccess", {
+      snapshots: result.snapshots || 0,
+      goals: result.goals || 0,
+    }));
+  });
 }
 
 function setupGlobalSearch() {

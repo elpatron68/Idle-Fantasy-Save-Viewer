@@ -21,8 +21,9 @@
     "langDe": "Deutsch"
   },
   "actions": {
-    "importBackup": "Import backup",
+    "importBackup": "Import game backup",
     "exportViewer": "Export viewer",
+    "importViewer": "Import viewer",
     "compare": "Compare",
     "dismiss": "Dismiss"
   },
@@ -223,6 +224,16 @@
     "copyLink": "Copy link",
     "copied": "Copied!",
     "copyPrompt": "Copy your viewer link:"
+  },
+  "viewerDb": {
+    "title": "Viewer backup",
+    "helpTitle": "What is this?",
+    "helpBody": "The viewer stores imported game backups, history charts, and goals in a SQLite database on the server. Export downloads that database as a backup. Import restores it and replaces all current viewer data. This is not the same as importing a game save (.json).",
+    "exportHint": "Download the SQLite database with all snapshots, history, and goals",
+    "importConfirm": "All current viewer data (snapshots, history, goals) will be replaced by the imported .db file. Continue?",
+    "importSuccess": "Viewer restored: {snapshots} snapshot(s), {goals} goal(s).",
+    "importFailed": "Could not import viewer database",
+    "invalidFile": "Please select a .db file (viewer export)."
   },
   "goals": {
     "filterAll": "All",
