@@ -5,8 +5,12 @@ A web viewer for backups of the Android game **Idle Fantasy**. Parses `fantasyid
 ## Features
 
 - **Dashboard** with character, coins, skills, inventory, equipment, quests, and combat
-- **Inventory** with text search, category filters, sorting, and grouped tables
-- **SQLite history** — import multiple backups, compare snapshots, coins/level charts
+- **Inventory** with text search, category filters, sorting, grouped tables, and quantity sparklines
+- **Goals** — item and skill targets in groups (absolute or relative), progress/ETA, completion on import
+- **Global search** across items, skills, and goals; deep links to tabs (`#overview`, `#goals`, …)
+- **SQLite history** — import multiple backups, compare snapshots, coins/level/skill charts, delete snapshots
+- **Import summary** — dashboard card with changes since the previous snapshot (coins, level, top deltas)
+- **Viewer export** — download the viewer SQLite database from the sidebar
 - **Import** via CLI or browser upload
 - **Multi-user** without login — each player gets their own viewer via a secret link
 - **Docker** — ready to run behind nginx Proxy Manager
@@ -78,7 +82,25 @@ python app.py --host 0.0.0.0 --no-browser
 
 ### Import backups in the browser
 
-Sidebar at the bottom: **Import backup** — selects a `.json` file. Duplicates (same file hash) are skipped.
+Sidebar at the bottom: **Import backup** — selects a `.json` file. Duplicates (same file hash) are skipped. After a successful import, a summary card on the overview tab shows changes compared to the previous snapshot.
+
+### Goals
+
+Create targets from the **Inventory** or **Skills** tab (+ button per row), or manage them under **Goals**:
+
+- **Item goals** — absolute (reach total quantity) or relative (gain since creation)
+- **Skill goals** — target level, absolute or relative
+- **Groups** — organize goals, rename groups, clear completed entries
+- **Progress** — missing quantity, ETA based on import history (items), completion banner on import
+- Open goals are marked with 🎯 in inventory and skills tables
+
+### Navigation
+
+Tabs support URL hashes for bookmarking, e.g. `http://127.0.0.1:5000/v/<id>/#goals`. The global search field above the KPI row jumps to matching items, skills, or goals.
+
+### Export viewer database
+
+Sidebar: **Export viewer** — downloads `idle-fantasy-viewer-<id>.db` (SQLite backup of all snapshots and goals).
 
 ## Multi-user (no login)
 
@@ -171,7 +193,8 @@ idle-fantasy-viewer/
 ├── viewers.py          # Viewer IDs and isolation
 ├── parser.py           # Parse and normalize saves
 ├── categories.py       # Item categories (heuristics)
-├── db.py               # SQLite snapshots, diff, timeline
+├── db.py               # SQLite snapshots, diff, timeline, goals
+├── test_db_goals.py    # Smoke tests for goals/import helpers
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -193,8 +216,20 @@ idle-fantasy-viewer/
 | `POST /api/viewers` | Create a new viewer (rate limited) |
 | `GET /v/<id>/api/snapshot/latest` | Latest save for the viewer |
 | `GET /v/<id>/api/snapshots` | All snapshots |
+| `DELETE /v/<id>/api/snapshots/<id>` | Delete a snapshot (last one cannot be removed) |
 | `GET /v/<id>/api/snapshots/<older>/diff/<newer>` | Compare two snapshots |
-| `GET /v/<id>/api/timeline` | Time series for charts |
+| `GET /v/<id>/api/timeline` | Time series for coins/level charts |
+| `GET /v/<id>/api/inventory/timeline` | Per-item quantity series for sparklines |
+| `GET /v/<id>/api/skills/timeline` | Per-skill level series for history charts |
+| `GET /v/<id>/api/goals` | Structured goals (groups + ungrouped) |
+| `GET /v/<id>/api/goals/overview` | Open/completed/total goal counts |
+| `POST /v/<id>/api/goals` | Create item or skill goal (`goal_type`, `mode`, `group_id`) |
+| `DELETE /v/<id>/api/goals/<id>` | Delete a completed goal |
+| `GET /v/<id>/api/goal-groups` | List goal groups |
+| `POST /v/<id>/api/goal-groups` | Create a goal group |
+| `PATCH /v/<id>/api/goal-groups/<id>` | Rename a goal group |
+| `DELETE /v/<id>/api/goal-groups/<id>` | Delete a goal group (goals become ungrouped) |
+| `GET /v/<id>/api/export` | Download viewer SQLite database |
 | `POST /v/<id>/api/import` | JSON file upload (`.json` only, rate limited) |
 
 ## Save format
@@ -216,6 +251,14 @@ The game is actively developed — save files may contain new fields, items, or 
 - **Blocks import** only for serious issues (invalid JSON file, empty object)
 
 After import, errors and warnings appear as a banner in the dashboard; in the CLI on stderr.
+
+## Tests
+
+```powershell
+python test_db_goals.py
+```
+
+Smoke tests for relative/skill goals, import change summaries, skill timeline, and snapshot deletion.
 
 ## License
 
