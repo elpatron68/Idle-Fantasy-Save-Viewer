@@ -48,10 +48,10 @@ def configure_app(flask_app: Flask) -> None:
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self'; "
+            "script-src 'self' https://plausible.elpatron.me; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data:; "
-            "connect-src 'self'; "
+            "connect-src 'self' https://plausible.elpatron.me; "
             "frame-ancestors 'self'"
         )
         return response

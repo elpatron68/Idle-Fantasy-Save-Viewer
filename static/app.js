@@ -42,6 +42,12 @@ function getViewerId() {
   return document.body?.dataset?.viewerId || "";
 }
 
+function trackEvent(name, props) {
+  if (typeof window.plausible === "function") {
+    window.plausible(name, props ? { props } : undefined);
+  }
+}
+
 function apiBase() {
   const vid = getViewerId();
   return vid ? `/v/${vid}/api` : "/api";
@@ -143,6 +149,7 @@ function setupUpload() {
       e.target.value = "";
       return;
     }
+    trackEvent("JSON Upload", { status: result.imported ? "imported" : result.reason || "ok" });
     if (result.imported) {
       await loadData();
       notifyImportSuccess(result);
