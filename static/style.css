@@ -1026,16 +1026,18 @@ tr.has-goal td:first-child { font-weight: 600; }
   display: block;
   text-align: center;
   text-decoration: none;
-  margin-top: 8px;
 }
 
 .sidebar-backup-block {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 4px;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .sidebar-backup-label {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1043,7 +1045,7 @@ tr.has-goal td:first-child { font-weight: 600; }
   color: var(--text-muted);
 }
 .sidebar-backup-help {
-  margin-top: 10px;
+  margin-top: 2px;
   font-size: 0.78rem;
   color: var(--text-muted);
 }
