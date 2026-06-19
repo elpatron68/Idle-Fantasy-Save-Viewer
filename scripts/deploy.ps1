@@ -95,7 +95,7 @@ docker compose up -d --build --remove-orphans
 info "Waiting for health check ($HEALTH_URL)…"
 ok=0
 for ((i = 1; i <= HEALTH_RETRIES; i++)); do
-  if curl -fsS -o /dev/null "$HEALTH_URL"; then
+  if curl -fsS -o /dev/null "$HEALTH_URL" 2>/dev/null; then
     ok=1
     break
   fi
@@ -117,6 +117,9 @@ docker image prune -f >/dev/null
 info "Service status:"
 docker compose ps
 '@
+
+# PowerShell here-strings use CRLF on Windows; strip CR before sending to remote bash.
+$RemoteScript = ($RemoteScript -replace "`r`n", "`n") -replace "`r", ""
 
 $RemoteScript | & ssh @SshOpts $DeployHost bash -s -- `
     $DeployDir `
