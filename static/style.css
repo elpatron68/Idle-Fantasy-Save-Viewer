@@ -383,6 +383,11 @@ tr:hover td { background: var(--bg-hover); }
 .inv-table col.col-qty { width: 6.25rem; }
 .inv-table col.col-key { width: 34%; }
 
+.inv-table.has-trend col.col-name { width: 38%; }
+.inv-table.has-trend col.col-trend { width: 5.5rem; }
+.inv-table.has-trend col.col-qty { width: 5.5rem; }
+.inv-table.has-trend col.col-key { width: 30%; }
+
 .inv-table thead th {
   position: sticky;
   top: 0;
@@ -449,6 +454,111 @@ tr:hover td { background: var(--bg-hover); }
 
 .inv-table .inv-item-row.item-equipped .col-name {
   color: var(--accent);
+}
+
+.inv-table th.col-trend,
+.inv-table td.col-trend {
+  padding-left: 8px;
+  padding-right: 8px;
+  text-align: center;
+  width: 5.5rem;
+}
+
+.inv-spark-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 28px;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.inv-spark-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+.inv-spark-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.inv-spark-svg {
+  display: block;
+  pointer-events: none;
+}
+
+.inv-spark-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+body.inv-chart-modal-open {
+  overflow: hidden;
+}
+
+.inv-chart-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.inv-chart-modal[hidden] {
+  display: none;
+}
+
+.inv-chart-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 16, 0.72);
+}
+
+.inv-chart-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(720px, 100%);
+  margin: 0;
+  padding: 20px 20px 16px;
+}
+
+.inv-chart-modal-panel h3 {
+  margin: 0 32px 12px 0;
+  font-size: 1.05rem;
+}
+
+.inv-chart-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.inv-chart-modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.chart-wrap-modal {
+  height: 280px;
+  margin-top: 0;
 }
 
 .inv-group-row td {

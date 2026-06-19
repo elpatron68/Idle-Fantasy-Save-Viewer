@@ -116,7 +116,10 @@
     "qty": "Menge",
     "id": "ID",
     "equipped": "Ausgerüstet",
-    "groupMeta": "{count} Items · {qty} Stk."
+    "groupMeta": "{count} Items · {qty} Stk.",
+    "trend": "Verlauf",
+    "trendExpand": "Klicken für großes Diagramm",
+    "trendExpandFor": "Mengenverlauf für {name}"
   },
   "equipment": {
     "title": "Ausrüstung"

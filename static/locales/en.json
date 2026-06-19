@@ -116,7 +116,10 @@
     "qty": "Qty",
     "id": "ID",
     "equipped": "Equipped",
-    "groupMeta": "{count} items · {qty} pcs"
+    "groupMeta": "{count} items · {qty} pcs",
+    "trend": "Trend",
+    "trendExpand": "Click to enlarge chart",
+    "trendExpandFor": "Quantity history for {name}"
   },
   "equipment": {
     "title": "Equipment"

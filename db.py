@@ -308,3 +308,37 @@ def timeline(db_path: Path | str = DEFAULT_DB) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def inventory_timeline(db_path: Path | str = DEFAULT_DB) -> dict[str, Any]:
+    """Per-item quantity series aligned to snapshots (oldest → newest)."""
+    conn = get_connection(db_path)
+    init_db(conn)
+    snap_rows = conn.execute(
+        """
+        SELECT id, exported_at FROM snapshots
+        ORDER BY exported_at ASC, id ASC
+        """
+    ).fetchall()
+    snapshots = [dict(r) for r in snap_rows]
+    if not snapshots:
+        conn.close()
+        return {"snapshots": [], "series": {}}
+
+    snap_index = {row["id"]: idx for idx, row in enumerate(snapshots)}
+    inv_rows = conn.execute(
+        "SELECT snapshot_id, item_key, qty FROM inventory_snapshots"
+    ).fetchall()
+    conn.close()
+
+    series: dict[str, list[int]] = {}
+    n = len(snapshots)
+    for row in inv_rows:
+        key = row["item_key"]
+        if key not in series:
+            series[key] = [0] * n
+        idx = snap_index.get(row["snapshot_id"])
+        if idx is not None:
+            series[key][idx] = row["qty"]
+
+    return {"snapshots": snapshots, "series": series}

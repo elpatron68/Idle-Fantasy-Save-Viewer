@@ -9,6 +9,7 @@ let state = {
   quests: { tab: "story", filter: "all" },
   history: { olderId: null, newerId: null, diff: null },
   charts: {},
+  inventoryTimeline: null,
 };
 
 const CATEGORY_ORDER = [
@@ -238,6 +239,7 @@ async function loadData() {
       return;
     }
     state.data = await res.json();
+    state.inventoryTimeline = null;
     renderAll();
   } catch (err) {
     showEmpty(t("empty.loadError", { message: err.message }));
@@ -436,8 +438,129 @@ function getFilteredInventoryItems(d, inv) {
   return items;
 }
 
+async function ensureInventoryTimeline() {
+  if (state.inventoryTimeline) return state.inventoryTimeline;
+  try {
+    const res = await fetch(`${apiBase()}/inventory/timeline`);
+    state.inventoryTimeline = res.ok ? await res.json() : { snapshots: [], series: {} };
+  } catch {
+    state.inventoryTimeline = { snapshots: [], series: {} };
+  }
+  return state.inventoryTimeline;
+}
+
+function inventoryTrendEnabled() {
+  return (state.inventoryTimeline?.snapshots?.length || 0) >= 2;
+}
+
+function itemQtySeries(itemKey) {
+  const tl = state.inventoryTimeline;
+  if (!tl?.series) return null;
+  const values = tl.series[itemKey];
+  if (!values || values.length < 2) return null;
+  return values;
+}
+
+function sparklineSvg(values, width = 72, height = 24) {
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  const points = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * width;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return `<svg class="inv-spark-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" aria-hidden="true"><polyline points="${points}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function renderItemSparkCell(item) {
+  const values = itemQtySeries(item.key);
+  if (!values) {
+    return `<td class="col-trend"><span class="inv-spark-empty">—</span></td>`;
+  }
+  return `
+    <td class="col-trend">
+      <button type="button" class="inv-spark-btn" data-item-key="${esc(item.key)}" data-item-name="${esc(item.name)}" title="${esc(t("inventory.trendExpand"))}" aria-label="${esc(t("inventory.trendExpandFor", { name: item.name }))}">
+        ${sparklineSvg(values)}
+      </button>
+    </td>`;
+}
+
+function setupInventoryChartModal() {
+  if (document.getElementById("inv-chart-modal")) return;
+
+  const modal = document.createElement("div");
+  modal.id = "inv-chart-modal";
+  modal.className = "inv-chart-modal";
+  modal.hidden = true;
+  modal.innerHTML = `
+    <div class="inv-chart-modal-backdrop" data-close="1"></div>
+    <div class="inv-chart-modal-panel card" role="dialog" aria-modal="true" aria-labelledby="inv-chart-modal-title">
+      <button type="button" class="inv-chart-modal-close" data-close="1" aria-label="${esc(t("actions.dismiss"))}">×</button>
+      <h3 id="inv-chart-modal-title"></h3>
+      <div class="chart-wrap chart-wrap-modal"><canvas id="inv-chart-modal-canvas"></canvas></div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll("[data-close]").forEach((el) => {
+    el.addEventListener("click", closeInventoryChartModal);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.hidden) closeInventoryChartModal();
+  });
+}
+
+function openInventoryChartModal(itemKey, itemName) {
+  const values = itemQtySeries(itemKey);
+  const tl = state.inventoryTimeline;
+  if (!values || !tl) return;
+
+  setupInventoryChartModal();
+  const modal = document.getElementById("inv-chart-modal");
+  const title = document.getElementById("inv-chart-modal-title");
+  title.textContent = itemName;
+  modal.hidden = false;
+  document.body.classList.add("inv-chart-modal-open");
+
+  destroyChart("inventoryModal");
+  const labels = tl.snapshots.map((s) => formatTs(s.exported_at));
+  state.charts.inventoryModal = new Chart(document.getElementById("inv-chart-modal-canvas"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: t("inventory.qty"),
+        data: values,
+        borderColor: "#6c8cff",
+        backgroundColor: "rgba(108, 140, 255, 0.12)",
+        tension: 0.3,
+        fill: true,
+      }],
+    },
+    options: chartOpts(),
+  });
+}
+
+function closeInventoryChartModal() {
+  const modal = document.getElementById("inv-chart-modal");
+  if (!modal || modal.hidden) return;
+  modal.hidden = true;
+  document.body.classList.remove("inv-chart-modal-open");
+  destroyChart("inventoryModal");
+}
+
+function bindInventorySparklines(container) {
+  container.querySelectorAll(".inv-spark-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openInventoryChartModal(btn.dataset.itemKey, btn.dataset.itemName);
+    });
+  });
+}
+
 function renderInventoryTable(d, inv) {
   const items = getFilteredInventoryItems(d, inv);
+  const showTrend = inventoryTrendEnabled();
+  const colSpan = showTrend ? 4 : 3;
   const grouped = {};
   for (const item of items) {
     if (!grouped[item.category]) grouped[item.category] = [];
@@ -450,7 +573,7 @@ function renderInventoryTable(d, inv) {
     const catLabel = categoryLabel(cat);
     const header = `
       <tr class="inv-group-row" data-group="${esc(cat)}">
-        <td colspan="3">
+        <td colspan="${colSpan}">
           <button type="button" class="inv-group-toggle" data-group="${esc(cat)}" aria-expanded="${expanded}">
             <span class="inv-group-title">${esc(catLabel)}</span>
             <span class="inv-group-meta">${esc(t("inventory.groupMeta", { count: catItems.length, qty: fmt(totalQty) }))}</span>
@@ -460,6 +583,7 @@ function renderInventoryTable(d, inv) {
     const rows = catItems.map((i) => `
       <tr class="inv-item-row ${i.equipped && inv.highlightEquipped ? "item-equipped" : ""} ${expanded ? "" : "collapsed"}" data-group="${esc(cat)}">
         <td class="col-name">${esc(i.name)}${i.equipped ? `<span class="equipped-mark" title="${esc(t("inventory.equipped"))}">⚡</span>` : ""}</td>
+        ${showTrend ? renderItemSparkCell(i) : ""}
         <td class="col-qty">${fmt(i.qty)}</td>
         <td class="col-key"><code>${esc(i.key)}</code></td>
       </tr>`).join("");
@@ -472,17 +596,26 @@ function renderInventoryTable(d, inv) {
     return;
   }
 
+  const trendCol = showTrend
+    ? `<col class="col-trend">`
+    : "";
+  const trendHeader = showTrend
+    ? `<th class="col-trend">${esc(t("inventory.trend"))}</th>`
+    : "";
+
   results.innerHTML = `
     <div class="inv-table-wrap">
-      <table class="inv-table">
+      <table class="inv-table ${showTrend ? "has-trend" : ""}">
         <colgroup>
           <col class="col-name">
+          ${trendCol}
           <col class="col-qty">
           <col class="col-key">
         </colgroup>
         <thead>
           <tr>
             <th class="col-name">${esc(t("inventory.item"))}</th>
+            ${trendHeader}
             <th class="col-qty">${esc(t("inventory.qty"))}</th>
             <th class="col-key">${esc(t("inventory.id"))}</th>
           </tr>
@@ -503,6 +636,7 @@ function renderInventoryTable(d, inv) {
       });
     });
   });
+  bindInventorySparklines(results);
 }
 
 function renderInventoryChips(d, inv) {
@@ -518,7 +652,7 @@ function renderInventoryChips(d, inv) {
       if (inv.categories.has(cat)) inv.categories.delete(cat);
       else inv.categories.add(cat);
       renderInventoryChips(d, inv);
-      renderInventoryTable(d, inv);
+      ensureInventoryTimeline().then(() => renderInventoryTable(d, inv));
     });
   });
 }
@@ -546,15 +680,15 @@ function renderInventory(d) {
 
     document.getElementById("inv-search").addEventListener("input", (e) => {
       state.inventory.search = e.target.value;
-      renderInventoryTable(state.data, state.inventory);
+      ensureInventoryTimeline().then(() => renderInventoryTable(state.data, state.inventory));
     });
     document.getElementById("inv-sort").addEventListener("change", (e) => {
       state.inventory.sort = e.target.value;
-      renderInventoryTable(state.data, state.inventory);
+      ensureInventoryTimeline().then(() => renderInventoryTable(state.data, state.inventory));
     });
     document.getElementById("inv-equipped").addEventListener("change", (e) => {
       state.inventory.highlightEquipped = e.target.checked;
-      renderInventoryTable(state.data, state.inventory);
+      ensureInventoryTimeline().then(() => renderInventoryTable(state.data, state.inventory));
     });
   }
 
@@ -568,7 +702,7 @@ function renderInventory(d) {
   document.getElementById("inv-sort").value = inv.sort;
   document.getElementById("inv-equipped").checked = inv.highlightEquipped;
   renderInventoryChips(d, inv);
-  renderInventoryTable(d, inv);
+  ensureInventoryTimeline().then(() => renderInventoryTable(d, inv));
 }
 
 function renderEquipment(d) {

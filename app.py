@@ -19,6 +19,7 @@ from db import (
     get_snapshot,
     import_save,
     init_db,
+    inventory_timeline,
     list_snapshots,
     get_connection,
     timeline,
@@ -111,6 +112,12 @@ def api_diff(viewer_id: str, older_id: int, newer_id: int):
 def api_timeline(viewer_id: str):
     db_path = _resolve_viewer_db(viewer_id)
     return jsonify(timeline(db_path=db_path))
+
+
+@viewer_bp.route("/api/inventory/timeline")
+def api_inventory_timeline(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    return jsonify(inventory_timeline(db_path=db_path))
 
 
 @viewer_bp.route("/api/import", methods=["POST"])
