@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idle Fantasy Viewer</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-icon">⚔</span>
+        <div>
+          <h1>Idle Fantasy</h1>
+          <p class="subtitle">Save Viewer</p>
+        </div>
+      </div>
+      <nav class="nav" id="nav">
+        <button class="nav-btn active" data-tab="overview">Übersicht</button>
+        <button class="nav-btn" data-tab="skills">Skills</button>
+        <button class="nav-btn" data-tab="inventory">Inventar</button>
+        <button class="nav-btn" data-tab="equipment">Ausrüstung</button>
+        <button class="nav-btn" data-tab="quests">Quests</button>
+        <button class="nav-btn" data-tab="combat">Kampf</button>
+        <button class="nav-btn" data-tab="history">Verlauf</button>
+      </nav>
+      <div class="sidebar-footer">
+        <label class="upload-btn">
+          Backup importieren
+          <input type="file" id="file-upload" accept=".json" hidden>
+        </label>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div id="character-header" class="character-header">
+          <span class="loading">Lade Save…</span>
+        </div>
+        <div class="kpi-row" id="kpi-row"></div>
+      </header>
+
+      <section class="tab-panel active" id="tab-overview"></section>
+      <section class="tab-panel" id="tab-skills"></section>
+      <section class="tab-panel" id="tab-inventory"></section>
+      <section class="tab-panel" id="tab-equipment"></section>
+      <section class="tab-panel" id="tab-quests"></section>
+      <section class="tab-panel" id="tab-combat"></section>
+      <section class="tab-panel" id="tab-history"></section>
+    </main>
+  </div>
+</body>
+</html>
