@@ -7,6 +7,8 @@ let state = {
   inventory: { search: "", categories: new Set(), sort: "category", highlightEquipped: false, collapsedGroups: new Set() },
   skills: { search: "", sort: "level", sortAsc: false },
   quests: { tab: "story", filter: "all" },
+  goals: { filter: "all", collapsedGroups: new Set(), data: { groups: [], ungrouped: [] } },
+  goalModalItem: null,
   history: { olderId: null, newerId: null, diff: null },
   charts: {},
   inventoryTimeline: null,
@@ -67,6 +69,7 @@ async function init() {
   setupViewerBanner();
   setupNav();
   setupUpload();
+  setupGoalModal();
   await loadData();
 }
 
@@ -154,6 +157,7 @@ function setupUpload() {
     if (result.imported) {
       await loadData();
       notifyImportSuccess(result);
+      showGoalsCompletedBanner(result);
     } else if (result.reason === "duplicate") {
       alert(t("import.duplicate"));
     }
@@ -233,9 +237,13 @@ function renderImportReport(meta) {
 
 async function loadData() {
   try {
-    const res = await fetch(`${apiBase()}/snapshot/latest`);
+    const [res] = await Promise.all([
+      fetch(`${apiBase()}/snapshot/latest`),
+      loadGoals(),
+    ]);
     if (!res.ok) {
       showEmpty(getViewerId() ? t("empty.noSaveWeb") : t("empty.noSave"));
+      renderGoals();
       return;
     }
     state.data = await res.json();
@@ -243,6 +251,7 @@ async function loadData() {
     renderAll();
   } catch (err) {
     showEmpty(t("empty.loadError", { message: err.message }));
+    renderGoals();
   }
 }
 
@@ -259,6 +268,7 @@ function renderAll() {
   renderOverview(d);
   renderSkills(d);
   renderInventory(d);
+  renderGoals();
   renderEquipment(d);
   renderQuests(d);
   renderCombat(d);
@@ -560,7 +570,7 @@ function bindInventorySparklines(container) {
 function renderInventoryTable(d, inv) {
   const items = getFilteredInventoryItems(d, inv);
   const showTrend = inventoryTrendEnabled();
-  const colSpan = showTrend ? 4 : 3;
+  const colSpan = showTrend ? 5 : 4;
   const grouped = {};
   for (const item of items) {
     if (!grouped[item.category]) grouped[item.category] = [];
@@ -586,6 +596,9 @@ function renderInventoryTable(d, inv) {
         ${showTrend ? renderItemSparkCell(i) : ""}
         <td class="col-qty">${fmt(i.qty)}</td>
         <td class="col-key"><code>${esc(i.key)}</code></td>
+        <td class="col-actions">
+          <button type="button" class="goal-add-btn" data-item-key="${esc(i.key)}" data-item-name="${esc(i.name)}" data-item-qty="${i.qty}" title="${esc(t("inventory.addGoalFor", { name: i.name }))}" aria-label="${esc(t("inventory.addGoalFor", { name: i.name }))}">+</button>
+        </td>
       </tr>`).join("");
     return header + rows;
   }).join("");
@@ -611,6 +624,7 @@ function renderInventoryTable(d, inv) {
           ${trendCol}
           <col class="col-qty">
           <col class="col-key">
+          <col class="col-actions">
         </colgroup>
         <thead>
           <tr>
@@ -618,11 +632,22 @@ function renderInventoryTable(d, inv) {
             ${trendHeader}
             <th class="col-qty">${esc(t("inventory.qty"))}</th>
             <th class="col-key">${esc(t("inventory.id"))}</th>
+            <th class="col-actions">${esc(t("goals.actions"))}</th>
           </tr>
         </thead>
         <tbody>${groupRows}</tbody>
       </table>
     </div>`;
+
+  results.querySelectorAll(".goal-add-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openGoalModal({
+        key: btn.dataset.itemKey,
+        name: btn.dataset.itemName,
+        qty: Number(btn.dataset.itemQty),
+      });
+    });
+  });
 
   results.querySelectorAll(".inv-group-toggle").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -703,6 +728,332 @@ function renderInventory(d) {
   document.getElementById("inv-equipped").checked = inv.highlightEquipped;
   renderInventoryChips(d, inv);
   ensureInventoryTimeline().then(() => renderInventoryTable(d, inv));
+}
+
+async function loadGoals() {
+  try {
+    const res = await fetch(`${apiBase()}/goals`);
+    state.goals.data = res.ok ? await res.json() : { groups: [], ungrouped: [] };
+  } catch {
+    state.goals.data = { groups: [], ungrouped: [] };
+  }
+}
+
+function goalMatchesFilter(goal, filter) {
+  if (filter === "open") return !goal.completed_at;
+  if (filter === "done") return !!goal.completed_at;
+  return true;
+}
+
+function renderGoalRow(goal) {
+  const done = !!goal.completed_at;
+  const deleteBtn = done
+    ? `<button type="button" class="goal-delete-btn" data-goal-id="${goal.id}">${esc(t("goals.delete"))}</button>`
+    : "";
+  return `<tr>
+    <td>${esc(goal.item_name)}</td>
+    <td>
+      <div class="goal-progress-text">${fmt(goal.current_qty)} / ${fmt(goal.target_qty)}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${goal.progress_pct}%"></div></div>
+    </td>
+    <td><span class="badge ${done ? "badge-success" : "badge-warning"}">${esc(done ? t("goals.done") : t("goals.open"))}</span></td>
+    <td class="goal-actions-cell">${deleteBtn}</td>
+  </tr>`;
+}
+
+function renderGoalsTableBody(goals) {
+  if (!goals.length) {
+    return `<tr><td colspan="4" class="empty-state">${esc(t("goals.empty"))}</td></tr>`;
+  }
+  return goals.map(renderGoalRow).join("");
+}
+
+function bindGoalActions(panel) {
+  panel.querySelectorAll(".goal-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm(t("goals.deleteConfirm"))) return;
+      const res = await fetch(`${apiBase()}/goals/${btn.dataset.goalId}`, { method: "DELETE" });
+      if (res.ok) await loadGoals();
+      renderGoals();
+    });
+  });
+
+  panel.querySelectorAll(".goal-group-delete").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const name = btn.dataset.groupName;
+      if (!confirm(t("goals.deleteGroupConfirm", { name }))) return;
+      const res = await fetch(`${apiBase()}/goal-groups/${btn.dataset.groupId}`, { method: "DELETE" });
+      if (res.ok) await loadGoals();
+      renderGoals();
+    });
+  });
+
+  panel.querySelectorAll(".goal-clear-completed").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const ids = (btn.dataset.goalIds || "").split(",").filter(Boolean);
+      for (const id of ids) {
+        await fetch(`${apiBase()}/goals/${id}`, { method: "DELETE" });
+      }
+      await loadGoals();
+      renderGoals();
+    });
+  });
+
+  panel.querySelectorAll(".goal-group-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const group = btn.dataset.group;
+      const expanded = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", expanded ? "false" : "true");
+      if (expanded) state.goals.collapsedGroups.add(group);
+      else state.goals.collapsedGroups.delete(group);
+      panel.querySelectorAll(`.goal-item-row[data-group="${group}"]`).forEach((row) => {
+        row.classList.toggle("collapsed", expanded);
+      });
+    });
+  });
+}
+
+function renderGoals() {
+  const panel = document.getElementById("tab-goals");
+  const g = state.goals;
+  const filter = g.filter;
+  const data = g.data || { groups: [], ungrouped: [] };
+
+  const groupSections = data.groups.map((group) => {
+    const goals = (group.goals || []).filter((goal) => goalMatchesFilter(goal, filter));
+    if (!goals.length && filter !== "all") return "";
+    const completed = goals.filter((goal) => goal.completed_at).length;
+    const total = goals.length;
+    const sectionKey = `group-${group.id}`;
+    const expanded = !g.collapsedGroups.has(sectionKey);
+    const completedIds = goals.filter((goal) => goal.completed_at).map((goal) => goal.id);
+    const headerActions = `
+      ${completedIds.length ? `<button type="button" class="goal-clear-completed" data-goal-ids="${completedIds.join(",")}">${esc(t("goals.clearCompleted"))}</button>` : ""}
+      <button type="button" class="goal-group-delete" data-group-id="${group.id}" data-group-name="${esc(group.name)}">${esc(t("goals.deleteGroup"))}</button>`;
+    const rows = goals.length
+      ? goals.map((goal) => {
+          const row = renderGoalRow(goal);
+          return row.replace("<tr>", `<tr class="goal-item-row ${expanded ? "" : "collapsed"}" data-group="${sectionKey}">`);
+        }).join("")
+      : `<tr class="goal-item-row ${expanded ? "" : "collapsed"}" data-group="${sectionKey}"><td colspan="4" class="empty-state">${esc(t("goals.empty"))}</td></tr>`;
+
+    return `
+      <div class="card goals-group-card">
+        <table class="goals-table">
+          <tbody>
+            <tr class="inv-group-row goal-group-header">
+              <td colspan="4">
+                <button type="button" class="inv-group-toggle goal-group-toggle" data-group="${sectionKey}" aria-expanded="${expanded}">
+                  <span class="inv-group-title">${esc(group.name)}</span>
+                  <span class="inv-group-meta">${esc(t("goals.groupProgress", { completed, total }))}</span>
+                </button>
+                <span class="goal-group-actions">${headerActions}</span>
+              </td>
+            </tr>
+            ${rows}
+          </tbody>
+        </table>
+      </div>`;
+  }).join("");
+
+  const ungrouped = (data.ungrouped || []).filter((goal) => goalMatchesFilter(goal, filter));
+  const ungroupedSection = (filter === "all" || ungrouped.length) ? `
+    <div class="card goals-group-card">
+      <h3 class="goals-ungrouped-title">${esc(t("goals.ungrouped"))}</h3>
+      <table class="goals-table">
+        <thead>
+          <tr>
+            <th>${esc(t("goals.item"))}</th>
+            <th>${esc(t("goals.progress"))}</th>
+            <th>${esc(t("goals.status"))}</th>
+            <th>${esc(t("goals.actions"))}</th>
+          </tr>
+        </thead>
+        <tbody>${renderGoalsTableBody(ungrouped)}</tbody>
+      </table>
+    </div>` : "";
+
+  const hasAny = groupSections || ungrouped.length || filter === "all";
+
+  panel.innerHTML = `
+    <div class="toolbar goals-toolbar">
+      <select class="select-input" id="goals-filter">
+        <option value="all" ${filter === "all" ? "selected" : ""}>${esc(t("goals.filterAll"))}</option>
+        <option value="open" ${filter === "open" ? "selected" : ""}>${esc(t("goals.filterOpen"))}</option>
+        <option value="done" ${filter === "done" ? "selected" : ""}>${esc(t("goals.filterDone"))}</option>
+      </select>
+      <button type="button" class="upload-btn" id="goals-create-group">${esc(t("goals.createGroup"))}</button>
+    </div>
+    ${hasAny ? groupSections + ungroupedSection : `<div class="card"><p class="empty-state">${esc(t("goals.empty"))}</p></div>`}`;
+
+  document.getElementById("goals-filter").addEventListener("change", (e) => {
+    state.goals.filter = e.target.value;
+    renderGoals();
+  });
+
+  document.getElementById("goals-create-group").addEventListener("click", async () => {
+    const name = prompt(t("goals.createGroupPrompt"));
+    if (!name || !name.trim()) return;
+    const res = await fetch(`${apiBase()}/goal-groups`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name.trim() }),
+    });
+    if (!res.ok) {
+      alert(t("goals.groupCreateFailed"));
+      return;
+    }
+    await loadGoals();
+    renderGoals();
+  });
+
+  bindGoalActions(panel);
+}
+
+async function fetchGoalGroups() {
+  const res = await fetch(`${apiBase()}/goal-groups`);
+  return res.ok ? await res.json() : [];
+}
+
+function setupGoalModal() {
+  document.getElementById("goal-modal-cancel").addEventListener("click", closeGoalModal);
+  document.getElementById("goal-modal-backdrop").addEventListener("click", closeGoalModal);
+  document.getElementById("goal-modal-group").addEventListener("change", (e) => {
+    document.getElementById("goal-modal-new-group-wrap").hidden = e.target.value !== "new";
+  });
+  document.getElementById("goal-modal-submit").addEventListener("click", submitGoalModal);
+}
+
+function applyGoalModalI18n() {
+  document.getElementById("goal-modal-title").textContent = t("goals.modalTitle");
+  document.getElementById("goal-modal-qty-label").textContent = t("goals.targetQty");
+  document.getElementById("goal-modal-group-label").textContent = t("goals.selectGroup");
+  document.getElementById("goal-modal-new-group-label").textContent = t("goals.newGroupName");
+  document.getElementById("goal-modal-cancel").textContent = t("goals.cancel");
+  document.getElementById("goal-modal-submit").textContent = t("inventory.addGoal");
+}
+
+async function openGoalModal(item) {
+  state.goalModalItem = item;
+  applyGoalModalI18n();
+  const modal = document.getElementById("goal-modal");
+  const errEl = document.getElementById("goal-modal-error");
+  errEl.hidden = true;
+  errEl.textContent = "";
+
+  document.getElementById("goal-modal-item").textContent = `${item.name} — ${t("goals.currentQty", { qty: fmt(item.qty) })}`;
+  document.getElementById("goal-modal-qty").value = Math.max(item.qty + 1, 1);
+  document.getElementById("goal-modal-new-group").value = "";
+  document.getElementById("goal-modal-new-group-wrap").hidden = true;
+
+  const groups = await fetchGoalGroups();
+  const sel = document.getElementById("goal-modal-group");
+  sel.innerHTML = `
+    <option value="">${esc(t("goals.noGroup"))}</option>
+    ${groups.map((g) => `<option value="${g.id}">${esc(g.name)}</option>`).join("")}
+    <option value="new">${esc(t("goals.newGroup"))}</option>`;
+
+  modal.hidden = false;
+}
+
+function closeGoalModal() {
+  document.getElementById("goal-modal").hidden = true;
+  state.goalModalItem = null;
+}
+
+async function submitGoalModal() {
+  const item = state.goalModalItem;
+  if (!item) return;
+  const errEl = document.getElementById("goal-modal-error");
+  errEl.hidden = true;
+
+  const targetQty = parseInt(document.getElementById("goal-modal-qty").value, 10);
+  if (!targetQty || targetQty <= 0) {
+    errEl.textContent = t("goals.createFailed");
+    errEl.hidden = false;
+    return;
+  }
+
+  let groupId = null;
+  const groupVal = document.getElementById("goal-modal-group").value;
+  if (groupVal === "new") {
+    const name = document.getElementById("goal-modal-new-group").value.trim();
+    if (!name) {
+      errEl.textContent = t("goals.groupCreateFailed");
+      errEl.hidden = false;
+      return;
+    }
+    const gRes = await fetch(`${apiBase()}/goal-groups`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!gRes.ok) {
+      errEl.textContent = t("goals.groupCreateFailed");
+      errEl.hidden = false;
+      return;
+    }
+    const gData = await gRes.json();
+    groupId = gData.id;
+  } else if (groupVal) {
+    groupId = parseInt(groupVal, 10);
+  }
+
+  const res = await fetch(`${apiBase()}/goals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ item_key: item.key, target_qty: targetQty, group_id: groupId }),
+  });
+  const result = await res.json();
+  if (!res.ok) {
+    errEl.textContent = result.error || t("goals.createFailed");
+    errEl.hidden = false;
+    return;
+  }
+
+  closeGoalModal();
+  await loadGoals();
+  renderGoals();
+}
+
+function showGoalsCompletedBanner(result) {
+  const el = document.getElementById("goals-completed-banner");
+  const completed = result.goals_completed || [];
+  const groupsDone = result.groups_completed || [];
+  if (!completed.length && !groupsDone.length) {
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+
+  const items = completed.map((goal) => {
+    const groupPrefix = goal.group_name
+      ? t("goals.completedItemGroup", { name: goal.group_name })
+      : "";
+    return `<li>${esc(t("goals.completedItem", {
+      group: groupPrefix,
+      name: goal.item_name,
+      current: fmt(goal.current_qty),
+      target: fmt(goal.target_qty),
+    }))}</li>`;
+  }).join("");
+
+  const groupLines = groupsDone.map((g) =>
+    `<li class="goal-group-completed-line">${esc(t("goals.groupCompleted", { name: g.name }))}</li>`
+  ).join("");
+
+  el.hidden = false;
+  el.className = "goals-completed-banner import-report import-report-info";
+  el.innerHTML = `
+    <div class="import-report-header">
+      <strong>${esc(t("goals.completedBannerTitle"))}</strong>
+      <button type="button" class="import-report-dismiss" title="${esc(t("actions.dismiss"))}">×</button>
+    </div>
+    <ul class="import-report-list">${items}${groupLines}</ul>`;
+
+  el.querySelector(".import-report-dismiss").addEventListener("click", () => {
+    el.hidden = true;
+  });
 }
 
 function renderEquipment(d) {

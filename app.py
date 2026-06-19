@@ -14,12 +14,18 @@ from werkzeug.utils import secure_filename
 
 from db import (
     DEFAULT_DB,
+    create_goal,
+    create_goal_group,
+    delete_goal,
+    delete_goal_group,
     diff_snapshots,
     get_latest_snapshot,
     get_snapshot,
     import_save,
     init_db,
     inventory_timeline,
+    list_goal_groups,
+    list_goals_structured,
     list_snapshots,
     get_connection,
     timeline,
@@ -119,6 +125,81 @@ def api_timeline(viewer_id: str):
 def api_inventory_timeline(viewer_id: str):
     db_path = _resolve_viewer_db(viewer_id)
     return jsonify(inventory_timeline(db_path=db_path))
+
+
+@viewer_bp.route("/api/goal-groups")
+def api_goal_groups(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    return jsonify(list_goal_groups(db_path=db_path))
+
+
+@viewer_bp.route("/api/goal-groups", methods=["POST"])
+def api_create_goal_group(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    body = request.get_json(silent=True) or {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "Group name is required"}), 400
+    try:
+        group = create_goal_group(name, db_path=db_path)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(group), 201
+
+
+@viewer_bp.route("/api/goal-groups/<int:group_id>", methods=["DELETE"])
+def api_delete_goal_group(viewer_id: str, group_id: int):
+    db_path = _resolve_viewer_db(viewer_id)
+    if not delete_goal_group(group_id, db_path=db_path):
+        return jsonify({"error": "Goal group not found"}), 404
+    return jsonify({"deleted": True})
+
+
+@viewer_bp.route("/api/goals")
+def api_goals(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    return jsonify(list_goals_structured(db_path=db_path))
+
+
+@viewer_bp.route("/api/goals", methods=["POST"])
+def api_create_goal(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    body = request.get_json(silent=True) or {}
+    item_key = (body.get("item_key") or "").strip()
+    target_qty = body.get("target_qty")
+    group_id = body.get("group_id")
+
+    if not item_key:
+        return jsonify({"error": "item_key is required"}), 400
+    try:
+        target_qty = int(target_qty)
+    except (TypeError, ValueError):
+        return jsonify({"error": "target_qty must be a positive integer"}), 400
+    if group_id is not None:
+        try:
+            group_id = int(group_id)
+        except (TypeError, ValueError):
+            return jsonify({"error": "group_id must be an integer"}), 400
+
+    if not get_latest_snapshot(db_path=db_path):
+        return jsonify({"error": "No snapshots imported yet"}), 404
+
+    try:
+        goal = create_goal(item_key, target_qty, group_id=group_id, db_path=db_path)
+    except ValueError as exc:
+        msg = str(exc)
+        status = 404 if "not found" in msg.lower() else 409 if "already exists" in msg.lower() else 400
+        return jsonify({"error": msg}), status
+
+    return jsonify(goal), 201
+
+
+@viewer_bp.route("/api/goals/<int:goal_id>", methods=["DELETE"])
+def api_delete_goal(viewer_id: str, goal_id: int):
+    db_path = _resolve_viewer_db(viewer_id)
+    if not delete_goal(goal_id, db_path=db_path):
+        return jsonify({"error": "Goal not found"}), 404
+    return jsonify({"deleted": True})
 
 
 @viewer_bp.route("/api/import", methods=["POST"])

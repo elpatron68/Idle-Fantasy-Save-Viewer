@@ -24,6 +24,7 @@
         <button class="nav-btn active" data-tab="overview" data-i18n="nav.overview">Overview</button>
         <button class="nav-btn" data-tab="skills" data-i18n="nav.skills">Skills</button>
         <button class="nav-btn" data-tab="inventory" data-i18n="nav.inventory">Inventory</button>
+        <button class="nav-btn" data-tab="goals" data-i18n="nav.goals">Goals</button>
         <button class="nav-btn" data-tab="equipment" data-i18n="nav.equipment">Equipment</button>
         <button class="nav-btn" data-tab="quests" data-i18n="nav.quests">Quests</button>
         <button class="nav-btn" data-tab="combat" data-i18n="nav.combat">Combat</button>
@@ -58,6 +59,7 @@
           <button type="button" class="viewer-copy-btn" id="viewer-copy-link" data-i18n="viewer.copyLink">Copy link</button>
         </div>
         <div id="import-report" class="import-report" hidden></div>
+        <div id="goals-completed-banner" class="goals-completed-banner" hidden></div>
         <div id="character-header" class="character-header">
           <span class="loading" data-i18n="app.loading">Loading save…</span>
         </div>
@@ -67,11 +69,36 @@
       <section class="tab-panel active" id="tab-overview"></section>
       <section class="tab-panel" id="tab-skills"></section>
       <section class="tab-panel" id="tab-inventory"></section>
+      <section class="tab-panel" id="tab-goals"></section>
       <section class="tab-panel" id="tab-equipment"></section>
       <section class="tab-panel" id="tab-quests"></section>
       <section class="tab-panel" id="tab-combat"></section>
       <section class="tab-panel" id="tab-history"></section>
     </main>
+  </div>
+  <div id="goal-modal" class="goal-modal" hidden>
+    <div class="goal-modal-backdrop" id="goal-modal-backdrop"></div>
+    <div class="goal-modal-card" role="dialog" aria-labelledby="goal-modal-title">
+      <h3 id="goal-modal-title"></h3>
+      <p class="goal-modal-item" id="goal-modal-item"></p>
+      <label class="goal-modal-field">
+        <span id="goal-modal-qty-label"></span>
+        <input type="number" class="search-input" id="goal-modal-qty" min="1" step="1">
+      </label>
+      <label class="goal-modal-field">
+        <span id="goal-modal-group-label"></span>
+        <select class="select-input" id="goal-modal-group"></select>
+      </label>
+      <label class="goal-modal-field" id="goal-modal-new-group-wrap" hidden>
+        <span id="goal-modal-new-group-label"></span>
+        <input type="text" class="search-input" id="goal-modal-new-group">
+      </label>
+      <p class="goal-modal-error landing-hint landing-hint-error" id="goal-modal-error" hidden></p>
+      <div class="goal-modal-actions">
+        <button type="button" class="viewer-copy-btn" id="goal-modal-cancel"></button>
+        <button type="button" class="upload-btn" id="goal-modal-submit"></button>
+      </div>
+    </div>
   </div>
   {% include '_footer.html' %}
 </body>

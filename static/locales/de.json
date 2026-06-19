@@ -8,6 +8,7 @@
     "overview": "Übersicht",
     "skills": "Skills",
     "inventory": "Inventar",
+    "goals": "Ziele",
     "equipment": "Ausrüstung",
     "quests": "Quests",
     "combat": "Kampf",
@@ -119,7 +120,9 @@
     "groupMeta": "{count} Items · {qty} Stk.",
     "trend": "Verlauf",
     "trendExpand": "Klicken für großes Diagramm",
-    "trendExpandFor": "Mengenverlauf für {name}"
+    "trendExpandFor": "Mengenverlauf für {name}",
+    "addGoal": "Ziel hinzufügen",
+    "addGoalFor": "Ziel für {name} hinzufügen"
   },
   "equipment": {
     "title": "Ausrüstung"
@@ -181,6 +184,7 @@
   },
   "viewer": {
     "landingLead": "Erstelle deinen persönlichen Save-Viewer. Kein Konto – nur ein privater Link zu deinen Daten.",
+    "gameLink": "Idle Fantasy auf GitHub",
     "featureDashboard": "Skills, Inventar, Quests und Verlauf",
     "featureUpload": "Backups im Browser importieren",
     "featurePrivate": "Deine Daten bleiben nur in deinem Viewer",
@@ -194,5 +198,41 @@
     "copyLink": "Link kopieren",
     "copied": "Kopiert!",
     "copyPrompt": "Viewer-Link kopieren:"
+  },
+  "goals": {
+    "filterAll": "Alle",
+    "filterOpen": "Offen",
+    "filterDone": "Erledigt",
+    "createGroup": "Gruppe anlegen",
+    "createGroupPrompt": "Gruppenname:",
+    "groupProgress": "{completed} / {total} erledigt",
+    "ungrouped": "Ohne Gruppe",
+    "item": "Item",
+    "progress": "Fortschritt",
+    "status": "Status",
+    "actions": "Aktionen",
+    "open": "Offen",
+    "done": "Erledigt",
+    "delete": "Löschen",
+    "deleteGroup": "Gruppe löschen",
+    "deleteGroupConfirm": "Gruppe „{name}“ löschen? Ziele bleiben ohne Gruppe erhalten.",
+    "deleteConfirm": "Dieses Ziel löschen?",
+    "clearCompleted": "Erledigte entfernen",
+    "empty": "Noch keine Ziele. Lege Ziele im Inventar-Tab an.",
+    "loadError": "Ziele konnten nicht geladen werden",
+    "createFailed": "Ziel konnte nicht angelegt werden",
+    "groupCreateFailed": "Gruppe konnte nicht angelegt werden",
+    "modalTitle": "Ziel hinzufügen",
+    "cancel": "Abbrechen",
+    "targetQty": "Zielmenge",
+    "selectGroup": "Gruppe",
+    "noGroup": "Keine Gruppe",
+    "newGroup": "Neue Gruppe…",
+    "newGroupName": "Name der neuen Gruppe",
+    "currentQty": "Aktuell: {qty}",
+    "completedBannerTitle": "Ziele erreicht",
+    "completedItem": "{group}{name}: {current} / {target}",
+    "completedItemGroup": "{name}: ",
+    "groupCompleted": "Gruppe erledigt: {name}"
   }
 }
