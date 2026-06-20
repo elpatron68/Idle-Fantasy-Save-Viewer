@@ -338,7 +338,7 @@ def timeline(db_path: Path | str = DEFAULT_DB) -> list[dict]:
     init_db(conn)
     rows = conn.execute(
         """
-        SELECT s.id, s.exported_at, s.coins, s.total_level, s.character_name, s.source_file
+        SELECT s.id, s.imported_at, s.exported_at, s.coins, s.total_level, s.character_name, s.source_file
         FROM snapshots s ORDER BY s.exported_at ASC, s.id ASC
         """
     ).fetchall()
@@ -352,7 +352,7 @@ def inventory_timeline(db_path: Path | str = DEFAULT_DB) -> dict[str, Any]:
     init_db(conn)
     snap_rows = conn.execute(
         """
-        SELECT id, exported_at FROM snapshots
+        SELECT id, imported_at, exported_at FROM snapshots
         ORDER BY exported_at ASC, id ASC
         """
     ).fetchall()
@@ -1047,7 +1047,7 @@ def skill_timeline(db_path: Path | str = DEFAULT_DB) -> dict[str, Any]:
     init_db(conn)
     snap_rows = conn.execute(
         """
-        SELECT id, exported_at FROM snapshots
+        SELECT id, imported_at, exported_at FROM snapshots
         ORDER BY exported_at ASC, id ASC
         """
     ).fetchall()

@@ -766,21 +766,20 @@ function openInventoryChartModal(itemKey, itemName) {
   document.body.classList.add("inv-chart-modal-open");
 
   destroyChart("inventoryModal");
-  const labels = tl.snapshots.map((s) => formatTs(s.exported_at));
+  const points = timelineChartPoints(tl.snapshots, values);
   state.charts.inventoryModal = new Chart(document.getElementById("inv-chart-modal-canvas"), {
     type: "line",
     data: {
-      labels,
       datasets: [{
         label: t("inventory.qty"),
-        data: values,
+        data: points,
         borderColor: "#6c8cff",
         backgroundColor: "rgba(108, 140, 255, 0.12)",
         tension: 0.3,
         fill: true,
       }],
     },
-    options: chartOpts(),
+    options: chartOptsTime(tl.snapshots),
   });
 }
 
@@ -1627,30 +1626,41 @@ function renderTimelineCharts() {
   const tl = state.timeline;
   if (!tl.length) return;
 
-  const labels = tl.map((s) => formatTs(s.exported_at));
-  const coins = tl.map((s) => s.coins);
-  const levels = tl.map((s) => s.total_level);
-
   destroyChart("coins");
   destroyChart("level");
   destroyChart("skills");
 
   state.charts.coins = new Chart(document.getElementById("chart-coins"), {
     type: "line",
-    data: { labels, datasets: [{ label: t("kpi.coins"), data: coins, borderColor: "#6c8cff", tension: 0.3, fill: false }] },
-    options: chartOpts(),
+    data: {
+      datasets: [{
+        label: t("kpi.coins"),
+        data: timelineChartPoints(tl, tl.map((s) => s.coins)),
+        borderColor: "#6c8cff",
+        tension: 0.3,
+        fill: false,
+      }],
+    },
+    options: chartOptsTime(tl),
   });
   state.charts.level = new Chart(document.getElementById("chart-level"), {
     type: "line",
-    data: { labels, datasets: [{ label: t("kpi.totalLevel"), data: levels, borderColor: "#4ade80", tension: 0.3, fill: false }] },
-    options: chartOpts(),
+    data: {
+      datasets: [{
+        label: t("kpi.totalLevel"),
+        data: timelineChartPoints(tl, tl.map((s) => s.total_level)),
+        borderColor: "#4ade80",
+        tension: 0.3,
+        fill: false,
+      }],
+    },
+    options: chartOptsTime(tl),
   });
 
   const skillTl = state.skillTimeline;
   const skillCanvas = document.getElementById("chart-skills");
   if (!skillCanvas || !skillTl?.snapshots?.length) return;
 
-  const skillLabels = skillTl.snapshots.map((s) => formatTs(s.exported_at));
   const skillEntries = Object.entries(skillTl.series || {})
     .map(([key, values]) => ({ key, values, latest: values[values.length - 1] || 0 }))
     .sort((a, b) => b.latest - a.latest)
@@ -1665,26 +1675,96 @@ function renderTimelineCharts() {
   state.charts.skills = new Chart(skillCanvas, {
     type: "line",
     data: {
-      labels: skillLabels,
       datasets: skillEntries.map((entry, idx) => ({
         label: skillName(entry.key),
-        data: entry.values,
+        data: timelineChartPoints(skillTl.snapshots, entry.values),
         borderColor: colors[idx % colors.length],
         tension: 0.3,
         fill: false,
       })),
     },
-    options: chartOpts(),
+    options: chartOptsTime(skillTl.snapshots),
   });
 }
 
-function chartOpts() {
+function normalizeTimeMs(ts) {
+  const n = Number(ts);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n < 1e12 ? n * 1000 : n;
+}
+
+function snapshotTimeMs(snapshot) {
+  if (!snapshot) return null;
+  const exported = normalizeTimeMs(snapshot.exported_at);
+  if (exported != null) return exported;
+  if (snapshot.imported_at) {
+    const imported = Date.parse(snapshot.imported_at);
+    if (Number.isFinite(imported)) return imported;
+  }
+  return null;
+}
+
+function timelineChartPoints(snapshots, values) {
+  return snapshots.map((snapshot, i) => {
+    const x = snapshotTimeMs(snapshot);
+    if (x == null) return null;
+    return { x, y: values[i] };
+  }).filter(Boolean);
+}
+
+function chartTimeRange(snapshots) {
+  const times = snapshots.map(snapshotTimeMs).filter((t) => t != null);
+  if (!times.length) return {};
+  const min = Math.min(...times);
+  const max = Math.max(...times);
+  if (min === max) {
+    const pad = 60 * 60 * 1000;
+    return { min: min - pad, max: max + pad };
+  }
+  return { min, max };
+}
+
+function formatChartAxisTs(ms, spanMs = 0) {
+  if (!ms || !Number.isFinite(ms)) return "";
+  const d = new Date(ms);
+  const dayMs = 86400000;
+  if (spanMs > 14 * dayMs) {
+    return d.toLocaleString(I18n.localeTag(), { dateStyle: "short" });
+  }
+  if (spanMs > 2 * dayMs) {
+    return d.toLocaleString(I18n.localeTag(), { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleString(I18n.localeTag(), { dateStyle: "short", timeStyle: "short" });
+}
+
+function chartOptsTime(snapshots) {
+  const range = chartTimeRange(snapshots);
+  const spanMs = (range.max ?? 0) - (range.min ?? 0);
   return {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: "#8b92a8" } } },
+    plugins: {
+      legend: { labels: { color: "#8b92a8" } },
+      tooltip: {
+        callbacks: {
+          title: (items) => {
+            const x = items[0]?.parsed?.x;
+            return x != null ? formatTs(x) : "";
+          },
+        },
+      },
+    },
     scales: {
-      x: { ticks: { color: "#8b92a8" }, grid: { color: "#2d3348" } },
+      x: {
+        type: "linear",
+        ...range,
+        ticks: {
+          color: "#8b92a8",
+          maxTicksLimit: 8,
+          callback: (v) => formatChartAxisTs(v, spanMs),
+        },
+        grid: { color: "#2d3348" },
+      },
       y: { ticks: { color: "#8b92a8" }, grid: { color: "#2d3348" } },
     },
   };
@@ -1762,8 +1842,9 @@ function fmt(n) {
 }
 
 function formatTs(ts) {
-  if (!ts) return "—";
-  const d = new Date(Number(ts));
+  const ms = normalizeTimeMs(ts);
+  if (ms == null) return "—";
+  const d = new Date(ms);
   return d.toLocaleString(I18n.localeTag(), { dateStyle: "short", timeStyle: "short" });
 }
 
