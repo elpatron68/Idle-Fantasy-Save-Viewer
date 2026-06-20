@@ -856,6 +856,10 @@ body.inv-chart-modal-open {
 }
 
 /* PWA install hint */
+.pwa-hint[hidden] {
+  display: none;
+}
+
 .pwa-hint {
   display: flex;
   align-items: flex-start;
