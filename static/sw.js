@@ -1,4 +1,4 @@
-const CACHE = "if-viewer-static-v4";
+const CACHE = "if-viewer-static-v5";
 const ASSETS = [
   "/static/style.css",
   "/static/favicon.svg",

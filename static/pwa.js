@@ -4,6 +4,7 @@ const Pwa = (() => {
   const DISMISS_KEY = "pwa-hint-dismissed";
   let deferredPrompt = null;
   let refreshInstallHint = null;
+  let hintBound = false;
 
   function isStandalone() {
     return window.matchMedia("(display-mode: standalone)").matches
@@ -42,27 +43,64 @@ const Pwa = (() => {
     return "pwa.hintDesktop";
   }
 
-  function setupInstallHint() {
-    if (isStandalone()) return null;
-    if (localStorage.getItem(DISMISS_KEY) === "1") return null;
+  function hideHint(hint, { persist = true } = {}) {
+    if (persist) {
+      try {
+        localStorage.setItem(DISMISS_KEY, "1");
+      } catch {
+        /* private mode with storage blocked – still hide for this session */
+      }
+    }
+    hint.hidden = true;
+    hint.classList.add("is-dismissed");
+  }
 
+  function showHint(hint) {
+    hint.hidden = false;
+    hint.classList.remove("is-dismissed");
+  }
+
+  function bindHintActions(hint) {
+    if (hintBound) return;
+    hintBound = true;
+
+    hint.addEventListener("click", (event) => {
+      if (event.target.closest(".pwa-hint-dismiss")) {
+        event.preventDefault();
+        hideHint(hint);
+      }
+    });
+  }
+
+  function setupInstallHint() {
     const hint = document.getElementById("pwa-install-hint");
     if (!hint) return null;
 
+    bindHintActions(hint);
+
+    if (isStandalone()) {
+      hideHint(hint, { persist: false });
+      return null;
+    }
+    if (localStorage.getItem(DISMISS_KEY) === "1") {
+      hideHint(hint, { persist: false });
+      return null;
+    }
+
     const body = document.getElementById("pwa-hint-body");
     const installBtn = document.getElementById("pwa-install-btn");
-    const dismissBtn = document.getElementById("pwa-hint-dismiss");
+    const dismissBtn = hint.querySelector(".pwa-hint-dismiss");
 
     const updateHintText = () => {
       const title = hint.querySelector("[data-i18n='pwa.hintTitle']");
       if (title) title.textContent = t("pwa.hintTitle");
       if (body && !deferredPrompt) body.textContent = t(platformHintKey());
       if (body && deferredPrompt) body.textContent = t("pwa.hintBody");
-      if (dismissBtn) dismissBtn.title = t("actions.dismiss");
+      if (dismissBtn) dismissBtn.setAttribute("aria-label", t("actions.dismiss"));
       if (installBtn && !installBtn.hidden) installBtn.textContent = t("pwa.install");
     };
 
-    hint.hidden = false;
+    showHint(hint);
     updateHintText();
 
     window.addEventListener("beforeinstallprompt", (e) => {
@@ -73,11 +111,6 @@ const Pwa = (() => {
       updateHintText();
     });
 
-    dismissBtn?.addEventListener("click", () => {
-      localStorage.setItem(DISMISS_KEY, "1");
-      hint.hidden = true;
-    });
-
     installBtn?.addEventListener("click", async () => {
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
@@ -86,7 +119,7 @@ const Pwa = (() => {
       installBtn.hidden = true;
       if (outcome === "accepted") {
         if (body) body.textContent = t("pwa.installed");
-        setTimeout(() => { hint.hidden = true; }, 3000);
+        setTimeout(() => { hideHint(hint); }, 3000);
       } else {
         updateHintText();
       }
@@ -96,8 +129,8 @@ const Pwa = (() => {
   }
 
   async function init() {
-    await registerServiceWorker();
     refreshInstallHint = setupInstallHint();
+    await registerServiceWorker();
   }
 
   function refreshHint() {

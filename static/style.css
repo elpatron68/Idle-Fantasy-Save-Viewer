@@ -856,8 +856,9 @@ body.inv-chart-modal-open {
 }
 
 /* PWA install hint */
-.pwa-hint[hidden] {
-  display: none;
+.pwa-hint[hidden],
+.pwa-hint.is-dismissed {
+  display: none !important;
 }
 
 .pwa-hint {
@@ -896,6 +897,25 @@ body.inv-chart-modal-open {
   align-items: flex-start;
   gap: 6px;
   flex-shrink: 0;
+}
+
+.pwa-hint-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.pwa-hint-dismiss:hover {
+  color: var(--text);
+  background: var(--bg-hover);
 }
 
 .landing-card .pwa-hint {
