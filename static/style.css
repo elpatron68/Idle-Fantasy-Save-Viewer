@@ -1028,35 +1028,34 @@ tr.has-goal td:first-child { font-weight: 600; }
   text-decoration: none;
 }
 
-.sidebar-backup-block {
-  margin-top: 4px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+.backup-tab-card {
+  max-width: 560px;
+}
+.backup-tab-card h3 {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+}
+.backup-tab-lead,
+.backup-tab-note {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.backup-tab-note {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+}
+.backup-tab-actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 16px;
 }
-.sidebar-backup-label {
-  margin: 0;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-}
-.sidebar-backup-help {
-  margin-top: 2px;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-.sidebar-backup-help summary {
-  cursor: pointer;
-  color: var(--accent);
-  font-weight: 600;
-}
-.sidebar-backup-help p {
-  margin: 8px 0 0;
-  line-height: 1.45;
+.backup-tab-actions .upload-btn {
+  width: 100%;
 }
 
 .goal-modal {

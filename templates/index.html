@@ -29,6 +29,7 @@
         <button class="nav-btn" data-tab="quests" data-i18n="nav.quests">Quests</button>
         <button class="nav-btn" data-tab="combat" data-i18n="nav.combat">Combat</button>
         <button class="nav-btn" data-tab="history" data-i18n="nav.history">History</button>
+        <button class="nav-btn" data-tab="backup" data-i18n="nav.backup">Backup</button>
       </nav>
       <div class="sidebar-footer">
         <label class="lang-label" for="locale-select">
@@ -43,18 +44,6 @@
           <span data-i18n="actions.importBackup">Import game backup</span>
           <input type="file" id="file-upload" accept=".json" hidden>
         </label>
-        <div class="sidebar-backup-block">
-          <p class="sidebar-backup-label" data-i18n="viewerDb.title">Viewer backup</p>
-          <a class="upload-btn export-btn" id="export-viewer" href="#" data-i18n="actions.exportViewer">Export viewer</a>
-          <label class="upload-btn">
-            <span data-i18n="actions.importViewer">Import viewer</span>
-            <input type="file" id="viewer-db-upload" accept=".db,application/octet-stream" hidden>
-          </label>
-          <details class="sidebar-backup-help">
-            <summary data-i18n="viewerDb.helpTitle">What is this?</summary>
-            <p data-i18n="viewerDb.helpBody">The viewer stores imported game backups, history charts, and goals in a SQLite database on the server. Export downloads that database as a backup. Import restores it and replaces all current viewer data. This is not the same as importing a game save (.json).</p>
-          </details>
-        </div>
       </div>
     </aside>
 
@@ -90,6 +79,20 @@
       <section class="tab-panel" id="tab-quests"></section>
       <section class="tab-panel" id="tab-combat"></section>
       <section class="tab-panel" id="tab-history"></section>
+      <section class="tab-panel" id="tab-backup">
+        <div class="card backup-tab-card">
+          <h3 data-i18n="viewerDb.title">Viewer backup</h3>
+          <p class="backup-tab-lead" data-i18n="viewerDb.helpBody">The viewer stores imported game backups, history charts, and goals in a SQLite database on the server. Export downloads that database as a backup. Import restores it and replaces all current viewer data. This is not the same as importing a game save (.json).</p>
+          <p class="backup-tab-note" data-i18n="viewerDb.gameBackupNote">To add a new game save snapshot, use Import game backup in the sidebar.</p>
+          <div class="backup-tab-actions">
+            <a class="upload-btn export-btn" id="export-viewer" href="#" data-i18n="actions.exportViewer">Export viewer</a>
+            <label class="upload-btn">
+              <span data-i18n="actions.importViewer">Import viewer</span>
+              <input type="file" id="viewer-db-upload" accept=".db,application/octet-stream" hidden>
+            </label>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
   <div id="goal-modal" class="goal-modal" hidden>

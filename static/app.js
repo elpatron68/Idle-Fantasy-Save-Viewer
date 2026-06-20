@@ -113,6 +113,8 @@ function applyStaticI18n() {
   document.querySelectorAll("[data-i18n]").forEach((el) => {
     el.textContent = t(el.dataset.i18n);
   });
+  const exportEl = document.getElementById("export-viewer");
+  if (exportEl) exportEl.title = t("viewerDb.exportHint");
 }
 
 function setupLanguage() {
@@ -146,6 +148,7 @@ function activateTab(tab) {
   document.getElementById(`tab-${tab}`).classList.add("active");
   if (tab === "history") loadHistoryTab();
   if (tab === "goals") trackEvent("Goals Tab");
+  if (tab === "backup") trackEvent("Backup Tab");
 }
 
 function setupNav() {

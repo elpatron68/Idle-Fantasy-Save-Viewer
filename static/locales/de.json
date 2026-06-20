@@ -12,7 +12,8 @@
     "equipment": "Ausrüstung",
     "quests": "Quests",
     "combat": "Kampf",
-    "history": "Verlauf"
+    "history": "Verlauf",
+    "backup": "Backup"
   },
   "settings": {
     "language": "Sprache",
@@ -229,6 +230,7 @@
     "title": "Viewer-Backup",
     "helpTitle": "Was ist das?",
     "helpBody": "Der Viewer speichert importierte Spiel-Backups, Verlaufsdiagramme und Ziele in einer SQLite-Datenbank auf dem Server. Export lädt diese Datenbank als Backup herunter. Import stellt sie wieder her und ersetzt alle aktuellen Viewer-Daten. Das ist nicht dasselbe wie ein Spiel-Backup (.json) importieren.",
+    "gameBackupNote": "Um einen neuen Spielstand hinzuzufügen, nutze in der Sidebar „Spiel-Backup importieren“.",
     "exportHint": "SQLite-Datenbank mit allen Snapshots, Verläufen und Zielen herunterladen",
     "importConfirm": "Alle aktuellen Viewer-Daten (Snapshots, Verlauf, Ziele) werden durch die importierte .db-Datei ersetzt. Fortfahren?",
     "importSuccess": "Viewer wiederhergestellt: {snapshots} Snapshot(s), {goals} Ziel(e).",
