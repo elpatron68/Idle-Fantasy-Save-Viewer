@@ -1,9 +1,10 @@
-const CACHE = "if-viewer-static-v2";
+const CACHE = "if-viewer-static-v3";
 const ASSETS = [
   "/static/style.css",
   "/static/favicon.svg",
   "/static/icon-192.png",
   "/static/icon-512.png",
+  "/static/icon-monochrome.png",
   "/static/i18n.js",
   "/static/locales/en.json",
   "/static/locales/de.json",
