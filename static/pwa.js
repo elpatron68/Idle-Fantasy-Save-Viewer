@@ -4,7 +4,8 @@ const Pwa = (() => {
   const DISMISS_KEY = "pwa-hint-dismissed";
   let deferredPrompt = null;
   let refreshInstallHint = null;
-  let hintBound = false;
+  let dismissListenerBound = false;
+  let initialized = false;
 
   function isStandalone() {
     return window.matchMedia("(display-mode: standalone)").matches
@@ -44,39 +45,41 @@ const Pwa = (() => {
   }
 
   function hideHint(hint, { persist = true } = {}) {
+    if (!hint) return;
     if (persist) {
       try {
         localStorage.setItem(DISMISS_KEY, "1");
       } catch {
-        /* private mode with storage blocked – still hide for this session */
+        /* storage blocked – still hide for this session */
       }
     }
     hint.hidden = true;
     hint.classList.add("is-dismissed");
+    hint.style.setProperty("display", "none", "important");
   }
 
   function showHint(hint) {
+    if (!hint) return;
     hint.hidden = false;
     hint.classList.remove("is-dismissed");
+    hint.style.removeProperty("display");
   }
 
-  function bindHintActions(hint) {
-    if (hintBound) return;
-    hintBound = true;
+  function bindDismissListener() {
+    if (dismissListenerBound) return;
+    dismissListenerBound = true;
 
-    hint.addEventListener("click", (event) => {
-      if (event.target.closest(".pwa-hint-dismiss")) {
-        event.preventDefault();
-        hideHint(hint);
-      }
-    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest("#pwa-hint-dismiss, .pwa-hint-dismiss")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      hideHint(document.getElementById("pwa-install-hint"));
+    }, true);
   }
 
   function setupInstallHint() {
     const hint = document.getElementById("pwa-install-hint");
     if (!hint) return null;
-
-    bindHintActions(hint);
 
     if (isStandalone()) {
       hideHint(hint, { persist: false });
@@ -89,9 +92,10 @@ const Pwa = (() => {
 
     const body = document.getElementById("pwa-hint-body");
     const installBtn = document.getElementById("pwa-install-btn");
-    const dismissBtn = hint.querySelector(".pwa-hint-dismiss");
+    const dismissBtn = document.getElementById("pwa-hint-dismiss");
 
     const updateHintText = () => {
+      if (typeof t !== "function") return;
       const title = hint.querySelector("[data-i18n='pwa.hintTitle']");
       if (title) title.textContent = t("pwa.hintTitle");
       if (body && !deferredPrompt) body.textContent = t(platformHintKey());
@@ -129,6 +133,8 @@ const Pwa = (() => {
   }
 
   async function init() {
+    if (initialized) return;
+    initialized = true;
     refreshInstallHint = setupInstallHint();
     await registerServiceWorker();
   }
@@ -136,6 +142,8 @@ const Pwa = (() => {
   function refreshHint() {
     refreshInstallHint?.();
   }
+
+  bindDismissListener();
 
   return { init, refreshHint };
 })();
