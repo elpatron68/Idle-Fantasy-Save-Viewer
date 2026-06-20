@@ -226,6 +226,15 @@
     "copied": "Copied!",
     "copyPrompt": "Copy your viewer link:"
   },
+  "pwa": {
+    "hintTitle": "Install as app",
+    "hintBody": "Install this viewer for quick access from your home screen or app list.",
+    "hintIos": "Tap Share, then \"Add to Home Screen\".",
+    "hintAndroid": "Open the browser menu and tap \"Install app\" or \"Add to Home screen\".",
+    "hintDesktop": "Use the install icon in the address bar or the browser menu → Install app.",
+    "install": "Install",
+    "installed": "App installed – open it from your home screen or app list."
+  },
   "viewerDb": {
     "title": "Viewer backup",
     "helpTitle": "What is this?",

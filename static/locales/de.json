@@ -226,6 +226,15 @@
     "copied": "Kopiert!",
     "copyPrompt": "Viewer-Link kopieren:"
   },
+  "pwa": {
+    "hintTitle": "Als App installieren",
+    "hintBody": "Installiere diesen Viewer für schnellen Zugriff über Startbildschirm oder App-Liste.",
+    "hintIos": "Tippe auf Teilen, dann „Zum Home-Bildschirm“.",
+    "hintAndroid": "Öffne das Browser-Menü und tippe auf „App installieren“ oder „Zum Startbildschirm“.",
+    "hintDesktop": "Nutze das Install-Symbol in der Adressleiste oder Browser-Menü → App installieren.",
+    "install": "Installieren",
+    "installed": "App installiert – öffne sie über Startbildschirm oder App-Liste."
+  },
   "viewerDb": {
     "title": "Viewer-Backup",
     "helpTitle": "Was ist das?",

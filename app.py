@@ -9,7 +9,7 @@ import sys
 import webbrowser
 from pathlib import Path
 
-from flask import Blueprint, Flask, abort, jsonify, render_template, request, send_file
+from flask import Blueprint, Flask, abort, jsonify, render_template, request, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
 from db import (
@@ -58,6 +58,28 @@ configure_app(app)
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", Path(__file__).parent / "data"))
 DB_PATH = DEFAULT_DB
+STATIC_DIR = Path(__file__).parent / "static"
+
+PWA_MANIFEST = {
+    "name": "Idle Fantasy Viewer",
+    "short_name": "IF Viewer",
+    "description": "Save viewer for Idle Fantasy – skills, inventory, quests and history.",
+    "display": "standalone",
+    "background_color": "#0f1117",
+    "theme_color": "#1a1d27",
+    "icons": [
+        {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+        {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+    ],
+}
+
+
+def _pwa_manifest(start_url: str, scope: str) -> dict:
+    return {**PWA_MANIFEST, "start_url": start_url, "scope": scope}
+
+
+def _serve_sw():
+    return send_from_directory(STATIC_DIR, "sw.js", mimetype="application/javascript")
 
 
 def get_data_dir() -> Path:
@@ -82,10 +104,27 @@ def _resolve_viewer_db(viewer_id: str) -> Path:
 viewer_bp = Blueprint("viewer", __name__, url_prefix="/v/<viewer_id>")
 
 
+@viewer_bp.route("/manifest.webmanifest")
+def manifest_viewer(viewer_id: str):
+    _resolve_viewer_db(viewer_id)
+    base = f"/v/{viewer_id}/"
+    return jsonify(_pwa_manifest(base, base)), 200, {"Content-Type": "application/manifest+json"}
+
+
+@viewer_bp.route("/sw.js")
+def sw_viewer(viewer_id: str):
+    _resolve_viewer_db(viewer_id)
+    return _serve_sw()
+
+
 @viewer_bp.route("/")
 def viewer_index(viewer_id: str):
     _resolve_viewer_db(viewer_id)
-    return render_template("index.html", viewer_id=viewer_id)
+    return render_template(
+        "index.html",
+        viewer_id=viewer_id,
+        manifest_href=f"/v/{viewer_id}/manifest.webmanifest",
+    )
 
 
 @viewer_bp.route("/api/snapshot/latest")
@@ -333,9 +372,19 @@ def api_import(viewer_id: str):
 app.register_blueprint(viewer_bp)
 
 
+@app.route("/manifest.webmanifest")
+def manifest_root():
+    return jsonify(_pwa_manifest("/", "/")), 200, {"Content-Type": "application/manifest+json"}
+
+
+@app.route("/sw.js")
+def sw_root():
+    return _serve_sw()
+
+
 @app.route("/")
 def landing():
-    return render_template("landing.html")
+    return render_template("landing.html", manifest_href="/manifest.webmanifest")
 
 
 @app.post("/api/viewers")

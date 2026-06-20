@@ -855,6 +855,50 @@ body.inv-chart-modal-open {
   border-radius: 6px;
 }
 
+/* PWA install hint */
+.pwa-hint {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(108, 140, 255, 0.35);
+  background: rgba(108, 140, 255, 0.08);
+}
+
+.pwa-hint-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-hint-text strong {
+  display: block;
+  color: var(--accent);
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.pwa-hint-text p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.pwa-hint-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.landing-card .pwa-hint {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
 .viewer-copy-btn {
   flex-shrink: 0;
   padding: 8px 12px;

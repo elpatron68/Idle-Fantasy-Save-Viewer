@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Idle Fantasy Viewer</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include '_pwa_head.html' %}
   <link rel="stylesheet" href="/static/style.css">
   {% include '_analytics.html' %}
   <script src="/static/vendor/chart.umd.min.js" defer></script>
@@ -33,6 +34,7 @@
         <button class="nav-btn" data-tab="backup" data-i18n="nav.backup">Backup</button>
       </nav>
       <div class="sidebar-footer">
+        {% include '_pwa_hint.html' %}
         <label class="lang-label" for="locale-select">
           <span data-i18n="settings.language">Language</span>
           <select id="locale-select" class="select-input lang-select">

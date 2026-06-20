@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await I18n.init();
   applyStaticI18n();
   setupLanguage();
+  await Pwa.init();
   setupCreate();
 });
 
@@ -17,6 +18,7 @@ function setupLanguage() {
   sel.addEventListener("change", async (e) => {
     await I18n.setPreference(e.target.value);
     applyStaticI18n();
+    Pwa.refreshHint();
   });
 }
 

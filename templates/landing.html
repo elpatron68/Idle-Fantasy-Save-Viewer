@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Idle Fantasy Viewer</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include '_pwa_head.html' %}
   <link rel="stylesheet" href="/static/style.css">
   {% include '_analytics.html' %}
   <script src="/static/i18n.js" defer></script>
@@ -40,6 +41,8 @@
       </button>
       <p class="landing-hint" id="create-status" hidden></p>
     </div>
+
+    {% include '_pwa_hint.html' %}
 
     <div class="landing-warning">
       <strong data-i18n="viewer.warningTitle">Important</strong>
