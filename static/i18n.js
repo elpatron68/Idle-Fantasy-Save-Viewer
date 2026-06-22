@@ -2,6 +2,7 @@
 
 const I18n = (() => {
   const STORAGE_KEY = "locale";
+  const LOCALE_VERSION = "7";
   const SUPPORTED = ["en", "de"];
   let locale = "en";
   let preference = "auto";
@@ -13,7 +14,7 @@ const I18n = (() => {
   }
 
   async function loadMessages(code) {
-    const res = await fetch(`/static/locales/${code}.json`);
+    const res = await fetch(`/static/locales/${code}.json?v=${LOCALE_VERSION}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`Locale not found: ${code}`);
     return res.json();
   }

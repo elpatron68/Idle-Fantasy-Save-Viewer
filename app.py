@@ -12,6 +12,7 @@ from pathlib import Path
 from flask import Blueprint, Flask, abort, jsonify, render_template, request, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
+from advisor import advise_skill
 from db import (
     DEFAULT_DB,
     create_goal,
@@ -193,6 +194,15 @@ def api_skill_timeline(viewer_id: str):
 def api_combat_timeline(viewer_id: str):
     db_path = _resolve_viewer_db(viewer_id)
     return jsonify(combat_timeline(db_path=db_path))
+
+
+@viewer_bp.route("/api/advisor/<skill_key>")
+def api_skill_advisor(viewer_id: str, skill_key: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    snapshot = get_latest_snapshot(db_path=db_path)
+    if not snapshot:
+        return jsonify({"error": "No snapshots imported yet"}), 404
+    return jsonify(advise_skill(skill_key, snapshot))
 
 
 @viewer_bp.route("/api/goals/overview")

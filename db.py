@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from categories import categorize_item
 from parser import SaveParseError, normalize_save, load_save
 
 DEFAULT_DB = Path(__file__).parent / "data" / "history.db"
@@ -722,16 +723,25 @@ def _resolve_item_from_latest(
         "SELECT item_key, qty, category FROM inventory_snapshots WHERE snapshot_id = ? AND item_key = ?",
         (snapshot_id, item_key),
     ).fetchone()
-    if not row:
-        return None
-    latest = get_latest_snapshot(conn=conn)
-    item_name = item_key.replace("_", " ").title()
-    if latest:
-        for item in latest.get("inventory", []):
-            if item["key"] == item_key:
-                item_name = item["name"]
-                break
-    return {"item_key": item_key, "item_name": item_name, "category": row["category"], "qty": row["qty"]}
+    if row:
+        latest = get_latest_snapshot(conn=conn)
+        item_name = item_key.replace("_", " ").title()
+        if latest:
+            for item in latest.get("inventory", []):
+                if item["key"] == item_key:
+                    item_name = item["name"]
+                    break
+        return {"item_key": item_key, "item_name": item_name, "category": row["category"], "qty": row["qty"]}
+
+    from game_data import recipe_display_name
+
+    display = recipe_display_name(item_key)
+    return {
+        "item_key": item_key,
+        "item_name": display or item_key.replace("_", " ").title(),
+        "category": categorize_item(item_key),
+        "qty": 0,
+    }
 
 
 def create_goal(

@@ -1,4 +1,4 @@
-const CACHE = "if-viewer-static-v6";
+const CACHE = "if-viewer-static-v7";
 const ASSETS = [
   "/static/style.css",
   "/static/favicon.svg",
@@ -13,6 +13,10 @@ const ASSETS = [
 const NETWORK_FIRST = new Set([
   "/static/pwa.js",
   "/static/style.css",
+  "/static/i18n.js",
+  "/static/locales/en.json",
+  "/static/locales/de.json",
+  "/static/app.js",
 ]);
 
 self.addEventListener("install", (event) => {

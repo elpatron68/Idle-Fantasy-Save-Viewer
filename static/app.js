@@ -5,7 +5,7 @@ let state = {
   snapshots: [],
   timeline: [],
   inventory: { search: "", categories: new Set(), sort: "category", highlightEquipped: false, collapsedGroups: new Set() },
-  skills: { search: "", sort: "level", sortAsc: false },
+  skills: { search: "", sort: "level", sortAsc: false, advisorKey: null, advisor: null, advisorLoading: false },
   quests: { tab: "story", filter: "all" },
   goals: { filter: "all", collapsedGroups: new Set(), data: { groups: [], ungrouped: [] } },
   goalsOverview: null,
@@ -580,6 +580,11 @@ function renderSkills(d) {
           <option value="name"></option>
         </select>
       </div>
+      <div class="card skill-advisor-card" id="skill-advisor-card">
+        <h3 id="skill-advisor-title"></h3>
+        <p class="skill-advisor-hint" id="skill-advisor-hint"></p>
+        <div id="skill-advisor-body"></div>
+      </div>
       <div class="card">
         <table class="skills-table" id="skills-table">
           <thead><tr id="skills-thead-row">
@@ -628,6 +633,8 @@ function renderSkills(d) {
 
   document.getElementById("skill-search").value = s.search;
   document.getElementById("skill-sort").value = s.sort;
+  const advisorTitle = document.getElementById("skill-advisor-title");
+  if (advisorTitle) advisorTitle.textContent = t("skills.advisorTitle");
   ensureSkillTimeline().then(() => renderSkillsBody(d));
 }
 
@@ -670,8 +677,9 @@ function renderSkillsBody(d) {
 
   document.getElementById("skill-tbody").innerHTML = items.map((sk) => {
     const hasGoal = openGoals.skills.has(sk.key);
+    const selected = state.skills.advisorKey === sk.key;
     return `
-    <tr class="${hasGoal ? "has-goal" : ""}">
+    <tr class="skill-row ${hasGoal ? "has-goal" : ""} ${selected ? "skill-row-selected" : ""}" data-skill-key="${esc(sk.key)}" tabindex="0" role="button">
       <td>${esc(sk.name)}${hasGoal ? `<span class="goal-mark" title="${esc(t("goals.hasGoal"))}">🎯</span>` : ""}</td>
       ${showTrend ? renderSkillSparkCell(sk) : ""}
       <td>${sk.level}</td>
@@ -689,7 +697,8 @@ function renderSkillsBody(d) {
   bindSparklines(document.getElementById("skill-tbody"));
 
   document.getElementById("skill-tbody").querySelectorAll(".goal-add-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       openGoalModal({
         key: btn.dataset.skillKey,
         name: btn.dataset.skillName,
@@ -698,6 +707,207 @@ function renderSkillsBody(d) {
       });
     });
   });
+
+  document.getElementById("skill-tbody").querySelectorAll(".skill-row").forEach((row) => {
+    const openAdvisor = () => {
+      const key = row.dataset.skillKey;
+      if (!key) return;
+      state.skills.advisorKey = key;
+      loadSkillAdvisor(key).then(() => renderSkillsBody(state.data));
+    };
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".goal-add-btn, .inv-spark-btn")) return;
+      openAdvisor();
+    });
+    row.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      openAdvisor();
+    });
+  });
+
+  renderSkillAdvisorCard();
+}
+
+async function loadSkillAdvisor(skillKey) {
+  state.skills.advisorLoading = true;
+  renderSkillAdvisorCard();
+  try {
+    const res = await fetch(`${apiBase()}/advisor/${encodeURIComponent(skillKey)}`);
+    state.skills.advisor = res.ok ? await res.json() : { supported: false, error: "load_failed" };
+  } catch {
+    state.skills.advisor = { supported: false, error: "load_failed" };
+  } finally {
+    state.skills.advisorLoading = false;
+  }
+}
+
+function formatAdvisorMaterials(materials) {
+  return Object.entries(materials || {})
+    .map(([key, qty]) => `${qty}× ${key.replace(/_/g, " ")}`)
+    .join(", ");
+}
+
+function formatAdvisorMissing(missing) {
+  return Object.entries(missing || {})
+    .map(([key, qty]) => `${qty}× ${key.replace(/_/g, " ")}`)
+    .join(", ");
+}
+
+function renderSkillAdvisorCard() {
+  const hint = document.getElementById("skill-advisor-hint");
+  const body = document.getElementById("skill-advisor-body");
+  if (!hint || !body) return;
+
+  const adv = state.skills.advisor;
+  const key = state.skills.advisorKey;
+
+  if (!key) {
+    hint.hidden = false;
+    hint.textContent = t("skills.advisorHint");
+    body.innerHTML = "";
+    return;
+  }
+
+  if (state.skills.advisorLoading) {
+    hint.hidden = true;
+    body.innerHTML = `<p class="loading">${esc(t("skills.advisorLoading"))}</p>`;
+    return;
+  }
+
+  if (!adv || !adv.supported) {
+    hint.hidden = false;
+    hint.textContent = adv?.error === "unsupported_skill"
+      ? t("skills.advisorUnsupported")
+      : t("skills.advisorUnavailable");
+    body.innerHTML = "";
+    return;
+  }
+
+  hint.hidden = true;
+  const xpRemain = adv.xp_remaining_in_level ?? 0;
+  const summary = t("skills.advisorSummary", {
+    name: adv.skill_name,
+    level: adv.skill_level,
+    xp: fmt(xpRemain),
+  });
+
+  if (!adv.recommendations?.length) {
+    body.innerHTML = `<p class="skill-advisor-summary">${esc(summary)}</p><p class="empty-state">${esc(t("skills.advisorNoRecipes"))}</p>`;
+    return;
+  }
+
+  const rows = adv.recommendations.map((rec) => {
+    const mats = rec.can_craft
+      ? formatAdvisorMaterials(rec.materials)
+      : t("skills.advisorMissing", { items: formatAdvisorMissing(rec.missing_materials) });
+    const eta = rec.eta_minutes_to_level > 0
+      ? t("skills.advisorEta", { minutes: fmt(rec.eta_minutes_to_level) })
+      : "—";
+    const crafts = rec.crafts_to_next_level || 1;
+    const goalLabel = t("skills.advisorAdoptGoalFor", { name: rec.display_name, count: fmt(crafts) });
+    return `<tr>
+      <td>${esc(rec.display_name)}</td>
+      <td class="num">${rec.xp_per_minute.toFixed(1)}</td>
+      <td>${rec.level_required}</td>
+      <td class="skill-advisor-mats">${esc(mats)}</td>
+      <td class="num">${esc(eta)}</td>
+      <td class="col-actions">
+        <button type="button" class="goal-add-btn skill-advisor-goal-btn" data-activity-key="${esc(rec.activity_key)}" data-crafts="${crafts}" title="${esc(goalLabel)}" aria-label="${esc(goalLabel)}">+</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  const skillGoalLabel = t("skills.advisorAdoptSkillGoal", { level: adv.skill_level + 1 });
+  body.innerHTML = `
+    <div class="skill-advisor-summary-row">
+      <p class="skill-advisor-summary">${esc(summary)}</p>
+      <button type="button" class="btn-secondary skill-advisor-skill-goal-btn">${esc(skillGoalLabel)}</button>
+    </div>
+    <div class="table-wrap">
+      <table class="skill-advisor-table">
+        <thead><tr>
+          <th>${esc(t("skills.advisorActivity"))}</th>
+          <th>${esc(t("skills.advisorXpMin"))}</th>
+          <th>${esc(t("skills.advisorReqLevel"))}</th>
+          <th>${esc(t("skills.advisorMaterials"))}</th>
+          <th>${esc(t("skills.advisorEtaCol"))}</th>
+          <th class="col-actions">${esc(t("goals.actions"))}</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+
+  body.querySelector(".skill-advisor-skill-goal-btn")?.addEventListener("click", () => {
+    adoptAdvisorSkillGoal();
+  });
+  body.querySelectorAll(".skill-advisor-goal-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      adoptAdvisorItemGoal(btn.dataset.activityKey, Number(btn.dataset.crafts));
+    });
+  });
+}
+
+async function adoptAdvisorSkillGoal() {
+  const adv = state.skills.advisor;
+  if (!adv?.supported || !adv.skill_key) return;
+  const targetLevel = adv.skill_level + 1;
+  const res = await fetch(`${apiBase()}/goals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      goal_type: "skill",
+      skill_key: adv.skill_key,
+      target_level: targetLevel,
+      mode: "absolute",
+    }),
+  });
+  const result = await res.json();
+  if (!res.ok) {
+    alert(result.error || t("goals.createFailed"));
+    return;
+  }
+  trackEvent("Goal Create", { source: "advisor", type: "skill", mode: "absolute" });
+  await refreshGoalsAfterCreate();
+  alert(t("skills.advisorGoalCreated", { name: adv.skill_name, target: targetLevel }));
+}
+
+async function adoptAdvisorItemGoal(activityKey, crafts) {
+  const adv = state.skills.advisor;
+  if (!adv?.supported || !activityKey) return;
+  const rec = adv.recommendations?.find((r) => r.activity_key === activityKey);
+  const name = rec?.display_name || activityKey.replace(/_/g, " ");
+  const count = crafts > 0 ? crafts : 1;
+  const res = await fetch(`${apiBase()}/goals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      item_key: activityKey,
+      target_qty: count,
+      mode: "relative",
+    }),
+  });
+  const result = await res.json();
+  if (!res.ok) {
+    alert(result.error || t("goals.createFailed"));
+    return;
+  }
+  trackEvent("Goal Create", { source: "advisor", type: "item", mode: "relative" });
+  await refreshGoalsAfterCreate();
+  alert(t("skills.advisorItemGoalCreated", { name, count: fmt(count) }));
+}
+
+async function refreshGoalsAfterCreate() {
+  await loadGoals();
+  const overviewRes = await fetch(`${apiBase()}/goals/overview`);
+  if (overviewRes.ok) state.goalsOverview = await overviewRes.json();
+  renderGoals();
+  if (state.data) {
+    renderHeader(state.data);
+    renderSkills(state.data);
+    renderInventory(state.data);
+  }
 }
 
 function getFilteredInventoryItems(d, inv) {
