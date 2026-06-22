@@ -118,7 +118,10 @@
     "level": "Level",
     "progress": "Progress",
     "addGoal": "Add goal",
-    "addGoalFor": "Add goal for {name}"
+    "addGoalFor": "Add goal for {name}",
+    "trend": "Trend",
+    "trendExpand": "Click to enlarge chart",
+    "trendExpandFor": "Level history for {name}"
   },
   "inventory": {
     "search": "Search items…",

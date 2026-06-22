@@ -578,8 +578,8 @@ function renderSkills(d) {
         </select>
       </div>
       <div class="card">
-        <table>
-          <thead><tr>
+        <table class="skills-table" id="skills-table">
+          <thead><tr id="skills-thead-row">
             <th data-sort="name"></th>
             <th data-sort="level"></th>
             <th data-sort="xp">XP</th>
@@ -592,21 +592,27 @@ function renderSkills(d) {
 
     document.getElementById("skill-search").addEventListener("input", (e) => {
       state.skills.search = e.target.value;
-      renderSkillsBody(state.data);
+      ensureSkillTimeline().then(() => renderSkillsBody(state.data));
     });
     document.getElementById("skill-sort").addEventListener("change", (e) => {
       state.skills.sort = e.target.value;
-      renderSkillsBody(state.data);
+      ensureSkillTimeline().then(() => renderSkillsBody(state.data));
     });
     panel.querySelectorAll("th[data-sort]").forEach((th) => {
       th.addEventListener("click", () => {
         const key = th.dataset.sort;
         if (state.skills.sort === key) state.skills.sortAsc = !state.skills.sortAsc;
         else { state.skills.sort = key; state.skills.sortAsc = false; }
-        renderSkillsBody(state.data);
+        ensureSkillTimeline().then(() => renderSkillsBody(state.data));
       });
     });
   }
+
+  const skillsTable = document.getElementById("skills-table");
+  if (skillsTable) {
+    skillsTable.classList.toggle("has-trend", skillTrendEnabled());
+  }
+  updateSkillsTrendHeader();
 
   document.getElementById("skill-search").placeholder = t("skills.search");
   document.getElementById("skill-sort").options[0].textContent = t("skills.sortLevel");
@@ -619,10 +625,31 @@ function renderSkills(d) {
 
   document.getElementById("skill-search").value = s.search;
   document.getElementById("skill-sort").value = s.sort;
-  renderSkillsBody(d);
+  ensureSkillTimeline().then(() => renderSkillsBody(d));
+}
+
+function updateSkillsTrendHeader() {
+  const row = document.getElementById("skills-thead-row");
+  if (!row) return;
+  const showTrend = skillTrendEnabled();
+  let trendTh = row.querySelector("th.col-trend");
+  if (showTrend && !trendTh) {
+    trendTh = document.createElement("th");
+    trendTh.className = "col-trend";
+    trendTh.textContent = t("skills.trend");
+    row.insertBefore(trendTh, row.querySelector('th[data-sort="level"]'));
+  } else if (!showTrend && trendTh) {
+    trendTh.remove();
+  } else if (showTrend && trendTh) {
+    trendTh.textContent = t("skills.trend");
+  }
 }
 
 function renderSkillsBody(d) {
+  const showTrend = skillTrendEnabled();
+  const skillsTable = document.getElementById("skills-table");
+  if (skillsTable) skillsTable.classList.toggle("has-trend", showTrend);
+  updateSkillsTrendHeader();
   const s = state.skills;
   const openGoals = collectOpenGoalKeys();
   let items = [...d.skills];
@@ -643,6 +670,7 @@ function renderSkillsBody(d) {
     return `
     <tr class="${hasGoal ? "has-goal" : ""}">
       <td>${esc(sk.name)}${hasGoal ? `<span class="goal-mark" title="${esc(t("goals.hasGoal"))}">🎯</span>` : ""}</td>
+      ${showTrend ? renderSkillSparkCell(sk) : ""}
       <td>${sk.level}</td>
       <td>${fmt(sk.xp)}</td>
       <td style="min-width:140px">
@@ -654,6 +682,8 @@ function renderSkillsBody(d) {
       </td>
     </tr>`;
   }).join("");
+
+  bindSparklines(document.getElementById("skill-tbody"));
 
   document.getElementById("skill-tbody").querySelectorAll(".goal-add-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -709,6 +739,18 @@ function itemQtySeries(itemKey) {
   return values;
 }
 
+function skillTrendEnabled() {
+  return (state.skillTimeline?.snapshots?.length || 0) >= 2;
+}
+
+function skillLevelSeries(skillKey) {
+  const tl = state.skillTimeline;
+  if (!tl?.series) return null;
+  const values = tl.series[skillKey];
+  if (!values || values.length < 2) return null;
+  return values;
+}
+
 function sparklineSvg(values, width = 72, height = 24) {
   const max = Math.max(...values);
   const min = Math.min(...values);
@@ -734,7 +776,20 @@ function renderItemSparkCell(item) {
     </td>`;
 }
 
-function setupInventoryChartModal() {
+function renderSkillSparkCell(skill) {
+  const values = skillLevelSeries(skill.key);
+  if (!values) {
+    return `<td class="col-trend"><span class="inv-spark-empty">—</span></td>`;
+  }
+  return `
+    <td class="col-trend">
+      <button type="button" class="inv-spark-btn" data-skill-key="${esc(skill.key)}" data-skill-name="${esc(skill.name)}" title="${esc(t("skills.trendExpand"))}" aria-label="${esc(t("skills.trendExpandFor", { name: skill.name }))}">
+        ${sparklineSvg(values)}
+      </button>
+    </td>`;
+}
+
+function setupTrendChartModal() {
   if (document.getElementById("inv-chart-modal")) return;
 
   const modal = document.createElement("div");
@@ -751,10 +806,35 @@ function setupInventoryChartModal() {
   document.body.appendChild(modal);
 
   modal.querySelectorAll("[data-close]").forEach((el) => {
-    el.addEventListener("click", closeInventoryChartModal);
+    el.addEventListener("click", closeTrendChartModal);
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !modal.hidden) closeInventoryChartModal();
+    if (e.key === "Escape" && !modal.hidden) closeTrendChartModal();
+  });
+}
+
+function openTrendChartModal(title, snapshots, values, datasetLabel, color = "#4ade80") {
+  setupTrendChartModal();
+  const modal = document.getElementById("inv-chart-modal");
+  document.getElementById("inv-chart-modal-title").textContent = title;
+  modal.hidden = false;
+  document.body.classList.add("inv-chart-modal-open");
+
+  destroyChart("trendModal");
+  const bg = color === "#6c8cff" ? "rgba(108, 140, 255, 0.12)" : "rgba(74, 222, 128, 0.12)";
+  state.charts.trendModal = new Chart(document.getElementById("inv-chart-modal-canvas"), {
+    type: "line",
+    data: {
+      datasets: [{
+        label: datasetLabel,
+        data: timelineChartPoints(snapshots, values),
+        borderColor: color,
+        backgroundColor: bg,
+        tension: 0.3,
+        fill: true,
+      }],
+    },
+    options: chartOptsTime(snapshots),
   });
 }
 
@@ -762,44 +842,34 @@ function openInventoryChartModal(itemKey, itemName) {
   const values = itemQtySeries(itemKey);
   const tl = state.inventoryTimeline;
   if (!values || !tl) return;
-
-  setupInventoryChartModal();
-  const modal = document.getElementById("inv-chart-modal");
-  const title = document.getElementById("inv-chart-modal-title");
-  title.textContent = itemName;
-  modal.hidden = false;
-  document.body.classList.add("inv-chart-modal-open");
-
-  destroyChart("inventoryModal");
-  const points = timelineChartPoints(tl.snapshots, values);
-  state.charts.inventoryModal = new Chart(document.getElementById("inv-chart-modal-canvas"), {
-    type: "line",
-    data: {
-      datasets: [{
-        label: t("inventory.qty"),
-        data: points,
-        borderColor: "#6c8cff",
-        backgroundColor: "rgba(108, 140, 255, 0.12)",
-        tension: 0.3,
-        fill: true,
-      }],
-    },
-    options: chartOptsTime(tl.snapshots),
-  });
+  openTrendChartModal(itemName, tl.snapshots, values, t("inventory.qty"), "#6c8cff");
 }
 
-function closeInventoryChartModal() {
+function openSkillChartModal(skillKey, skillName) {
+  const values = skillLevelSeries(skillKey);
+  const tl = state.skillTimeline;
+  if (!values || !tl) return;
+  openTrendChartModal(skillName, tl.snapshots, values, t("skills.level"));
+}
+
+function closeTrendChartModal() {
   const modal = document.getElementById("inv-chart-modal");
   if (!modal || modal.hidden) return;
   modal.hidden = true;
   document.body.classList.remove("inv-chart-modal-open");
-  destroyChart("inventoryModal");
+  destroyChart("trendModal");
 }
 
-function bindInventorySparklines(container) {
-  container.querySelectorAll(".inv-spark-btn").forEach((btn) => {
+function bindSparklines(container) {
+  if (!container) return;
+  container.querySelectorAll(".inv-spark-btn[data-item-key]").forEach((btn) => {
     btn.addEventListener("click", () => {
       openInventoryChartModal(btn.dataset.itemKey, btn.dataset.itemName);
+    });
+  });
+  container.querySelectorAll(".inv-spark-btn[data-skill-key]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openSkillChartModal(btn.dataset.skillKey, btn.dataset.skillName);
     });
   });
 }
@@ -903,7 +973,7 @@ function renderInventoryTable(d, inv) {
       });
     });
   });
-  bindInventorySparklines(results);
+  bindSparklines(results);
 }
 
 function renderInventoryChips(d, inv) {

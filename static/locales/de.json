@@ -118,7 +118,10 @@
     "level": "Level",
     "progress": "Fortschritt",
     "addGoal": "Ziel hinzufügen",
-    "addGoalFor": "Ziel für {name} hinzufügen"
+    "addGoalFor": "Ziel für {name} hinzufügen",
+    "trend": "Verlauf",
+    "trendExpand": "Klicken für großes Diagramm",
+    "trendExpandFor": "Level-Verlauf für {name}"
   },
   "inventory": {
     "search": "Item suchen…",
