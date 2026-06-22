@@ -1,19 +1,24 @@
 # Idle Fantasy Save Viewer
 
-A web viewer for backups of the Android game **Idle Fantasy**. Parses `fantasyidler_save.json` and displays skills, inventory, quests, and combat stats in a dark dashboard — with filters, item grouping, and history comparison via SQLite.
+A web viewer for backups of the Android game **Idle Fantasy**. Parses `fantasyidler_save.json` and displays skills, inventory, quests, and combat stats in a dark dashboard — with filters, item grouping, snapshot history in SQLite, and **trend sparklines** for inventory, skills, and combat (from the second snapshot onward).
+
+**[Live demo](https://if-viewer.elpatron.me/)** — try the viewer in your browser (create a personal link, no account required).
 
 ## Features
 
-- **Dashboard** with character, coins, skills, inventory, equipment, quests, and combat
-- **Inventory** with text search, category filters, sorting, grouped tables, and quantity sparklines
+- **Dashboard** — character, coins, slayer task, skills, inventory, equipment, quests, and combat at a glance
+- **Inventory** — text search, category filters, sorting, grouped tables, equipped-item highlighting, quantity sparklines (click to enlarge)
+- **Skills** — sortable table with level/XP progress and per-skill level sparklines
+- **Combat** — enemy kills and dungeon runs (tables with trend sparklines), recent activity, active sessions
+- **History** — coins and total level over time, top-skills chart, snapshot comparison (inventory/skill deltas), delete snapshots
 - **Goals** — item and skill targets in groups (absolute or relative), progress/ETA, completion on import
 - **Global search** across items, skills, and goals; deep links to tabs (`#overview`, `#goals`, …)
-- **SQLite history** — import multiple backups, compare snapshots, coins/level/skill charts, delete snapshots
 - **Import summary** — dashboard card with changes since the previous snapshot (coins, level, top deltas)
 - **Viewer backup** — export/import the viewer SQLite database (snapshots, history, goals)
 - **Import** via CLI or browser upload
 - **Multi-user** without login — each player gets their own viewer via a secret link
-- **Docker** — ready to run behind nginx Proxy Manager
+- **PWA** — install hint and per-viewer service worker for home-screen / standalone use
+- **Docker** — ready to run behind nginx Proxy Manager (includes container health check)
 - **i18n** — English as default/fallback, German optional; automatic browser language or manual selection in the sidebar
 
 ## Requirements
@@ -64,6 +69,16 @@ docker compose logs -f
 docker compose down
 ```
 
+### Deploy to production
+
+For a git-based rollout to a remote Docker host (push → pull → `docker compose up --build` → wait for health check):
+
+```bash
+bash scripts/deploy.sh
+```
+
+Configure via environment variables: `DEPLOY_HOST` (default `root@10.0.0.5`), `DEPLOY_DIR`, `DEPLOY_SERVICE`, `DEPLOY_HEALTH_RETRIES`, `DEPLOY_HEALTH_INTERVAL`. Requires a clean working tree, an upstream branch, and SSH access. The remote script lives in `scripts/deploy-remote.sh`.
+
 ### More options
 
 ```powershell
@@ -83,6 +98,26 @@ python app.py --host 0.0.0.0 --no-browser
 ### Import backups in the browser
 
 Sidebar at the bottom: **Import backup** — selects a `.json` file. Duplicates (same file hash) are skipped. After a successful import, a summary card on the overview tab shows changes compared to the previous snapshot.
+
+Import multiple backups over time to unlock **trend charts** (sparklines appear from the second snapshot onward).
+
+### Trend charts
+
+Per-item, per-skill, and per-combat-entry mini charts in the **Inventory**, **Skills**, and **Combat** tabs:
+
+- Sparkline in the **Trend** column when at least two snapshots exist and the value changed at least twice
+- Click a sparkline to open a larger Chart.js modal with the full time series
+- **History** tab: aggregate charts for coins, total level, and top skills over time; pick two snapshots to compare inventory and skill deltas
+
+Timeline data is derived from stored snapshots (`/api/inventory/timeline`, `/api/skills/timeline`, `/api/combat/timeline`).
+
+### Combat
+
+The **Combat** tab shows:
+
+- **Enemy kills** and **dungeon runs** — sorted tables with kill/run counts and optional trend sparklines
+- **Recent activity** and **active sessions** from the latest save
+- Slayer task progress on the overview tab (when present in the save)
 
 ### Goals
 
@@ -203,18 +238,22 @@ idle-fantasy-viewer/
 ├── viewers.py          # Viewer IDs and isolation
 ├── parser.py           # Parse and normalize saves
 ├── categories.py       # Item categories (heuristics)
-├── db.py               # SQLite snapshots, diff, timeline, goals
+├── db.py               # SQLite snapshots, diff, timelines, goals
 ├── test_db_goals.py    # Smoke tests for goals/import helpers
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
+├── scripts/
+│   ├── deploy.sh           # Push + remote Docker deploy
+│   └── deploy-remote.sh    # Runs on the server (git pull, compose)
 ├── static/
 │   ├── vendor/           # chart.umd.min.js (bundled)
 │   ├── i18n.js           # Locale loading, t(), en fallback
 │   ├── locales/          # en.json, de.json
 │   ├── landing.js        # Landing page
+│   ├── pwa.js            # PWA install hint, service worker
 │   └── app.js            # Dashboard UI
-├── templates/          # HTML
+├── templates/          # HTML (incl. optional Plausible analytics partial)
 └── data/               # viewers/*.db (gitignored)
 ```
 
@@ -230,7 +269,8 @@ idle-fantasy-viewer/
 | `GET /v/<id>/api/snapshots/<older>/diff/<newer>` | Compare two snapshots |
 | `GET /v/<id>/api/timeline` | Time series for coins/level charts |
 | `GET /v/<id>/api/inventory/timeline` | Per-item quantity series for sparklines |
-| `GET /v/<id>/api/skills/timeline` | Per-skill level series for history charts |
+| `GET /v/<id>/api/skills/timeline` | Per-skill level series for sparklines and history chart |
+| `GET /v/<id>/api/combat/timeline` | Per-enemy kill and dungeon-run series for sparklines |
 | `GET /v/<id>/api/goals` | Structured goals (groups + ungrouped) |
 | `GET /v/<id>/api/goals/overview` | Open/completed/total goal counts |
 | `POST /v/<id>/api/goals` | Create item or skill goal (`goal_type`, `mode`, `group_id`) |
@@ -270,6 +310,10 @@ python test_db_goals.py
 ```
 
 Smoke tests for relative/skill goals, import change summaries, skill timeline, and snapshot deletion.
+
+## Analytics (optional)
+
+The demo at [if-viewer.elpatron.me](https://if-viewer.elpatron.me/) may include [Plausible](https://plausible.io/) analytics via `templates/_analytics.html` (privacy-friendly, no cookies). Self-hosted instances can omit or replace this partial; CSP in `security.py` allows `plausible.elpatron.me` when enabled. Client events use tagged `plausible()` calls in `app.js` (e.g. viewer create, import, snapshot delete).
 
 ## License
 
