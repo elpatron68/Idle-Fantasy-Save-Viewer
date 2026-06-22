@@ -58,7 +58,7 @@ def main() -> None:
         synced.append(name)
         print(f"  {name}")
 
-    MANIFEST.write_text(
+    manifest_body = (
         json.dumps(
             {
                 "source_repo": f"https://github.com/{REPO}",
@@ -69,9 +69,10 @@ def main() -> None:
             },
             indent=2,
         )
-        + "\n",
-        encoding="utf-8",
+        + "\n"
     )
+    with MANIFEST.open("w", encoding="utf-8", newline="\n") as manifest_file:
+        manifest_file.write(manifest_body)
     print(f"Synced {len(synced)} files -> {OUT_DIR}")
     print(f"Manifest: {MANIFEST} (sha {sha[:12]})")
 

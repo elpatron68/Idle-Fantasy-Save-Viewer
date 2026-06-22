@@ -28,11 +28,30 @@ A web viewer for backups of the Android game **[Idle Fantasy](https://github.com
 
 ## Installation
 
+### Windows (PowerShell)
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
+
+### WSL (recommended for deploy)
+
+Keep the repo on the Linux filesystem (not `/mnt/c/`) to avoid CRLF/git/deploy issues between Windows and WSL:
+
+```bash
+# one-time clone or copy to e.g. ~/source/idle-fantasy-viewer
+cd ~/source/idle-fantasy-viewer
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Open in **Cursor**: *File → Open Folder in WSL…* → `~/source/idle-fantasy-viewer`  
+Windows path (Explorer): `\\wsl.localhost\Ubuntu-24.04\home\markus\source\idle-fantasy-viewer`
+
+Run tests, dev server, and `bash scripts/deploy.sh` from the same WSL shell.
 
 ## Usage
 
