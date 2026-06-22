@@ -804,8 +804,11 @@ function renderSkillAdvisorCard() {
     const eta = rec.eta_minutes_to_level > 0
       ? t("skills.advisorEta", { minutes: fmt(rec.eta_minutes_to_level) })
       : "—";
-    const crafts = rec.crafts_to_next_level || 1;
+    const crafts = rec.crafts_to_next_level ?? 0;
     const goalLabel = t("skills.advisorAdoptGoalFor", { name: rec.display_name, count: fmt(crafts) });
+    const goalCell = crafts > 0
+      ? `<button type="button" class="goal-add-btn skill-advisor-goal-btn" data-activity-key="${esc(rec.activity_key)}" data-crafts="${crafts}" title="${esc(goalLabel)}" aria-label="${esc(goalLabel)}">+</button>`
+      : `<span class="inv-spark-empty">—</span>`;
     return `<tr>
       <td>${esc(rec.display_name)}</td>
       <td class="num">${rec.xp_per_minute.toFixed(1)}</td>
@@ -813,7 +816,7 @@ function renderSkillAdvisorCard() {
       <td class="skill-advisor-mats">${esc(mats)}</td>
       <td class="num">${esc(eta)}</td>
       <td class="col-actions">
-        <button type="button" class="goal-add-btn skill-advisor-goal-btn" data-activity-key="${esc(rec.activity_key)}" data-crafts="${crafts}" title="${esc(goalLabel)}" aria-label="${esc(goalLabel)}">+</button>
+        ${goalCell}
       </td>
     </tr>`;
   }).join("");
@@ -878,7 +881,8 @@ async function adoptAdvisorItemGoal(activityKey, crafts) {
   if (!adv?.supported || !activityKey) return;
   const rec = adv.recommendations?.find((r) => r.activity_key === activityKey);
   const name = rec?.display_name || activityKey.replace(/_/g, " ");
-  const count = crafts > 0 ? crafts : 1;
+  const count = Number(crafts);
+  if (!count || count <= 0) return;
   const res = await fetch(`${apiBase()}/goals`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

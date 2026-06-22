@@ -41,6 +41,8 @@ class AdvisorTests(unittest.TestCase):
 
     def test_crafts_to_next_level(self) -> None:
         self.assertEqual(crafts_to_next_level(100, 12.5), 8)
+        self.assertEqual(crafts_to_next_level(0, 12.5), 0)
+        self.assertEqual(crafts_to_next_level(10, 0), 0)
 
     def test_item_goal_from_recipe_not_in_inventory(self) -> None:
         from db import create_goal, get_connection, import_save, init_db

@@ -38,8 +38,8 @@ def missing_materials(
 
 def crafts_to_next_level(xp_remaining: int, xp_per_item: float) -> int:
     if xp_remaining <= 0 or xp_per_item <= 0:
-        return 1
-    return max(1, int((xp_remaining + xp_per_item - 1) // xp_per_item))
+        return 0
+    return int((xp_remaining + xp_per_item - 1) // xp_per_item)
 
 
 def advise_skill(
