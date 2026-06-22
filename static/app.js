@@ -914,7 +914,7 @@ function openCombatChartModal(combatType, combatKey, combatName) {
   const isDungeon = combatType === "dungeon";
   const label = isDungeon ? t("combat.runsLabel") : t("combat.kills");
   const color = isDungeon ? "#fb923c" : "#f87171";
-  openTrendChartModal(combatName, tl.snapshots, values, label, color, true);
+  openTrendChartModal(combatName, tl.snapshots, values, label, color);
 }
 
 function closeTrendChartModal() {
