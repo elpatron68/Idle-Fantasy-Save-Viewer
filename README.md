@@ -1,6 +1,6 @@
 # Idle Fantasy Save Viewer
 
-A web viewer for backups of the Android game **Idle Fantasy**. Parses `fantasyidler_save.json` and displays skills, inventory, quests, and combat stats in a dark dashboard — with filters, item grouping, snapshot history in SQLite, and **trend sparklines** for inventory, skills, and combat (from the second snapshot onward).
+A web viewer for backups of the Android game **[Idle Fantasy](https://github.com/tristinbaker/IdleFantasy)**. Parses `fantasyidler_save.json` and displays skills, inventory, quests, and combat stats in a dark dashboard — with filters, item grouping, snapshot history in SQLite, **trend sparklines**, and a **training advisor** powered by vendored game recipe data.
 
 **[Live demo](https://if-viewer.elpatron.me/)** — try the viewer in your browser (create a personal link, no account required).
 
@@ -8,10 +8,10 @@ A web viewer for backups of the Android game **Idle Fantasy**. Parses `fantasyid
 
 - **Dashboard** — character, coins, slayer task, skills, inventory, equipment, quests, and combat at a glance
 - **Inventory** — text search, category filters, sorting, grouped tables, equipped-item highlighting, quantity sparklines (click to enlarge)
-- **Skills** — sortable table with level/XP progress and per-skill level sparklines
+- **Skills** — sortable table with level/XP progress, per-skill level sparklines, and **training advisor** (XP/min rankings from recipe data)
 - **Combat** — enemy kills and dungeon runs (tables with trend sparklines), recent activity, active sessions
 - **History** — coins and total level over time, top-skills chart, snapshot comparison (inventory/skill deltas), delete snapshots
-- **Goals** — item and skill targets in groups (absolute or relative), progress/ETA, completion on import
+- **Goals** — item and skill targets in groups (absolute or relative), progress/ETA, completion on import; **one-click goals** from the training advisor
 - **Global search** across items, skills, and goals; deep links to tabs (`#overview`, `#goals`, …)
 - **Import summary** — dashboard card with changes since the previous snapshot (coins, level, top deltas)
 - **Viewer backup** — export/import the viewer SQLite database (snapshots, history, goals)
@@ -111,6 +111,23 @@ Per-item, per-skill, and per-combat-entry mini charts in the **Inventory**, **Sk
 
 Timeline data is derived from stored snapshots (`/api/inventory/timeline`, `/api/skills/timeline`, `/api/combat/timeline`).
 
+### Training advisor
+
+On the **Skills** tab, click a skill row to load **training recommendations** (recipe-based crafting skills):
+
+- Ranks unlocked activities by **XP per minute**, checks materials against your current inventory, and estimates time to the next level
+- Supported skills: smithing, crafting, cooking, fletching, herblore, construction (from vendored game data)
+- **Level as goal** — button to create an absolute skill goal for the next level
+- **+ per row** — create a relative item goal (craft count until next level for that activity)
+
+Recipe JSON is synced from the [Idle Fantasy](https://github.com/tristinbaker/IdleFantasy) open-source repo (`app/src/main/assets/data/recipes/`). See `game_data/ATTRIBUTION.md`. Refresh with:
+
+```bash
+python scripts/sync_game_data.py
+```
+
+API: `GET /v/<id>/api/advisor/<skill_key>` (uses latest snapshot + `game_data/recipes/`).
+
 ### Combat
 
 The **Combat** tab shows:
@@ -121,7 +138,7 @@ The **Combat** tab shows:
 
 ### Goals
 
-Create targets from the **Inventory** or **Skills** tab (+ button per row), or manage them under **Goals**:
+Create targets from the **Inventory** or **Skills** tab (+ button per row), from the **training advisor**, or manage them under **Goals**:
 
 - **Item goals** — absolute (reach total quantity) or relative (gain since creation)
 - **Skill goals** — target level, absolute or relative
@@ -238,14 +255,19 @@ idle-fantasy-viewer/
 ├── viewers.py          # Viewer IDs and isolation
 ├── parser.py           # Parse and normalize saves
 ├── categories.py       # Item categories (heuristics)
+├── game_data.py        # Load vendored recipe JSON
+├── advisor.py          # Skill training recommendations
 ├── db.py               # SQLite snapshots, diff, timelines, goals
 ├── test_db_goals.py    # Smoke tests for goals/import helpers
+├── test_advisor.py     # Smoke tests for training advisor
+├── game_data/          # Vendored recipe JSON + manifest (see ATTRIBUTION.md)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
 ├── scripts/
 │   ├── deploy.sh           # Push + remote Docker deploy
-│   └── deploy-remote.sh    # Runs on the server (git pull, compose)
+│   ├── deploy-remote.sh    # Runs on the server (git pull, compose)
+│   └── sync_game_data.py   # Pull recipe JSON from IdleFantasy repo
 ├── static/
 │   ├── vendor/           # chart.umd.min.js (bundled)
 │   ├── i18n.js           # Locale loading, t(), en fallback
@@ -271,6 +293,7 @@ idle-fantasy-viewer/
 | `GET /v/<id>/api/inventory/timeline` | Per-item quantity series for sparklines |
 | `GET /v/<id>/api/skills/timeline` | Per-skill level series for sparklines and history chart |
 | `GET /v/<id>/api/combat/timeline` | Per-enemy kill and dungeon-run series for sparklines |
+| `GET /v/<id>/api/advisor/<skill_key>` | Training recommendations (XP/min, materials, ETA) for recipe skills |
 | `GET /v/<id>/api/goals` | Structured goals (groups + ungrouped) |
 | `GET /v/<id>/api/goals/overview` | Open/completed/total goal counts |
 | `POST /v/<id>/api/goals` | Create item or skill goal (`goal_type`, `mode`, `group_id`) |
@@ -307,9 +330,10 @@ After import, errors and warnings appear as a banner in the dashboard; in the CL
 
 ```powershell
 python test_db_goals.py
+python test_advisor.py
 ```
 
-Smoke tests for relative/skill goals, import change summaries, skill timeline, and snapshot deletion.
+Smoke tests for goals/import helpers, skill timeline, snapshot deletion, and the training advisor (recipe loading, rankings, item goals from recipes).
 
 ## Analytics (optional)
 
