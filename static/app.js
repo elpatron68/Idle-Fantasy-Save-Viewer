@@ -748,6 +748,7 @@ function skillLevelSeries(skillKey) {
   if (!tl?.series) return null;
   const values = tl.series[skillKey];
   if (!values || values.length < 2) return null;
+  if (values.filter((v) => v > 0).length < 2) return null;
   return values;
 }
 
@@ -813,7 +814,7 @@ function setupTrendChartModal() {
   });
 }
 
-function openTrendChartModal(title, snapshots, values, datasetLabel, color = "#4ade80") {
+function openTrendChartModal(title, snapshots, values, datasetLabel, color = "#4ade80", skillSeries = false) {
   setupTrendChartModal();
   const modal = document.getElementById("inv-chart-modal");
   document.getElementById("inv-chart-modal-title").textContent = title;
@@ -822,16 +823,20 @@ function openTrendChartModal(title, snapshots, values, datasetLabel, color = "#4
 
   destroyChart("trendModal");
   const bg = color === "#6c8cff" ? "rgba(108, 140, 255, 0.12)" : "rgba(74, 222, 128, 0.12)";
+  const points = skillSeries
+    ? skillTimelineChartPoints(snapshots, values)
+    : timelineChartPoints(snapshots, values);
   state.charts.trendModal = new Chart(document.getElementById("inv-chart-modal-canvas"), {
     type: "line",
     data: {
       datasets: [{
         label: datasetLabel,
-        data: timelineChartPoints(snapshots, values),
+        data: points,
         borderColor: color,
         backgroundColor: bg,
-        tension: 0.3,
+        tension: skillSeries ? 0 : 0.3,
         fill: true,
+        spanGaps: false,
       }],
     },
     options: chartOptsTime(snapshots),
@@ -849,7 +854,7 @@ function openSkillChartModal(skillKey, skillName) {
   const values = skillLevelSeries(skillKey);
   const tl = state.skillTimeline;
   if (!values || !tl) return;
-  openTrendChartModal(skillName, tl.snapshots, values, t("skills.level"));
+  openTrendChartModal(skillName, tl.snapshots, values, t("skills.level"), "#4ade80", true);
 }
 
 function closeTrendChartModal() {
@@ -1736,12 +1741,10 @@ function renderTimelineCharts() {
   const skillCanvas = document.getElementById("chart-skills");
   if (!skillCanvas || !skillTl?.snapshots?.length) return;
 
-  const skillEntries = Object.entries(skillTl.series || {})
-    .map(([key, values]) => ({ key, values, latest: values[values.length - 1] || 0 }))
-    .sort((a, b) => b.latest - a.latest)
-    .slice(0, 5);
+  const skillEntries = pickTopSkillEntries(skillTl.series, 5);
 
   const colors = ["#6c8cff", "#4ade80", "#fbbf24", "#f87171", "#a78bfa"];
+  const dashPatterns = [[], [6, 4], [2, 3], [8, 4, 2, 4], [4, 2]];
   const skillName = (key) => {
     const sk = state.data?.skills?.find((s) => s.key === key);
     return sk?.name || key.replace(/_/g, " ");
@@ -1752,10 +1755,15 @@ function renderTimelineCharts() {
     data: {
       datasets: skillEntries.map((entry, idx) => ({
         label: skillName(entry.key),
-        data: timelineChartPoints(skillTl.snapshots, entry.values),
+        data: skillTimelineChartPoints(skillTl.snapshots, entry.values),
         borderColor: colors[idx % colors.length],
-        tension: 0.3,
+        borderWidth: 2,
+        borderDash: dashPatterns[idx % dashPatterns.length],
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0,
         fill: false,
+        spanGaps: false,
       })),
     },
     options: chartOptsTime(skillTl.snapshots),
@@ -1777,6 +1785,45 @@ function snapshotTimeMs(snapshot) {
     if (Number.isFinite(imported)) return imported;
   }
   return null;
+}
+
+function skillLevelDelta(values) {
+  const valid = values.filter((v) => v > 0);
+  if (valid.length < 2) return 0;
+  return Math.max(...valid) - Math.min(...valid);
+}
+
+function pickTopSkillEntries(series, limit = 5) {
+  const ranked = Object.entries(series || {})
+    .map(([key, values]) => ({
+      key,
+      values,
+      latest: values[values.length - 1] || 0,
+      delta: skillLevelDelta(values),
+    }))
+    .filter((e) => e.delta > 0)
+    .sort((a, b) => b.delta - a.delta || b.latest - a.latest);
+
+  const seen = new Set();
+  const picked = [];
+  for (const entry of ranked) {
+    const sig = entry.values.join(",");
+    if (seen.has(sig)) continue;
+    seen.add(sig);
+    picked.push(entry);
+    if (picked.length >= limit) break;
+  }
+  return picked;
+}
+
+function skillTimelineChartPoints(snapshots, values) {
+  return snapshots.map((snapshot, i) => {
+    const x = snapshotTimeMs(snapshot);
+    if (x == null) return null;
+    const y = values[i];
+    if (y == null || y <= 0) return null;
+    return { x, y };
+  }).filter(Boolean);
 }
 
 function timelineChartPoints(snapshots, values) {

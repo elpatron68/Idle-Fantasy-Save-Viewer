@@ -1072,6 +1072,14 @@ def skill_timeline(db_path: Path | str = DEFAULT_DB) -> dict[str, Any]:
         if idx is not None:
             series[key][idx] = row["level"]
 
+    for key in series:
+        last = 0
+        for i in range(n):
+            if series[key][i] > 0:
+                last = series[key][i]
+            elif last > 0:
+                series[key][i] = last
+
     return {"snapshots": snapshots, "series": series}
 
 
