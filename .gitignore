@@ -5,3 +5,4 @@ data/
 *.db
 fantasyidler_save.json
 .gitea-credentials.txt
+testfiles/

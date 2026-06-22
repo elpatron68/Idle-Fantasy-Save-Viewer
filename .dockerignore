@@ -10,3 +10,4 @@ fantasyidler_save.json
 .dockerignore
 Dockerfile
 docker-compose.yml
+testfiles/
