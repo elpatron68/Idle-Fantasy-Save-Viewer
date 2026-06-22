@@ -14,6 +14,7 @@ let state = {
   charts: {},
   inventoryTimeline: null,
   skillTimeline: null,
+  combatTimeline: null,
   lastImportChanges: null,
   globalSearch: "",
 };
@@ -202,6 +203,7 @@ function setupViewerDbImport() {
     state.lastImportChanges = null;
     state.inventoryTimeline = null;
     state.skillTimeline = null;
+    state.combatTimeline = null;
     await loadData();
     alert(t("viewerDb.importSuccess", {
       snapshots: result.snapshots || 0,
@@ -422,6 +424,7 @@ async function loadData() {
     state.data = await res.json();
     state.inventoryTimeline = null;
     state.skillTimeline = null;
+    state.combatTimeline = null;
     renderAll();
   } catch (err) {
     showEmpty(t("empty.loadError", { message: err.message }));
@@ -752,6 +755,33 @@ function skillLevelSeries(skillKey) {
   return values;
 }
 
+async function ensureCombatTimeline() {
+  if (state.combatTimeline) return state.combatTimeline;
+  try {
+    const res = await fetch(`${apiBase()}/combat/timeline`);
+    state.combatTimeline = res.ok
+      ? await res.json()
+      : { snapshots: [], enemy_kills: {}, dungeon_runs: {} };
+  } catch {
+    state.combatTimeline = { snapshots: [], enemy_kills: {}, dungeon_runs: {} };
+  }
+  return state.combatTimeline;
+}
+
+function combatTrendEnabled() {
+  return (state.combatTimeline?.snapshots?.length || 0) >= 2;
+}
+
+function combatSeries(combatType, key) {
+  const tl = state.combatTimeline;
+  if (!tl) return null;
+  const bucket = combatType === "dungeon" ? tl.dungeon_runs : tl.enemy_kills;
+  const values = bucket?.[key];
+  if (!values || values.length < 2) return null;
+  if (values.filter((v) => v > 0).length < 2) return null;
+  return values;
+}
+
 function sparklineSvg(values, width = 72, height = 24) {
   const max = Math.max(...values);
   const min = Math.min(...values);
@@ -790,6 +820,20 @@ function renderSkillSparkCell(skill) {
     </td>`;
 }
 
+function renderCombatSparkCell(combatKey, combatType, displayName) {
+  const values = combatSeries(combatType, combatKey);
+  if (!values) {
+    return `<td class="col-trend"><span class="inv-spark-empty">—</span></td>`;
+  }
+  const expandKey = combatType === "dungeon" ? "trendExpandRunsFor" : "trendExpandKillsFor";
+  return `
+    <td class="col-trend">
+      <button type="button" class="inv-spark-btn" data-combat-key="${esc(combatKey)}" data-combat-type="${esc(combatType)}" data-combat-name="${esc(displayName)}" title="${esc(t("combat.trendExpand"))}" aria-label="${esc(t(`combat.${expandKey}`, { name: displayName }))}">
+        ${sparklineSvg(values)}
+      </button>
+    </td>`;
+}
+
 function setupTrendChartModal() {
   if (document.getElementById("inv-chart-modal")) return;
 
@@ -822,7 +866,13 @@ function openTrendChartModal(title, snapshots, values, datasetLabel, color = "#4
   document.body.classList.add("inv-chart-modal-open");
 
   destroyChart("trendModal");
-  const bg = color === "#6c8cff" ? "rgba(108, 140, 255, 0.12)" : "rgba(74, 222, 128, 0.12)";
+  const bgMap = {
+    "#6c8cff": "rgba(108, 140, 255, 0.12)",
+    "#4ade80": "rgba(74, 222, 128, 0.12)",
+    "#f87171": "rgba(248, 113, 113, 0.12)",
+    "#fb923c": "rgba(251, 146, 60, 0.12)",
+  };
+  const bg = bgMap[color] || "rgba(74, 222, 128, 0.12)";
   const points = skillSeries
     ? skillTimelineChartPoints(snapshots, values)
     : timelineChartPoints(snapshots, values);
@@ -857,6 +907,16 @@ function openSkillChartModal(skillKey, skillName) {
   openTrendChartModal(skillName, tl.snapshots, values, t("skills.level"), "#4ade80", true);
 }
 
+function openCombatChartModal(combatType, combatKey, combatName) {
+  const values = combatSeries(combatType, combatKey);
+  const tl = state.combatTimeline;
+  if (!values || !tl) return;
+  const isDungeon = combatType === "dungeon";
+  const label = isDungeon ? t("combat.runsLabel") : t("combat.kills");
+  const color = isDungeon ? "#fb923c" : "#f87171";
+  openTrendChartModal(combatName, tl.snapshots, values, label, color, true);
+}
+
 function closeTrendChartModal() {
   const modal = document.getElementById("inv-chart-modal");
   if (!modal || modal.hidden) return;
@@ -875,6 +935,11 @@ function bindSparklines(container) {
   container.querySelectorAll(".inv-spark-btn[data-skill-key]").forEach((btn) => {
     btn.addEventListener("click", () => {
       openSkillChartModal(btn.dataset.skillKey, btn.dataset.skillName);
+    });
+  });
+  container.querySelectorAll(".inv-spark-btn[data-combat-key]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      openCombatChartModal(btn.dataset.combatType, btn.dataset.combatKey, btn.dataset.combatName);
     });
   });
 }
@@ -1562,14 +1627,6 @@ function renderQuests(d) {
 }
 
 function renderCombat(d) {
-  const kills = Object.entries(d.combat.enemy_kills || {})
-    .sort((a, b) => b[1] - a[1])
-    .map(([k, v]) => `<li><span>${esc(k.replace(/_/g, " "))}</span><span>${fmt(v)}</span></li>`).join("");
-
-  const dungeons = Object.entries(d.combat.dungeon_runs || {})
-    .sort((a, b) => b[1] - a[1])
-    .map(([k, v]) => `<li><span>${esc(k.replace(/_/g, " "))}</span><span>${esc(t("combat.runs", { count: fmt(v) }))}</span></li>`).join("");
-
   const recent = (d.recent_sessions || [])
     .map((s) => `<li><span>${esc(s.activity_display_name || s.activity_key)}</span><span>${esc(s.skill_name)}</span></li>`).join("");
 
@@ -1579,11 +1636,79 @@ function renderCombat(d) {
   const none = `<li>${esc(t("empty.none"))}</li>`;
   document.getElementById("tab-combat").innerHTML = `
     <div class="grid-2">
-      <div class="card"><h3>${esc(t("combat.enemyKills"))}</h3><ul class="list-compact">${kills || none}</ul></div>
-      <div class="card"><h3>${esc(t("combat.dungeonRuns"))}</h3><ul class="list-compact">${dungeons || none}</ul></div>
+      <div class="card">
+        <h3>${esc(t("combat.enemyKills"))}</h3>
+        <div class="table-wrap" id="combat-kills-wrap">
+          <table class="combat-table" id="combat-kills-table">
+            <thead><tr>
+              <th>${esc(t("combat.entry"))}</th>
+              <th class="col-trend combat-trend-col" hidden>${esc(t("combat.trend"))}</th>
+              <th>${esc(t("combat.kills"))}</th>
+            </tr></thead>
+            <tbody id="combat-kills-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h3>${esc(t("combat.dungeonRuns"))}</h3>
+        <div class="table-wrap" id="combat-dungeons-wrap">
+          <table class="combat-table" id="combat-dungeons-table">
+            <thead><tr>
+              <th>${esc(t("combat.entry"))}</th>
+              <th class="col-trend combat-trend-col" hidden>${esc(t("combat.trend"))}</th>
+              <th>${esc(t("combat.runsLabel"))}</th>
+            </tr></thead>
+            <tbody id="combat-dungeons-tbody"></tbody>
+          </table>
+        </div>
+      </div>
       <div class="card"><h3>${esc(t("combat.recentActivity"))}</h3><ul class="list-compact">${recent || none}</ul></div>
       <div class="card"><h3>${esc(t("combat.activeSessions"))}</h3><ul class="list-compact">${active || none}</ul></div>
     </div>`;
+
+  ensureCombatTimeline().then(() => renderCombatBody(d));
+}
+
+function renderCombatBody(d) {
+  const showTrend = combatTrendEnabled();
+  document.querySelectorAll("#tab-combat .combat-trend-col").forEach((el) => {
+    el.hidden = !showTrend;
+  });
+
+  const kills = Object.entries(d.combat.enemy_kills || {})
+    .sort((a, b) => b[1] - a[1]);
+  const dungeons = Object.entries(d.combat.dungeon_runs || {})
+    .sort((a, b) => b[1] - a[1]);
+
+  const killsTbody = document.getElementById("combat-kills-tbody");
+  if (killsTbody) {
+    killsTbody.innerHTML = kills.length
+      ? kills.map(([k, v]) => {
+        const name = k.replace(/_/g, " ");
+        return `<tr>
+          <td>${esc(name)}</td>
+          ${showTrend ? renderCombatSparkCell(k, "enemy", name) : ""}
+          <td>${fmt(v)}</td>
+        </tr>`;
+      }).join("")
+      : `<tr><td colspan="${showTrend ? 3 : 2}">${esc(t("empty.none"))}</td></tr>`;
+    bindSparklines(killsTbody);
+  }
+
+  const dungeonsTbody = document.getElementById("combat-dungeons-tbody");
+  if (dungeonsTbody) {
+    dungeonsTbody.innerHTML = dungeons.length
+      ? dungeons.map(([k, v]) => {
+        const name = k.replace(/_/g, " ");
+        return `<tr>
+          <td>${esc(name)}</td>
+          ${showTrend ? renderCombatSparkCell(k, "dungeon", name) : ""}
+          <td>${esc(t("combat.runs", { count: fmt(v) }))}</td>
+        </tr>`;
+      }).join("")
+      : `<tr><td colspan="${showTrend ? 3 : 2}">${esc(t("empty.none"))}</td></tr>`;
+    bindSparklines(dungeonsTbody);
+  }
 }
 
 async function ensureSkillTimeline() {
@@ -1690,6 +1815,7 @@ async function loadHistoryTab() {
       trackEvent("Snapshot Delete");
       state.inventoryTimeline = null;
       state.skillTimeline = null;
+      state.combatTimeline = null;
       await loadData();
       loadHistoryTab();
     });

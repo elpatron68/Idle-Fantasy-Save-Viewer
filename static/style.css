@@ -459,7 +459,9 @@ tr:hover td { background: var(--bg-hover); }
 .inv-table th.col-trend,
 .inv-table td.col-trend,
 .skills-table th.col-trend,
-.skills-table td.col-trend {
+.skills-table td.col-trend,
+.combat-table th.col-trend,
+.combat-table td.col-trend {
   padding-left: 8px;
   padding-right: 8px;
   text-align: center;

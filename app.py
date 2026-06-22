@@ -26,6 +26,7 @@ from db import (
     goals_overview,
     import_save,
     init_db,
+    combat_timeline,
     inventory_timeline,
     list_goal_groups,
     list_goals_structured,
@@ -186,6 +187,12 @@ def api_inventory_timeline(viewer_id: str):
 def api_skill_timeline(viewer_id: str):
     db_path = _resolve_viewer_db(viewer_id)
     return jsonify(skill_timeline(db_path=db_path))
+
+
+@viewer_bp.route("/api/combat/timeline")
+def api_combat_timeline(viewer_id: str):
+    db_path = _resolve_viewer_db(viewer_id)
+    return jsonify(combat_timeline(db_path=db_path))
 
 
 @viewer_bp.route("/api/goals/overview")

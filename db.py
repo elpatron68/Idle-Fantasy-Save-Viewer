@@ -1083,6 +1083,60 @@ def skill_timeline(db_path: Path | str = DEFAULT_DB) -> dict[str, Any]:
     return {"snapshots": snapshots, "series": series}
 
 
+def _forward_fill_positive(series: dict[str, list[int]]) -> None:
+    for key in series:
+        last = 0
+        for i in range(len(series[key])):
+            if series[key][i] > 0:
+                last = series[key][i]
+            elif last > 0:
+                series[key][i] = last
+
+
+def combat_timeline(db_path: Path | str = DEFAULT_DB) -> dict[str, Any]:
+    """Enemy-kill and dungeon-run series aligned to snapshots (oldest → newest)."""
+    conn = get_connection(db_path)
+    init_db(conn)
+    snap_rows = conn.execute(
+        """
+        SELECT id, imported_at, exported_at, raw_json FROM snapshots
+        ORDER BY exported_at ASC, id ASC
+        """
+    ).fetchall()
+    conn.close()
+
+    snapshots = [
+        {"id": r["id"], "imported_at": r["imported_at"], "exported_at": r["exported_at"]}
+        for r in snap_rows
+    ]
+    if not snapshots:
+        return {"snapshots": [], "enemy_kills": {}, "dungeon_runs": {}}
+
+    n = len(snapshots)
+    enemy_kills: dict[str, list[int]] = {}
+    dungeon_runs: dict[str, list[int]] = {}
+
+    for idx, row in enumerate(snap_rows):
+        try:
+            data = json.loads(row["raw_json"])
+        except (json.JSONDecodeError, TypeError):
+            continue
+        combat = data.get("combat") or {}
+        for key, qty in (combat.get("enemy_kills") or {}).items():
+            if key not in enemy_kills:
+                enemy_kills[key] = [0] * n
+            enemy_kills[key][idx] = int(qty) if qty else 0
+        for key, qty in (combat.get("dungeon_runs") or {}).items():
+            if key not in dungeon_runs:
+                dungeon_runs[key] = [0] * n
+            dungeon_runs[key][idx] = int(qty) if qty else 0
+
+    _forward_fill_positive(enemy_kills)
+    _forward_fill_positive(dungeon_runs)
+
+    return {"snapshots": snapshots, "enemy_kills": enemy_kills, "dungeon_runs": dungeon_runs}
+
+
 def delete_snapshot(snapshot_id: int, db_path: Path | str = DEFAULT_DB) -> bool:
     conn = get_connection(db_path)
     init_db(conn)
