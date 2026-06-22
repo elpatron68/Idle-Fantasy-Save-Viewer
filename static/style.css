@@ -393,6 +393,27 @@ tr:hover td { background: var(--bg-hover); }
   max-width: 16rem;
 }
 
+.skill-advisor-legend {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.skill-advisor-goal-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.skill-advisor-craft-qty {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .skill-advisor-summary-row {
   display: flex;
   flex-wrap: wrap;

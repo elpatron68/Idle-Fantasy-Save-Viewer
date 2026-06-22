@@ -793,6 +793,15 @@ function formatAdvisorMissing(missing) {
     .join(", ");
 }
 
+function advisorTh(labelKey, hintKey, className = "") {
+  const label = t(labelKey);
+  const hint = hintKey ? t(hintKey) : "";
+  const cls = className ? ` class="${className}"` : "";
+  return hint
+    ? `<th scope="col"${cls} title="${esc(hint)}">${esc(label)}</th>`
+    : `<th scope="col"${cls}>${esc(label)}</th>`;
+}
+
 function renderSkillAdvisorCard() {
   const hint = document.getElementById("skill-advisor-hint");
   const body = document.getElementById("skill-advisor-body");
@@ -846,7 +855,8 @@ function renderSkillAdvisorCard() {
     const crafts = rec.crafts_to_next_level ?? 0;
     const goalLabel = t("skills.advisorAdoptGoalFor", { name: rec.display_name, count: fmt(crafts) });
     const goalCell = crafts > 0
-      ? `<button type="button" class="goal-add-btn skill-advisor-goal-btn" data-activity-key="${esc(rec.activity_key)}" data-crafts="${crafts}" title="${esc(goalLabel)}" aria-label="${esc(goalLabel)}">+</button>`
+      ? `<span class="skill-advisor-craft-qty" title="${esc(t("skills.advisorGoalColHint"))}">${esc(fmt(crafts))}×</span>
+         <button type="button" class="goal-add-btn skill-advisor-goal-btn" data-activity-key="${esc(rec.activity_key)}" data-crafts="${crafts}" title="${esc(goalLabel)}" aria-label="${esc(goalLabel)}">+</button>`
       : `<span class="inv-spark-empty">—</span>`;
     return `<tr>
       <td>${esc(rec.display_name)}</td>
@@ -854,7 +864,7 @@ function renderSkillAdvisorCard() {
       <td>${rec.level_required}</td>
       <td class="skill-advisor-mats">${esc(mats)}</td>
       <td class="num">${esc(eta)}</td>
-      <td class="col-actions">
+      <td class="col-actions skill-advisor-goal-cell">
         ${goalCell}
       </td>
     </tr>`;
@@ -869,16 +879,17 @@ function renderSkillAdvisorCard() {
     <div class="table-wrap">
       <table class="skill-advisor-table">
         <thead><tr>
-          <th>${esc(t("skills.advisorActivity"))}</th>
-          <th>${esc(t("skills.advisorXpMin"))}</th>
-          <th>${esc(t("skills.advisorReqLevel"))}</th>
-          <th>${esc(t("skills.advisorMaterials"))}</th>
-          <th>${esc(t("skills.advisorEtaCol"))}</th>
-          <th class="col-actions">${esc(t("goals.actions"))}</th>
+          ${advisorTh("skills.advisorActivity")}
+          ${advisorTh("skills.advisorXpMin")}
+          ${advisorTh("skills.advisorReqLevel")}
+          ${advisorTh("skills.advisorMaterials", "skills.advisorMaterialsHint")}
+          ${advisorTh("skills.advisorEtaCol", "skills.advisorEtaColHint")}
+          ${advisorTh("skills.advisorGoalCol", "skills.advisorGoalColHint", "col-actions")}
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>
+    <p class="skill-advisor-legend">${esc(t("skills.advisorTableLegend"))}</p>`;
 
   body.querySelector(".skill-advisor-skill-goal-btn")?.addEventListener("click", () => {
     adoptAdvisorSkillGoal();
@@ -915,30 +926,121 @@ async function adoptAdvisorSkillGoal() {
   alert(t("skills.advisorGoalCreated", { name: adv.skill_name, target: targetLevel }));
 }
 
+function inventoryQtyMap(data) {
+  const map = {};
+  for (const item of data?.inventory || []) {
+    map[item.key] = item.qty;
+  }
+  return map;
+}
+
+function collectExistingGoalItemKeys() {
+  const keys = new Set();
+  const data = state.goals.data || {};
+  for (const goal of data.ungrouped || []) {
+    if (goal.goal_type === "item") keys.add(goal.item_key);
+  }
+  for (const group of data.groups || []) {
+    for (const goal of group.goals || []) {
+      if (goal.goal_type === "item") keys.add(goal.item_key);
+    }
+  }
+  return keys;
+}
+
+function advisorMaterialGoalTargets(rec, crafts, inventoryMap) {
+  const targets = [];
+  for (const [key, perCraft] of Object.entries(rec.materials || {})) {
+    const totalNeeded = Number(perCraft) * crafts;
+    const have = inventoryMap[key] ?? 0;
+    const missing = totalNeeded - have;
+    if (missing > 0) {
+      targets.push({ item_key: key, target_qty: missing });
+    }
+  }
+  return targets;
+}
+
+async function createGoalInGroup(itemKey, targetQty, groupId, existingKeys) {
+  if (existingKeys.has(itemKey)) {
+    return { ok: false, skipped: true };
+  }
+  const res = await fetch(`${apiBase()}/goals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      item_key: itemKey,
+      target_qty: targetQty,
+      mode: "relative",
+      group_id: groupId,
+    }),
+  });
+  if (!res.ok) {
+    return { ok: false, skipped: true };
+  }
+  existingKeys.add(itemKey);
+  return { ok: true, goal: await res.json() };
+}
+
 async function adoptAdvisorItemGoal(activityKey, crafts) {
   const adv = state.skills.advisor;
   if (!adv?.supported || !activityKey) return;
   const rec = adv.recommendations?.find((r) => r.activity_key === activityKey);
   const name = rec?.display_name || activityKey.replace(/_/g, " ");
   const count = Number(crafts);
-  if (!count || count <= 0) return;
-  const res = await fetch(`${apiBase()}/goals`, {
+  if (!count || count <= 0 || !rec) return;
+
+  await loadGoals();
+  const existingKeys = collectExistingGoalItemKeys();
+  const inventoryMap = inventoryQtyMap(state.data);
+  const materialTargets = advisorMaterialGoalTargets(rec, count, inventoryMap);
+
+  const groupName = t("skills.advisorGoalGroupName", { name });
+  const groupRes = await fetch(`${apiBase()}/goal-groups`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      item_key: activityKey,
-      target_qty: count,
-      mode: "relative",
-    }),
+    body: JSON.stringify({ name: groupName }),
   });
-  const result = await res.json();
-  if (!res.ok) {
-    alert(result.error || t("goals.createFailed"));
+  const groupData = await groupRes.json();
+  if (!groupRes.ok) {
+    alert(groupData.error || t("goals.groupCreateFailed"));
     return;
   }
-  trackEvent("Goal Create", { source: "advisor", type: "item", mode: "relative", group: "none" });
+
+  let created = 0;
+  let skipped = 0;
+
+  for (const mat of materialTargets) {
+    const result = await createGoalInGroup(mat.item_key, mat.target_qty, groupData.id, existingKeys);
+    if (result.ok) created += 1;
+    else skipped += 1;
+  }
+
+  const mainResult = await createGoalInGroup(activityKey, count, groupData.id, existingKeys);
+  if (mainResult.ok) created += 1;
+  else skipped += 1;
+
+  if (created === 0) {
+    await fetch(`${apiBase()}/goal-groups/${groupData.id}`, { method: "DELETE" });
+    alert(t("skills.advisorItemGoalsNone"));
+    return;
+  }
+
+  trackEvent("Goal Group Create", { source: "advisor" });
+  trackEvent("Goal Create", {
+    source: "advisor",
+    type: "item",
+    mode: "relative",
+    group: "new",
+    materials: materialTargets.length,
+  });
   await refreshGoalsAfterCreate();
-  alert(t("skills.advisorItemGoalCreated", { name, count: fmt(count) }));
+
+  let message = t("skills.advisorItemGoalsCreated", { group: groupName, count: fmt(created) });
+  if (skipped > 0) {
+    message += ` ${t("skills.advisorItemGoalsSkipped", { count: fmt(skipped) })}`;
+  }
+  alert(message);
 }
 
 async function refreshGoalsAfterCreate() {
