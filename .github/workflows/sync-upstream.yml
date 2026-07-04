@@ -1,0 +1,62 @@
+# GitHub mirror of .gitea/workflows/sync-upstream.yml — use after moving the repo to GitHub.
+# Copy or symlink when migrating from Gitea; same secrets/vars names apply.
+name: Sync Upstream Game Data
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why this run was triggered
+        required: false
+        default: manual
+  repository_dispatch:
+    types: [idle-fantasy-upstream-updated]
+
+permissions:
+  contents: write
+
+jobs:
+  sync-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync recipe JSON from upstream IdleFantasy
+        run: python scripts/sync_game_data.py
+
+      - name: Smoke tests
+        run: |
+          python test_db_goals.py
+          python test_advisor.py
+
+      - name: Commit and push if game_data changed
+        id: commit
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game_data/
+          git commit -m "Sync game_data from tristinbaker/IdleFantasy"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to production
+        if: steps.commit.outputs.changed == 'true' && vars.AUTO_DEPLOY != 'false'
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+          DEPLOY_SERVICE: ${{ vars.DEPLOY_SERVICE }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: bash scripts/deploy-ci.sh
