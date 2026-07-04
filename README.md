@@ -21,6 +21,16 @@ A web viewer for backups of the Android game **[Idle Fantasy](https://github.com
 - **Docker** — ready to run behind nginx Proxy Manager (includes container health check)
 - **i18n** — English as default/fallback, German optional; automatic browser language or manual selection in the sidebar
 
+## Android integration
+
+Upload saves directly from the **[Idle Fantasy Android app](https://github.com/elpatron68/IdleFantasyApp)** (Settings → Save Data):
+
+1. Create a viewer on the [live instance](https://if-viewer.elpatron.me/) or your self-hosted URL → **Copy link**
+2. Paste the link into **Save Viewer URL** in the app settings
+3. Tap **Send to Save Viewer** — the app POSTs your export JSON to `POST /v/<viewer_id>/api/import` (multipart field `file`)
+
+The viewer URL is stored locally in the game save; no account is required. For local development, clone both repos side by side (see [Repository layout](#repository-layout)).
+
 ## Requirements
 
 - Python 3.11+
@@ -357,6 +367,19 @@ Smoke tests for goals/import helpers, skill timeline, snapshot deletion, and the
 ## Analytics (optional)
 
 The demo at [if-viewer.elpatron.me](https://if-viewer.elpatron.me/) may include [Plausible](https://plausible.io/) analytics via `templates/_analytics.html` (privacy-friendly, no cookies). Self-hosted instances can omit or replace this partial; CSP in `security.py` allows `plausible.elpatron.me` when enabled. Client events use tagged `plausible()` calls in `app.js` (e.g. viewer create, import, snapshot delete).
+
+## Repository layout
+
+The Android app and Save Viewer are separate git repositories (no submodule). For local development, clone both into a shared parent folder:
+
+```bash
+mkdir -p ~/repos/if
+cd ~/repos/if
+git clone https://github.com/elpatron68/IdleFantasyApp
+git clone <this-save-viewer-repo-url> Idle-Fantasy-Save-Viewer
+```
+
+Open `~/repos/if` in your editor to work on both projects in one workspace.
 
 ## License
 
