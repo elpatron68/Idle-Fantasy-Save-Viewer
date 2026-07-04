@@ -1,0 +1,14 @@
+# Minimal workflow to verify act_runner is online.
+name: Runner smoke test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Runner works"
+          python3 --version
+          uname -a
