@@ -252,7 +252,8 @@
     "linkWarning": "Save this link – there is no login. Without it, your data is lost.",
     "copyLink": "Copy link",
     "copied": "Copied!",
-    "copyPrompt": "Copy your viewer link:"
+    "copyPrompt": "Copy your viewer link:",
+    "androidHint": "Paste this link in Idle Fantasy under Settings → Save Data to send saves directly from the app."
   },
   "pwa": {
     "hintTitle": "Install as app",

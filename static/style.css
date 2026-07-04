@@ -929,6 +929,12 @@ body.inv-chart-modal-open {
   color: var(--text-muted);
 }
 
+.viewer-banner-android {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .viewer-link-url {
   display: block;
   word-break: break-all;
