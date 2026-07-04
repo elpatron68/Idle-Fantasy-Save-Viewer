@@ -1,0 +1,71 @@
+# Sync vendored recipe JSON from tristinbaker/IdleFantasy, run smoke tests, deploy.
+#
+# Secrets (repo settings → Actions → Secrets):
+#   DEPLOY_SSH_KEY   — private key for DEPLOY_HOST
+# Optional variables:
+#   DEPLOY_HOST      — default root@10.0.0.5
+#   DEPLOY_DIR       — default /opt/apps/Idle-Fantasy-Save-Viewer
+#   DEPLOY_SERVICE   — default viewer
+#
+# Set AUTO_DEPLOY=false to sync + test only (no SSH deploy).
+name: Sync Upstream Game Data
+
+on:
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why this run was triggered
+        required: false
+        default: manual
+
+permissions:
+  contents: write
+
+jobs:
+  sync-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sync recipe JSON from upstream IdleFantasy
+        run: python scripts/sync_game_data.py
+
+      - name: Smoke tests
+        run: |
+          python test_db_goals.py
+          python test_advisor.py
+
+      - name: Commit and push if game_data changed
+        id: commit
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "game_data already current"
+            exit 0
+          fi
+          git config user.name "gitea-actions[bot]"
+          git config user.email "gitea-actions[bot]@users.noreply.local"
+          git add game_data/
+          git commit -m "Sync game_data from tristinbaker/IdleFantasy (automated)"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to production
+        if: steps.commit.outputs.changed == 'true' && vars.AUTO_DEPLOY != 'false'
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+          DEPLOY_SERVICE: ${{ vars.DEPLOY_SERVICE }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: bash scripts/deploy-ci.sh
