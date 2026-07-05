@@ -1057,12 +1057,30 @@ body.inv-chart-modal-open {
 /* Goals */
 .goals-toolbar { gap: 12px; flex-wrap: wrap; }
 .goals-group-card { margin-bottom: 16px; }
-.goals-ungrouped-title { margin: 0 0 12px; font-size: 1rem; }
-.goals-table { width: 100%; border-collapse: collapse; }
+.goals-ungrouped-title {
+  margin: 0;
+  padding: 10px 10px 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.goal-section-header td {
+  padding: 0;
+  border-bottom: none;
+  border-top: 1px solid var(--border);
+}
+.goal-section-header + tr td { border-top: none; }
+.goals-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .goals-table th,
 .goals-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.goals-table .col-goal-item { width: 22%; }
+.goals-table .col-goal-progress { width: auto; }
+.goals-table .col-goal-status { width: 96px; text-align: center; }
+.goals-table .col-goal-actions { width: 88px; text-align: right; }
 .goal-progress-text { font-size: 0.85rem; margin-bottom: 4px; }
 .goal-actions-cell { white-space: nowrap; }
+.goal-actions-cell .goal-delete-btn { margin-left: 0; }
 .goal-delete-btn,
 .goal-group-delete,
 .goal-clear-completed {
