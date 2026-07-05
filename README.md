@@ -4,6 +4,92 @@ A web viewer for backups of the Android game **[Idle Fantasy](https://github.com
 
 **[Live demo](https://if-viewer.elpatron.me/)** — try the viewer in your browser (create a personal link, no account required).
 
+## Screenshots
+
+Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below link to expandable sections with full-size images.  
+*(Gitea/GitHub README: HTML `<details>` and `<img width="…">` are supported; JavaScript slideshows are not.)*
+
+<table>
+<tr>
+<td align="center"><a href="#screenshot-overview"><img src="docs/screenshots/overview.png" alt="" width="220"></a><br><strong>Overview</strong></td>
+<td align="center"><a href="#screenshot-skills"><img src="docs/screenshots/skills.png" alt="" width="220"></a><br><strong>Skills</strong></td>
+<td align="center"><a href="#screenshot-inventory"><img src="docs/screenshots/inventory.png" alt="" width="220"></a><br><strong>Inventory</strong></td>
+</tr>
+<tr>
+<td align="center"><a href="#screenshot-goals"><img src="docs/screenshots/goals.png" alt="" width="220"></a><br><strong>Goals</strong></td>
+<td align="center"><a href="#screenshot-add-goal"><img src="docs/screenshots/add_item_to_goal.png" alt="" width="220"></a><br><strong>Add goal</strong></td>
+<td align="center"><a href="#screenshot-equipment"><img src="docs/screenshots/equipment.png" alt="" width="220"></a><br><strong>Equipment</strong></td>
+</tr>
+<tr>
+<td align="center"><a href="#screenshot-quests"><img src="docs/screenshots/quests.png" alt="" width="220"></a><br><strong>Quests</strong></td>
+<td align="center"><a href="#screenshot-combat"><img src="docs/screenshots/combat.png" alt="" width="220"></a><br><strong>Combat</strong></td>
+<td align="center"><a href="#screenshot-history"><img src="docs/screenshots/history.png" alt="" width="220"></a><br><strong>History</strong></td>
+</tr>
+<tr>
+<td align="center" colspan="3"><a href="#screenshot-data"><img src="docs/screenshots/data.png" alt="" width="220"></a><br><strong>Data</strong> (export / import / delete viewer)</td>
+</tr>
+</table>
+
+<a name="screenshot-overview"></a>
+<details>
+<summary><strong>Overview</strong> — character header, KPIs, import summary</summary>
+<p><img src="docs/screenshots/overview.png" alt="Overview dashboard"></p>
+</details>
+
+<a name="screenshot-skills"></a>
+<details>
+<summary><strong>Skills</strong> — level/XP table, sparklines, training advisor</summary>
+<p><img src="docs/screenshots/skills.png" alt="Skills tab"></p>
+</details>
+
+<a name="screenshot-inventory"></a>
+<details>
+<summary><strong>Inventory</strong> — search, filters, grouped items, quantity trends</summary>
+<p><img src="docs/screenshots/inventory.png" alt="Inventory tab"></p>
+</details>
+
+<a name="screenshot-goals"></a>
+<details>
+<summary><strong>Goals</strong> — grouped targets, progress, status</summary>
+<p><img src="docs/screenshots/goals.png" alt="Goals tab"></p>
+</details>
+
+<a name="screenshot-add-goal"></a>
+<details>
+<summary><strong>Add goal</strong> — create item goal from inventory</summary>
+<p><img src="docs/screenshots/add_item_to_goal.png" alt="Add item goal dialog"></p>
+</details>
+
+<a name="screenshot-equipment"></a>
+<details>
+<summary><strong>Equipment</strong> — equipped gear by slot</summary>
+<p><img src="docs/screenshots/equipment.png" alt="Equipment tab"></p>
+</details>
+
+<a name="screenshot-quests"></a>
+<details>
+<summary><strong>Quests</strong> — story, daily, and achievement progress</summary>
+<p><img src="docs/screenshots/quests.png" alt="Quests tab"></p>
+</details>
+
+<a name="screenshot-combat"></a>
+<details>
+<summary><strong>Combat</strong> — kills, dungeons, recent activity</summary>
+<p><img src="docs/screenshots/combat.png" alt="Combat tab"></p>
+</details>
+
+<a name="screenshot-history"></a>
+<details>
+<summary><strong>History</strong> — charts and snapshot comparison</summary>
+<p><img src="docs/screenshots/history.png" alt="History tab"></p>
+</details>
+
+<a name="screenshot-data"></a>
+<details>
+<summary><strong>Data</strong> — viewer backup export/import and danger zone</summary>
+<p><img src="docs/screenshots/data.png" alt="Data tab"></p>
+</details>
+
 ## Features
 
 - **Dashboard** — character, coins, slayer task, skills, inventory, equipment, quests, and combat at a glance
