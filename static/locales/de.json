@@ -201,6 +201,7 @@
     "file": "Datei",
     "inventoryChanges": "Inventar-Änderungen ({count})",
     "skillChanges": "Skill-Änderungen ({count})",
+    "levelUp": "Level-Up",
     "delta": "Delta",
     "xpDelta": "XP-Delta",
     "skillLevelChart": "Top-Skills über Zeit",

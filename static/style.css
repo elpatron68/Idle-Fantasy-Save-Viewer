@@ -761,6 +761,33 @@ body.inv-chart-modal-open {
 .delta-pos { color: var(--success); }
 .delta-neg { color: var(--danger); }
 
+.skill-change-level-up {
+  background: rgba(74, 222, 128, 0.08);
+}
+.skill-change-level-up td:first-child {
+  border-left: 3px solid var(--success);
+  padding-left: 7px;
+}
+.skill-level-up-level {
+  color: var(--success);
+  font-weight: 700;
+}
+.skill-level-up-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #14532d;
+  color: var(--success);
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.skill-level-up-mark {
+  color: var(--success);
+  font-size: 0.85rem;
+}
+
 .chart-wrap {
   position: relative;
   height: 220px;

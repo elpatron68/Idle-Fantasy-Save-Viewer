@@ -201,6 +201,7 @@
     "file": "File",
     "inventoryChanges": "Inventory changes ({count})",
     "skillChanges": "Skill changes ({count})",
+    "levelUp": "Level up",
     "delta": "Delta",
     "xpDelta": "XP delta",
     "skillLevelChart": "Top skills over time",
