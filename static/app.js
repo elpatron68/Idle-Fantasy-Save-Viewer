@@ -622,7 +622,8 @@ function renderSkills(d) {
         <p class="skill-advisor-hint" id="skill-advisor-hint"></p>
         <div id="skill-advisor-body"></div>
       </div>
-      <div class="card">
+      <div class="card inv-card">
+        <div class="inv-table-wrap">
         <table class="skills-table" id="skills-table">
           <thead><tr id="skills-thead-row">
             <th data-sort="name"></th>
@@ -633,6 +634,7 @@ function renderSkills(d) {
           </tr></thead>
           <tbody id="skill-tbody"></tbody>
         </table>
+        </div>
       </div>`;
 
     document.getElementById("skill-search").addEventListener("input", (e) => {
@@ -1142,6 +1144,7 @@ function openTrendChartModal(title, snapshots, values, datasetLabel, color = "#4
     },
     options: chartOptsTime(snapshots),
   });
+  requestAnimationFrame(() => state.charts.trendModal?.resize());
 }
 
 function openInventoryChartModal(itemKey, itemName) {
@@ -2264,6 +2267,9 @@ function chartOptsTime(snapshots) {
   return {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: { top: 8, right: 16, bottom: 4, left: 4 },
+    },
     plugins: {
       legend: { labels: { color: "#8b92a8" } },
       tooltip: {
@@ -2282,11 +2288,18 @@ function chartOptsTime(snapshots) {
         ticks: {
           color: "#8b92a8",
           maxTicksLimit: 8,
+          maxRotation: 0,
+          autoSkip: true,
+          padding: 8,
           callback: (v) => formatChartAxisTs(v, spanMs),
         },
         grid: { color: "#2d3348" },
       },
-      y: { ticks: { color: "#8b92a8" }, grid: { color: "#2d3348" } },
+      y: {
+        ticks: { color: "#8b92a8", padding: 8 },
+        grid: { color: "#2d3348" },
+        grace: "5%",
+      },
     },
   };
 }

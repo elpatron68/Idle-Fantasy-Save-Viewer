@@ -448,8 +448,10 @@ tr:hover td { background: var(--bg-hover); }
   overflow: hidden;
 }
 
-.inv-table-wrap {
+.inv-table-wrap,
+.table-wrap {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 .inv-table {
@@ -611,8 +613,11 @@ body.inv-chart-modal-open {
   position: relative;
   z-index: 1;
   width: min(720px, 100%);
+  max-width: 100%;
   margin: 0;
   padding: 20px 20px 16px;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .inv-chart-modal-panel h3 {
@@ -641,8 +646,18 @@ body.inv-chart-modal-open {
 }
 
 .chart-wrap-modal {
-  height: 280px;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  height: min(280px, 50vh);
   margin-top: 0;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.chart-wrap-modal canvas {
+  display: block;
+  max-width: 100%;
 }
 
 .inv-group-row td {
@@ -790,8 +805,17 @@ body.inv-chart-modal-open {
 
 .chart-wrap {
   position: relative;
+  width: 100%;
+  max-width: 100%;
   height: 220px;
   margin-top: 12px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.chart-wrap canvas {
+  display: block;
+  max-width: 100%;
 }
 
 .item-equipped { color: var(--accent); }
