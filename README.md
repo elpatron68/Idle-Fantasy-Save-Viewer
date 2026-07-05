@@ -23,7 +23,7 @@ Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below li
 <tr>
 <td align="center"><a href="#screenshot-quests"><img src="docs/screenshots/quests.png" alt="" width="220"></a><br><strong>Quests</strong></td>
 <td align="center"><a href="#screenshot-combat"><img src="docs/screenshots/combat.png" alt="" width="220"></a><br><strong>Combat</strong></td>
-<td align="center"><a href="#screenshot-history"><img src="docs/screenshots/history.png" alt="" width="220"></a><br><strong>History</strong></td>
+<td align="center"><a href="#screenshot-history"><img src="docs/screenshots/history.png?v=6694843" alt="" width="220"></a><br><strong>History</strong></td>
 </tr>
 <tr>
 <td align="center" colspan="3"><a href="#screenshot-data"><img src="docs/screenshots/data.png" alt="" width="220"></a><br><strong>Data</strong> (export / import / delete viewer)</td>
@@ -81,7 +81,7 @@ Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below li
 <a name="screenshot-history"></a>
 <details>
 <summary><strong>History</strong> — charts and snapshot comparison</summary>
-<p><img src="docs/screenshots/history.png" alt="History tab"></p>
+<p><img src="docs/screenshots/history.png?v=6694843" alt="History tab"></p>
 </details>
 
 <a name="screenshot-data"></a>
