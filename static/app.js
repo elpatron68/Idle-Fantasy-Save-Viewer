@@ -2265,14 +2265,26 @@ async function runDiff() {
     </tr>`).join("");
 
   const skRows = diff.skill_changes
-    .sort((a, b) => b.xp_delta - a.xp_delta)
+    .sort((a, b) => {
+      const aUp = a.new_level > a.old_level ? 1 : 0;
+      const bUp = b.new_level > b.old_level ? 1 : 0;
+      if (aUp !== bUp) return bUp - aUp;
+      return b.xp_delta - a.xp_delta;
+    })
     .slice(0, 20)
-    .map((s) => `
-    <tr>
-      <td>${esc(s.name)}</td>
-      <td>${s.old_level} → ${s.new_level}</td>
+    .map((s) => {
+      const levelUp = s.new_level > s.old_level;
+      const levelDelta = s.new_level - s.old_level;
+      const levelCell = levelUp
+        ? `${s.old_level} → <span class="skill-level-up-level">${s.new_level}</span> <span class="skill-level-up-badge" title="${esc(t("history.levelUp"))}">+${levelDelta}</span>`
+        : `${s.old_level} → ${s.new_level}`;
+      return `
+    <tr class="${levelUp ? "skill-change-level-up" : ""}">
+      <td>${esc(s.name)}${levelUp ? ` <span class="skill-level-up-mark" title="${esc(t("history.levelUp"))}">⬆</span>` : ""}</td>
+      <td class="skill-level-cell">${levelCell}</td>
       <td class="${s.xp_delta >= 0 ? "delta-pos" : "delta-neg"}">${s.xp_delta >= 0 ? "+" : ""}${fmt(s.xp_delta)} XP</td>
-    </tr>`).join("");
+    </tr>`;
+    }).join("");
 
   const noChanges = `<tr><td colspan='3'>${esc(t("empty.noChanges"))}</td></tr>`;
   el.innerHTML = `
