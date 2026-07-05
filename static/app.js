@@ -1357,9 +1357,7 @@ function renderGoalRow(goal) {
   const missing = !done && goal.missing_qty > 0
     ? `<div class="goal-missing">${esc(t("goals.missing", { qty: isSkill ? goal.missing_qty : fmt(goal.missing_qty) }))}</div>`
     : "";
-  const deleteBtn = done
-    ? `<button type="button" class="goal-delete-btn" data-goal-id="${goal.id}">${esc(t("goals.delete"))}</button>`
-    : "";
+  const deleteBtn = `<button type="button" class="goal-delete-btn" data-goal-id="${goal.id}">${esc(t("goals.delete"))}</button>`;
   return `<tr>
     <td>${typeBadge}${esc(goal.item_name)}</td>
     <td>
