@@ -1341,6 +1341,26 @@ function goalMatchesFilter(goal, filter) {
   return true;
 }
 
+const GOALS_TABLE_COLGROUP = `
+  <colgroup>
+    <col class="col-goal-item">
+    <col class="col-goal-progress">
+    <col class="col-goal-status">
+    <col class="col-goal-actions">
+  </colgroup>`;
+
+function goalsTableHead() {
+  return `
+    <thead>
+      <tr>
+        <th class="col-goal-item">${esc(t("goals.item"))}</th>
+        <th class="col-goal-progress">${esc(t("goals.progress"))}</th>
+        <th class="col-goal-status">${esc(t("goals.status"))}</th>
+        <th class="col-goal-actions">${esc(t("goals.actions"))}</th>
+      </tr>
+    </thead>`;
+}
+
 function renderGoalRow(goal) {
   const done = !!goal.completed_at;
   const isSkill = goal.goal_type === "skill";
@@ -1359,14 +1379,14 @@ function renderGoalRow(goal) {
     : "";
   const deleteBtn = `<button type="button" class="goal-delete-btn" data-goal-id="${goal.id}">${esc(t("goals.delete"))}</button>`;
   return `<tr>
-    <td>${typeBadge}${esc(goal.item_name)}</td>
-    <td>
+    <td class="col-goal-item">${typeBadge}${esc(goal.item_name)}</td>
+    <td class="col-goal-progress">
       <div class="goal-progress-text">${progressText} ${modeHint}</div>
       <div class="progress-bar"><div class="progress-fill" style="width:${goal.progress_pct}%"></div></div>
       ${missing}${eta}
     </td>
-    <td><span class="badge ${done ? "badge-success" : "badge-warning"}">${esc(done ? t("goals.done") : t("goals.open"))}</span></td>
-    <td class="goal-actions-cell">${deleteBtn}</td>
+    <td class="col-goal-status"><span class="badge ${done ? "badge-success" : "badge-warning"}">${esc(done ? t("goals.done") : t("goals.open"))}</span></td>
+    <td class="col-goal-actions goal-actions-cell">${deleteBtn}</td>
   </tr>`;
 }
 
@@ -1464,7 +1484,7 @@ function renderGoals() {
   const filter = g.filter;
   const data = g.data || { groups: [], ungrouped: [] };
 
-  const groupSections = data.groups.map((group) => {
+  const groupRows = data.groups.map((group) => {
     const goals = (group.goals || []).filter((goal) => goalMatchesFilter(goal, filter));
     if (!goals.length && filter !== "all") return "";
     const completed = goals.filter((goal) => goal.completed_at).length;
@@ -1491,43 +1511,40 @@ function renderGoals() {
       : `<tr class="goal-item-row ${expanded ? "" : "collapsed"}" data-group="${sectionKey}"><td colspan="4" class="empty-state">${esc(t("goals.empty"))}</td></tr>`;
 
     return `
-      <div class="card goals-group-card">
-        <table class="goals-table">
-          <tbody>
-            <tr class="inv-group-row goal-group-header">
-              <td colspan="4">
-                <button type="button" class="inv-group-toggle goal-group-toggle" data-group="${sectionKey}" aria-expanded="${expanded}">
-                  <span class="inv-group-title">${esc(group.name)}</span>
-                  <span class="inv-group-meta">${esc(t("goals.groupProgress", { completed, total }))}</span>
-                </button>
-                <span class="goal-group-actions">${headerActions}</span>
-                ${missingSummary}
-              </td>
-            </tr>
-            ${rows}
-          </tbody>
-        </table>
-      </div>`;
+      <tr class="inv-group-row goal-group-header">
+        <td colspan="4">
+          <button type="button" class="inv-group-toggle goal-group-toggle" data-group="${sectionKey}" aria-expanded="${expanded}">
+            <span class="inv-group-title">${esc(group.name)}</span>
+            <span class="inv-group-meta">${esc(t("goals.groupProgress", { completed, total }))}</span>
+          </button>
+          <span class="goal-group-actions">${headerActions}</span>
+          ${missingSummary}
+        </td>
+      </tr>
+      ${rows}`;
   }).join("");
 
   const ungrouped = (data.ungrouped || []).filter((goal) => goalMatchesFilter(goal, filter));
-  const ungroupedSection = (filter === "all" || ungrouped.length) ? `
-    <div class="card goals-group-card">
-      <h3 class="goals-ungrouped-title">${esc(t("goals.ungrouped"))}</h3>
-      <table class="goals-table">
-        <thead>
-          <tr>
-            <th>${esc(t("goals.item"))}</th>
-            <th>${esc(t("goals.progress"))}</th>
-            <th>${esc(t("goals.status"))}</th>
-            <th>${esc(t("goals.actions"))}</th>
-          </tr>
-        </thead>
-        <tbody>${renderGoalsTableBody(ungrouped)}</tbody>
-      </table>
-    </div>` : "";
+  const showUngrouped = filter === "all" || ungrouped.length;
+  const ungroupedRows = showUngrouped
+    ? `<tr class="goal-section-header">
+        <td colspan="4" class="goals-ungrouped-title">${esc(t("goals.ungrouped"))}</td>
+      </tr>
+      ${renderGoalsTableBody(ungrouped)}`
+    : "";
 
-  const hasAny = groupSections || ungrouped.length || filter === "all";
+  const hasAny = groupRows || ungrouped.length || filter === "all";
+  const goalsTable = hasAny ? `
+    <div class="card goals-group-card">
+      <table class="goals-table">
+        ${GOALS_TABLE_COLGROUP}
+        ${goalsTableHead()}
+        <tbody>
+          ${groupRows}
+          ${ungroupedRows}
+        </tbody>
+      </table>
+    </div>` : `<div class="card"><p class="empty-state">${esc(t("goals.empty"))}</p></div>`;
 
   const overview = state.goalsOverview;
   const overviewHtml = overview ? `
@@ -1547,7 +1564,7 @@ function renderGoals() {
       </select>
       <button type="button" class="upload-btn" id="goals-create-group">${esc(t("goals.createGroup"))}</button>
     </div>
-    ${hasAny ? groupSections + ungroupedSection : `<div class="card"><p class="empty-state">${esc(t("goals.empty"))}</p></div>`}`;
+    ${goalsTable}`;
 
   document.getElementById("goals-filter").addEventListener("change", (e) => {
     state.goals.filter = e.target.value;
