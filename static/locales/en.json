@@ -13,6 +13,7 @@
     "quests": "Quests",
     "combat": "Combat",
     "history": "History",
+    "data": "Data",
     "backup": "Backup"
   },
   "settings": {
@@ -266,7 +267,7 @@
     "installed": "App installed – open it from your home screen or app list."
   },
   "viewerDb": {
-    "title": "Viewer backup",
+    "title": "Viewer data",
     "helpTitle": "What is this?",
     "helpBody": "The viewer stores imported game backups, history charts, and goals in a SQLite database on the server. Export downloads that database as a backup. Import restores it and replaces all current viewer data. This is not the same as importing a game save (.json).",
     "gameBackupNote": "To add a new game save snapshot, use Import game backup in the sidebar.",
@@ -274,7 +275,15 @@
     "importConfirm": "All current viewer data (snapshots, history, goals) will be replaced by the imported .db file. Continue?",
     "importSuccess": "Viewer restored: {snapshots} snapshot(s), {goals} goal(s).",
     "importFailed": "Could not import viewer database",
-    "invalidFile": "Please select a .db file (viewer export)."
+    "invalidFile": "Please select a .db file (viewer export).",
+    "dangerTitle": "Danger zone",
+    "dangerLead": "Permanently delete this viewer and all stored data. Your personal link will stop working. This cannot be undone.",
+    "exportBeforeDelete": "Export your viewer first if you want to keep a copy of your data.",
+    "deleteViewer": "Delete viewer and all data",
+    "deleteConfirm": "Really delete this viewer permanently? Your link will become invalid and all data will be lost.",
+    "deleteTypePrompt": "Type \"{word}\" to confirm:",
+    "deleteConfirmWord": "DELETE",
+    "deleteFailed": "Could not delete viewer"
   },
   "goals": {
     "filterAll": "All",

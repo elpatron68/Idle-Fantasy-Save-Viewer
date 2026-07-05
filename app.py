@@ -40,6 +40,7 @@ from db import (
 from security import (
     IMPORT_LIMIT,
     VIEWER_CREATE_LIMIT,
+    VIEWER_DELETE_LIMIT,
     configure_app,
     external_base_url,
     limiter,
@@ -48,6 +49,7 @@ from security import (
 from viewers import (
     LOCAL_VIEWER_ID,
     create_viewer,
+    delete_viewer,
     ensure_local_viewer,
     get_or_create_cli_viewer,
     is_valid_viewer_id,
@@ -235,6 +237,24 @@ def api_export_viewer(viewer_id: str):
         download_name=f"idle-fantasy-viewer-{viewer_id}.db",
         mimetype="application/octet-stream",
     )
+
+
+@viewer_bp.route("/api/viewer", methods=["DELETE"])
+@limiter.limit(VIEWER_DELETE_LIMIT)
+def api_delete_viewer(viewer_id: str):
+    if viewer_id == LOCAL_VIEWER_ID:
+        return jsonify({"error": "Local viewer cannot be deleted"}), 403
+    if not is_valid_viewer_id(viewer_id):
+        abort(404)
+    db_path = viewer_db_path(viewer_id, get_data_dir())
+    if not db_path.exists():
+        return jsonify({"error": "Viewer not found"}), 404
+    try:
+        if not delete_viewer(viewer_id, get_data_dir()):
+            return jsonify({"error": "Viewer not found"}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 403
+    return jsonify({"deleted": True})
 
 
 @viewer_bp.route("/api/goal-groups")

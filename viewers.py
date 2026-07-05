@@ -135,3 +135,16 @@ def restore_viewer_db(source: Path, target: Path) -> dict[str, int]:
         staging.unlink(missing_ok=True)
         raise
     return stats
+
+
+def delete_viewer(viewer_id: str, data_dir: Path) -> bool:
+    """Permanently delete a viewer database."""
+    if viewer_id == LOCAL_VIEWER_ID:
+        raise ValueError("Local viewer cannot be deleted")
+    if not is_valid_viewer_id(viewer_id):
+        raise ValueError("Invalid viewer id")
+    db_path = viewer_db_path(viewer_id, data_dir)
+    if not db_path.exists():
+        return False
+    db_path.unlink()
+    return True

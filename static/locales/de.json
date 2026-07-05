@@ -13,6 +13,7 @@
     "quests": "Quests",
     "combat": "Kampf",
     "history": "Verlauf",
+    "data": "Daten",
     "backup": "Backup"
   },
   "settings": {
@@ -266,7 +267,7 @@
     "installed": "App installiert – öffne sie über Startbildschirm oder App-Liste."
   },
   "viewerDb": {
-    "title": "Viewer-Backup",
+    "title": "Viewer-Daten",
     "helpTitle": "Was ist das?",
     "helpBody": "Der Viewer speichert importierte Spiel-Backups, Verlaufsdiagramme und Ziele in einer SQLite-Datenbank auf dem Server. Export lädt diese Datenbank als Backup herunter. Import stellt sie wieder her und ersetzt alle aktuellen Viewer-Daten. Das ist nicht dasselbe wie ein Spiel-Backup (.json) importieren.",
     "gameBackupNote": "Um einen neuen Spielstand hinzuzufügen, nutze in der Sidebar „Spiel-Backup importieren“.",
@@ -274,7 +275,15 @@
     "importConfirm": "Alle aktuellen Viewer-Daten (Snapshots, Verlauf, Ziele) werden durch die importierte .db-Datei ersetzt. Fortfahren?",
     "importSuccess": "Viewer wiederhergestellt: {snapshots} Snapshot(s), {goals} Ziel(e).",
     "importFailed": "Viewer konnte nicht importiert werden",
-    "invalidFile": "Bitte eine .db-Datei auswählen (Viewer-Export)."
+    "invalidFile": "Bitte eine .db-Datei auswählen (Viewer-Export).",
+    "dangerTitle": "Gefahrenzone",
+    "dangerLead": "Diesen Viewer und alle gespeicherten Daten dauerhaft löschen. Dein persönlicher Link funktioniert danach nicht mehr. Das kann nicht rückgängig gemacht werden.",
+    "exportBeforeDelete": "Exportiere den Viewer zuerst, wenn du eine Kopie deiner Daten behalten möchtest.",
+    "deleteViewer": "Viewer und alle Daten löschen",
+    "deleteConfirm": "Diesen Viewer wirklich dauerhaft löschen? Dein Link wird ungültig und alle Daten gehen verloren.",
+    "deleteTypePrompt": "Zur Bestätigung „{word}“ eingeben:",
+    "deleteConfirmWord": "LÖSCHEN",
+    "deleteFailed": "Viewer konnte nicht gelöscht werden"
   },
   "goals": {
     "filterAll": "Alle",

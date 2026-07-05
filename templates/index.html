@@ -33,7 +33,7 @@
         <button class="nav-btn" data-tab="quests" data-i18n="nav.quests">Quests</button>
         <button class="nav-btn" data-tab="combat" data-i18n="nav.combat">Combat</button>
         <button class="nav-btn" data-tab="history" data-i18n="nav.history">History</button>
-        <button class="nav-btn" data-tab="backup" data-i18n="nav.backup">Backup</button>
+        <button class="nav-btn" data-tab="backup" data-i18n="nav.data">Data</button>
       </nav>
       <div class="sidebar-footer">
         {% include '_pwa_hint.html' %}
@@ -89,7 +89,7 @@
       <section class="tab-panel" id="tab-history"></section>
       <section class="tab-panel" id="tab-backup">
         <div class="card backup-tab-card">
-          <h3 data-i18n="viewerDb.title">Viewer backup</h3>
+          <h3 data-i18n="viewerDb.title">Viewer data</h3>
           <p class="backup-tab-lead" data-i18n="viewerDb.helpBody">The viewer stores imported game backups, history charts, and goals in a SQLite database on the server. Export downloads that database as a backup. Import restores it and replaces all current viewer data. This is not the same as importing a game save (.json).</p>
           <p class="backup-tab-note" data-i18n="viewerDb.gameBackupNote">To add a new game save snapshot, use Import game backup in the sidebar.</p>
           <div class="backup-tab-actions">
@@ -99,6 +99,13 @@
               <input type="file" id="viewer-db-upload" accept=".db,application/octet-stream" hidden>
             </label>
           </div>
+        </div>
+        <div class="card danger-zone-card" id="viewer-danger-zone" hidden>
+          <h3 class="danger-zone-title" data-i18n="viewerDb.dangerTitle">Danger zone</h3>
+          <p class="danger-zone-lead" data-i18n="viewerDb.dangerLead">Permanently delete this viewer and all stored data. Your personal link will stop working. This cannot be undone.</p>
+          <p class="danger-zone-note" data-i18n="viewerDb.exportBeforeDelete">Export your viewer first if you want to keep a copy of your data.</p>
+          <button type="button" class="danger-zone-btn" id="viewer-delete-btn" data-i18n="viewerDb.deleteViewer">Delete viewer and all data</button>
+          <p class="landing-hint landing-hint-error" id="viewer-delete-error" hidden></p>
         </div>
       </section>
     </main>

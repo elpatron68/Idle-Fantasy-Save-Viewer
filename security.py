@@ -15,6 +15,7 @@ limiter = Limiter(key_func=get_remote_address, storage_uri="memory://")
 
 DEFAULT_MAX_UPLOAD_MB = 10
 VIEWER_CREATE_LIMIT = os.environ.get("RATE_LIMIT_VIEWER_CREATE", "5 per minute")
+VIEWER_DELETE_LIMIT = os.environ.get("RATE_LIMIT_VIEWER_DELETE", "5 per hour")
 IMPORT_LIMIT = os.environ.get("RATE_LIMIT_IMPORT", "20 per hour")
 
 

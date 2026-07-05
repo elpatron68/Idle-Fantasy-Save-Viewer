@@ -71,6 +71,7 @@ async function init() {
   setupUpload();
   setupExport();
   setupViewerDbImport();
+  setupViewerDelete();
   setupGlobalSearch();
   setupGoalModal();
   await loadData();
@@ -145,7 +146,7 @@ function activateTab(tab) {
   document.getElementById(`tab-${tab}`).classList.add("active");
   if (tab === "history") loadHistoryTab();
   if (tab === "goals") trackEvent("Goals Tab");
-  if (tab === "backup") trackEvent("Backup Tab");
+  if (tab === "backup") trackEvent("Data Tab");
 }
 
 function setupNav() {
@@ -203,6 +204,48 @@ function setupViewerDbImport() {
       snapshots: result.snapshots || 0,
       goals: result.goals || 0,
     }));
+  });
+}
+
+function setupViewerDelete() {
+  const zone = document.getElementById("viewer-danger-zone");
+  const btn = document.getElementById("viewer-delete-btn");
+  const errEl = document.getElementById("viewer-delete-error");
+  if (!zone || !btn) return;
+
+  const vid = getViewerId();
+  if (!vid || vid === "local") {
+    zone.hidden = true;
+    return;
+  }
+  zone.hidden = false;
+
+  btn.addEventListener("click", async () => {
+    if (errEl) errEl.hidden = true;
+    if (!confirm(t("viewerDb.deleteConfirm"))) return;
+
+    const expected = t("viewerDb.deleteConfirmWord");
+    const typed = prompt(t("viewerDb.deleteTypePrompt", { word: expected }));
+    if (typed !== expected) return;
+
+    btn.disabled = true;
+    try {
+      const res = await fetch(`${apiBase()}/viewer`, { method: "DELETE" });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(result.error || t("viewerDb.deleteFailed"));
+      }
+      trackEvent("Viewer Delete", { status: "deleted" });
+      window.location.href = "/";
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = err.message || t("viewerDb.deleteFailed");
+        errEl.hidden = false;
+      } else {
+        alert(err.message || t("viewerDb.deleteFailed"));
+      }
+      btn.disabled = false;
+    }
   });
 }
 
