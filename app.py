@@ -9,7 +9,7 @@ import sys
 import webbrowser
 from pathlib import Path
 
-from flask import Blueprint, Flask, abort, jsonify, render_template, request, send_file, send_from_directory
+from flask import Blueprint, Flask, Response, abort, jsonify, render_template, request, send_file, send_from_directory
 from werkzeug.utils import secure_filename
 
 from advisor import advise_skill
@@ -121,6 +121,20 @@ def sw_viewer(viewer_id: str):
     return _serve_sw()
 
 
+def _landing_seo() -> dict[str, str]:
+    base = external_base_url()
+    return {
+        "seo_title": "Idle Fantasy Save Viewer",
+        "seo_description": (
+            "Free web viewer for Idle Fantasy game saves. "
+            "Track skills, inventory, quests, goals and snapshot history – no account, private link only."
+        ),
+        "seo_url": f"{base}/",
+        "seo_image": f"{base}/static/icon-512.png",
+        "seo_robots": "index, follow",
+    }
+
+
 @viewer_bp.route("/")
 def viewer_index(viewer_id: str):
     _resolve_viewer_db(viewer_id)
@@ -128,6 +142,7 @@ def viewer_index(viewer_id: str):
         "index.html",
         viewer_id=viewer_id,
         manifest_href=f"/v/{viewer_id}/manifest.webmanifest",
+        seo_robots="noindex, nofollow",
     )
 
 
@@ -401,9 +416,31 @@ def sw_root():
     return _serve_sw()
 
 
+@app.route("/robots.txt")
+def robots_txt():
+    base = external_base_url()
+    body = f"User-agent: *\nAllow: /\nDisallow: /v/\n\nSitemap: {base}/sitemap.xml\n"
+    return Response(body, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    base = external_base_url()
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{base}/</loc>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
+"""
+    return Response(xml, mimetype="application/xml")
+
+
 @app.route("/")
 def landing():
-    return render_template("landing.html", manifest_href="/manifest.webmanifest")
+    return render_template("landing.html", manifest_href="/manifest.webmanifest", **_landing_seo())
 
 
 @app.post("/api/viewers")

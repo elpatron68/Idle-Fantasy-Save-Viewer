@@ -1,0 +1,17 @@
+{% if seo_robots %}<meta name="robots" content="{{ seo_robots }}">{% endif %}
+{% if seo_description %}
+<meta name="description" content="{{ seo_description }}">
+<meta property="og:description" content="{{ seo_description }}">
+<meta name="twitter:description" content="{{ seo_description }}">
+{% endif %}
+{% if seo_url %}
+<link rel="canonical" href="{{ seo_url }}">
+<meta property="og:url" content="{{ seo_url }}">
+{% endif %}
+{% if seo_title %}
+<meta property="og:title" content="{{ seo_title }}">
+<meta name="twitter:title" content="{{ seo_title }}">
+{% endif %}
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+{% if seo_image %}<meta property="og:image" content="{{ seo_image }}">{% endif %}

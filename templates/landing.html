@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Idle Fantasy Viewer</title>
+  <title>{{ seo_title | default("Idle Fantasy Save Viewer", true) }} – Skills, Inventory &amp; History</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  {% include '_seo_head.html' %}
   {% include '_pwa_head.html' %}
   <link rel="stylesheet" href="/static/style.css">
   {% include '_analytics.html' %}
