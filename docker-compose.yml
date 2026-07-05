@@ -1,6 +1,9 @@
 services:
   viewer:
-    build: .
+    build:
+      context: .
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
     ports:
       - "5000:5000"
     environment:

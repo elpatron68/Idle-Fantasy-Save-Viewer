@@ -41,6 +41,7 @@ if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
 fi
 
 info "Rebuilding and starting containers…"
+export GIT_COMMIT="$ACTUAL_SHA"
 docker compose up -d --build --remove-orphans
 
 wait_for_docker_health() {

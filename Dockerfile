@@ -2,6 +2,8 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+ARG GIT_COMMIT=unknown
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DATA_DIR=/data \
@@ -13,12 +15,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py db.py parser.py categories.py validation.py viewers.py security.py game_data.py advisor.py ./
+COPY app.py db.py parser.py categories.py validation.py viewers.py security.py game_data.py advisor.py version.py ./
 COPY game_data/ game_data/
 COPY templates/ templates/
 COPY static/ static/
 
-RUN mkdir -p /data/viewers /data/uploads \
+RUN echo "$GIT_COMMIT" > BUILD_REF \
+    && mkdir -p /data/viewers /data/uploads \
     && useradd --create-home --uid 1000 --shell /usr/sbin/nologin appuser \
     && chown -R appuser:appuser /app /data
 

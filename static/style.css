@@ -918,6 +918,15 @@ body.inv-chart-modal-open {
   text-decoration: underline;
 }
 
+.site-footer .build-ref {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  color: var(--text-muted);
+}
+
+.site-footer .build-ref:hover {
+  color: var(--accent);
+}
+
 .landing-page .site-footer {
   width: 100%;
   max-width: 520px;

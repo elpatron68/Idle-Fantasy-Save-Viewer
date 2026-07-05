@@ -46,6 +46,7 @@ from security import (
     limiter,
     local_viewer_disabled,
 )
+from version import build_info
 from viewers import (
     LOCAL_VIEWER_ID,
     create_viewer,
@@ -59,6 +60,16 @@ from viewers import (
 
 app = Flask(__name__)
 configure_app(app)
+
+
+@app.context_processor
+def inject_build_info():
+    info = build_info()
+    return {
+        "build_ref": info.get("ref"),
+        "build_url": info.get("url"),
+    }
+
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", Path(__file__).parent / "data"))
 DB_PATH = DEFAULT_DB

@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 data/
 *.db
+BUILD_REF
 fantasyidler_save.json
 .gitea-credentials.txt
 testfiles/
