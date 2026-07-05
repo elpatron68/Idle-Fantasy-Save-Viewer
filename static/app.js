@@ -50,12 +50,6 @@ function getViewerId() {
   return document.body?.dataset?.viewerId || "";
 }
 
-function trackEvent(name, props) {
-  if (typeof window.plausible === "function") {
-    window.plausible(name, props ? { props } : undefined);
-  }
-}
-
 function apiBase() {
   const vid = getViewerId();
   return vid ? `/v/${vid}/api` : "/api";
@@ -871,7 +865,7 @@ async function adoptAdvisorSkillGoal() {
     alert(result.error || t("goals.createFailed"));
     return;
   }
-  trackEvent("Goal Create", { source: "advisor", type: "skill", mode: "absolute" });
+  trackEvent("Goal Create", { source: "advisor", type: "skill", mode: "absolute", group: "none" });
   await refreshGoalsAfterCreate();
   alert(t("skills.advisorGoalCreated", { name: adv.skill_name, target: targetLevel }));
 }
@@ -897,7 +891,7 @@ async function adoptAdvisorItemGoal(activityKey, crafts) {
     alert(result.error || t("goals.createFailed"));
     return;
   }
-  trackEvent("Goal Create", { source: "advisor", type: "item", mode: "relative" });
+  trackEvent("Goal Create", { source: "advisor", type: "item", mode: "relative", group: "none" });
   await refreshGoalsAfterCreate();
   alert(t("skills.advisorItemGoalCreated", { name, count: fmt(count) }));
 }
@@ -1377,7 +1371,7 @@ function renderGoalRow(goal) {
   const missing = !done && goal.missing_qty > 0
     ? `<div class="goal-missing">${esc(t("goals.missing", { qty: isSkill ? goal.missing_qty : fmt(goal.missing_qty) }))}</div>`
     : "";
-  const deleteBtn = `<button type="button" class="goal-delete-btn" data-goal-id="${goal.id}">${esc(t("goals.delete"))}</button>`;
+  const deleteBtn = `<button type="button" class="goal-delete-btn" data-goal-id="${goal.id}" data-goal-status="${done ? "completed" : "open"}">${esc(t("goals.delete"))}</button>`;
   return `<tr>
     <td class="col-goal-item">${typeBadge}${esc(goal.item_name)}</td>
     <td class="col-goal-progress">
@@ -1403,7 +1397,7 @@ function bindGoalActions(panel) {
       if (!confirm(t("goals.deleteConfirm"))) return;
       const res = await fetch(`${apiBase()}/goals/${btn.dataset.goalId}`, { method: "DELETE" });
       if (res.ok) {
-        trackEvent("Goal Delete");
+        trackEvent("Goal Delete", { status: btn.dataset.goalStatus || "open" });
         await loadGoals();
         const overviewRes = await fetch(`${apiBase()}/goals/overview`);
         if (overviewRes.ok) state.goalsOverview = await overviewRes.json();
@@ -1443,7 +1437,7 @@ function bindGoalActions(panel) {
       if (!confirm(t("goals.deleteGroupConfirm", { name }))) return;
       const res = await fetch(`${apiBase()}/goal-groups/${btn.dataset.groupId}`, { method: "DELETE" });
       if (res.ok) {
-        trackEvent("Goal Group Delete");
+        trackEvent("Goal Group Delete", { source: "goals_tab" });
         await loadGoals();
       }
       renderGoals();
@@ -1454,7 +1448,8 @@ function bindGoalActions(panel) {
     btn.addEventListener("click", async () => {
       const ids = (btn.dataset.goalIds || "").split(",").filter(Boolean);
       for (const id of ids) {
-        await fetch(`${apiBase()}/goals/${id}`, { method: "DELETE" });
+        const res = await fetch(`${apiBase()}/goals/${id}`, { method: "DELETE" });
+        if (res.ok) trackEvent("Goal Delete", { status: "completed", bulk: "true" });
       }
       if (ids.length) {
         trackEvent("Goals Clear Completed", { count: String(ids.length) });
@@ -1749,6 +1744,12 @@ function showGoalsCompletedBanner(result) {
     goals: String(completed.length),
     groups: String(groupsDone.length),
   });
+  for (const goal of completed) {
+    trackEvent("Goal Reached", {
+      type: goal.goal_type || "item",
+      group: goal.group_name ? "yes" : "no",
+    });
+  }
 
   const items = completed.map((goal) => {
     const groupPrefix = goal.group_name

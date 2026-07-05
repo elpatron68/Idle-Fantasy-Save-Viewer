@@ -34,6 +34,7 @@ function setupCreate() {
       const res = await fetch("/api/viewers", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || t("viewer.createFailed"));
+      trackEvent("Viewer Create", { status: "created" });
       window.location.href = data.url;
     } catch (err) {
       status.textContent = err.message;
