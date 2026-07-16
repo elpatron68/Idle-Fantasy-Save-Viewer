@@ -1225,6 +1225,15 @@ body.inv-chart-modal-open {
   margin-left: 6px;
   font-size: 0.85rem;
 }
+.event-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
 tr.has-goal .col-name,
 tr.has-goal td:first-child { font-weight: 600; }
 .kpi-goals .kpi-value { color: var(--accent); }

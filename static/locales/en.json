@@ -12,6 +12,7 @@
     "equipment": "Equipment",
     "quests": "Quests",
     "combat": "Combat",
+    "events": "Events",
     "history": "History",
     "data": "Data",
     "backup": "Backup"
@@ -51,6 +52,8 @@
     "questsCompleted": "Story quests completed",
     "slayerKills": "Slayer kills",
     "dungeonRuns": "Dungeon runs",
+    "seasonalTokens": "Event tokens",
+    "towerFloor": "Tower floor",
     "topInventory": "Largest inventory changes",
     "topSkills": "Largest skill changes",
     "titleError": "Import errors",
@@ -108,7 +111,18 @@
     "pets": "Pets",
     "farming": "Farming",
     "patch": "Patch {n}",
-    "guildRep": "Guild reputation"
+    "guildRep": "Guild reputation",
+    "tower": "Infinite Tower",
+    "towerFloor": "Current / best floor",
+    "towerMilestones": "Milestones",
+    "towerBonuses": "Bonuses",
+    "worker": "Worker",
+    "workerSlot": "Slot {slot}",
+    "titles": "Titles",
+    "titlesUnlocked": "Unlocked",
+    "titlesEquipped": "Equipped",
+    "town": "Town",
+    "buildingTier": "Tier {tier}"
   },
   "skills": {
     "search": "Search skills…",
@@ -199,7 +213,48 @@
     "recentActivity": "Recent activity",
     "activeSessions": "Active sessions",
     "sessionDone": "done",
-    "sessionRunning": "running"
+    "sessionRunning": "running",
+    "dungeonLastRuns": "Last dungeon run",
+    "lastRunKills": "Kills (last run)",
+    "foodConsumed": "Food",
+    "survived": "Survived",
+    "notSurvived": "No",
+    "yes": "Yes",
+    "totalRuns": "Total runs"
+  },
+  "events": {
+    "seasonal": "Seasonal events",
+    "noActiveEvent": "No active seasonal event",
+    "tokens": "Event tokens",
+    "minigame": "Minigame",
+    "banners": "Banners",
+    "bounties": "Bounties",
+    "bountyOpen": "Open",
+    "bountyProgress": "Progress: {progress}",
+    "easyMode": "Easy mode",
+    "cooldownReady": "Ready",
+    "cooldownUntil": "Available from {time}",
+    "noneEquipped": "None",
+    "carnival": {
+      "title": "Carnival",
+      "skill": "Carnival skill",
+      "level": "Level {level}",
+      "tickets": "Tickets",
+      "cooldowns": "Minigame cooldowns",
+      "difficulties": "Difficulties",
+      "ring_toss": "Ring toss",
+      "hammer_strike": "Hammer strike",
+      "potion_sequence": "Potion sequence",
+      "item_appraisal": "Item appraisal",
+      "shell_game": "Shell game",
+      "higher_lower": "Higher lower"
+    }
+  },
+  "expeditions": {
+    "title": "Expeditions",
+    "unlocked": "Unlocked",
+    "notes": "Skilling dungeons",
+    "pity": "Pity counter"
   },
   "history": {
     "loading": "Loading history…",
@@ -219,7 +274,8 @@
     "deleteSnapshot": "Delete snapshot",
     "deleteSnapshotConfirm": "Really delete this snapshot?",
     "deleteSnapshotFailed": "Could not delete snapshot",
-    "coinsSummary": "Coins: {delta} · Total level: {levelDelta}"
+    "coinsSummary": "Coins: {delta} · Total level: {levelDelta}",
+    "progressSummary": "Event tokens: {tokens} · Tower floor: {tower}"
   },
   "search": {
     "global": "Search items, skills and goals…",

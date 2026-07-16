@@ -487,6 +487,7 @@ function renderAll() {
   renderEquipment(d);
   renderQuests(d);
   renderCombat(d);
+  renderEvents(d);
 }
 
 function renderHeader(d) {
@@ -525,6 +526,29 @@ function renderOverview(d) {
     `<li><span>${esc(t("overview.patch", { n: p.patchNumber }))}</span><span>${esc(p.cropType || "—")}</span></li>`
   ).join("");
 
+  const tower = d.tower || {};
+  const towerHtml = tower.current_floor || tower.best_floor
+    ? `<ul class="list-compact">
+        <li><span>${esc(t("overview.towerFloor"))}</span><span>${tower.current_floor} / ${tower.best_floor}</span></li>
+        <li><span>${esc(t("overview.towerMilestones"))}</span><span>${(tower.milestones || []).join(", ") || "—"}</span></li>
+        <li><span>${esc(t("overview.towerBonuses"))}</span><span>XP +${tower.xp_bonus_pct}% · HP +${tower.hp_bonus} · ${esc(t("kpi.coins"))} +${tower.coin_bonus_pct}%</span></li>
+      </ul>`
+    : `<p class="empty-state">${esc(t("empty.none"))}</p>`;
+
+  const workersHtml = (d.workers || []).map((w) =>
+    `<li><span>${esc(t("overview.workerSlot", { slot: w.slot }))}</span><span>${esc(w.daily_name || "?")} (${esc(w.tier || "?")})</span></li>`
+  ).join("");
+
+  const titles = d.titles || {};
+  const titlesHtml = `<ul class="list-compact">
+    <li><span>${esc(t("overview.titlesUnlocked"))}</span><span>${esc((titles.unlocked || []).map(humanizeKey).join(", ") || t("empty.none"))}</span></li>
+    <li><span>${esc(t("overview.titlesEquipped"))}</span><span>${esc(titles.equipped ? humanizeKey(titles.equipped) : t("events.noneEquipped"))}</span></li>
+  </ul>`;
+
+  const townHtml = Object.entries(d.town_buildings || {}).map(([k, v]) =>
+    `<li><span>${esc(humanizeKey(k))}</span><span>${esc(t("overview.buildingTier", { tier: v }))}</span></li>`
+  ).join("");
+
   document.getElementById("tab-overview").innerHTML = `
     ${renderImportChangesCard(state.lastImportChanges)}
     <div class="grid-2">
@@ -559,6 +583,22 @@ function renderOverview(d) {
         <ul class="list-compact">${Object.entries(d.guild_reputation || {}).map(([k, v]) =>
           `<li><span>${esc(k)}</span><span>${fmt(v)}</span></li>`).join("")}</ul>
       </div>
+      <div class="card">
+        <h3>${esc(t("overview.tower"))}</h3>
+        ${towerHtml}
+      </div>
+      <div class="card">
+        <h3>${esc(t("overview.worker"))}</h3>
+        <ul class="list-compact">${workersHtml || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>
+      </div>
+      <div class="card">
+        <h3>${esc(t("overview.titles"))}</h3>
+        ${titlesHtml}
+      </div>
+      <div class="card">
+        <h3>${esc(t("overview.town"))}</h3>
+        <ul class="list-compact">${townHtml || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>
+      </div>
     </div>`;
 }
 
@@ -587,6 +627,8 @@ function renderImportChangesCard(changes) {
         ${changes.quests_completed ? `<li><span>${esc(t("import.questsCompleted"))}</span><span>${changes.quests_completed}</span></li>` : ""}
         ${changes.slayer_kills_delta ? `<li><span>${esc(t("import.slayerKills"))}</span><span>+${changes.slayer_kills_delta}</span></li>` : ""}
         ${changes.dungeon_runs_delta ? `<li><span>${esc(t("import.dungeonRuns"))}</span><span>+${changes.dungeon_runs_delta}</span></li>` : ""}
+        ${changes.seasonal_tokens_delta ? `<li><span>${esc(t("import.seasonalTokens"))}</span><span>${changes.seasonal_tokens_delta >= 0 ? "+" : ""}${fmt(changes.seasonal_tokens_delta)}</span></li>` : ""}
+        ${changes.tower_floor_delta ? `<li><span>${esc(t("import.towerFloor"))}</span><span>${changes.tower_floor_delta >= 0 ? "+" : ""}${changes.tower_floor_delta}</span></li>` : ""}
       </ul>
       ${invTop ? `<h4>${esc(t("import.topInventory"))}</h4><ul class="list-compact">${invTop}</ul>` : ""}
       ${skTop ? `<h4>${esc(t("import.topSkills"))}</h4><ul class="list-compact">${skTop}</ul>` : ""}
@@ -2004,6 +2046,78 @@ function renderQuests(d) {
   });
 }
 
+function renderEvents(d) {
+  const seasonal = d.seasonal || {};
+  const carnival = d.carnival || {};
+  const carnivalSkill = (d.skills || []).find((s) => s.key === "carnival");
+  const carnivalTickets = (d.inventory || []).find((i) => i.key === "carnival_ticket");
+  const eventId = seasonal.active_event_id;
+
+  let seasonalHtml = `<p class="empty-state">${esc(t("events.noActiveEvent"))}</p>`;
+  if (eventId) {
+    const tokens = seasonal.tokens_by_event?.[eventId] ?? 0;
+    const bountySlots = (seasonal.bounty_slots || []).map((slot) => {
+      const progress = seasonal.bounty_progress?.[slot];
+      const cooldown = seasonal.bounty_cooldowns?.[slot];
+      let status = t("events.bountyOpen");
+      if (progress != null && progress > 0) {
+        status = t("events.bountyProgress", { progress: fmt(progress) });
+      } else if (cooldown) {
+        status = formatCooldown(cooldown);
+      }
+      return `<li><span>${esc(humanizeKey(slot))}</span><span>${esc(status)}</span></li>`;
+    }).join("");
+
+    const banners = (seasonal.banners_earned || []).map(humanizeKey).join(", ") || t("empty.none");
+    const minigameStatus = formatCooldown(seasonal.minigame_cooldown_at);
+    const easyBadge = seasonal.minigame_easy_mode
+      ? `<span class="event-badge">${esc(t("events.easyMode"))}</span>`
+      : "";
+
+    seasonalHtml = `
+      <ul class="list-compact">
+        <li><span>${esc(t("events.tokens"))}</span><span>${fmt(tokens)}</span></li>
+        <li><span>${esc(t("events.minigame"))}</span><span>${esc(minigameStatus)} ${easyBadge}</span></li>
+        <li><span>${esc(t("events.banners"))}</span><span>${esc(banners)}</span></li>
+      </ul>
+      <h4>${esc(t("events.bounties"))}</h4>
+      <ul class="list-compact">${bountySlots || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>`;
+  }
+
+  const carnivalCooldowns = Object.entries(carnival.cooldowns || {})
+    .map(([key, ts]) => {
+      const labelKey = `events.carnival.${key}`;
+      const label = I18n.t(labelKey) !== labelKey ? t(labelKey) : humanizeKey(key);
+      return `<li><span>${esc(label)}</span><span>${esc(formatCooldown(ts))}</span></li>`;
+    })
+    .join("");
+
+  const difficulties = Object.entries(carnival.difficulties || {});
+  const diffHtml = difficulties.length
+    ? `<h4>${esc(t("events.carnival.difficulties"))}</h4><ul class="list-compact">${difficulties.map(([k, v]) =>
+      `<li><span>${esc(humanizeKey(k))}</span><span>${esc(String(v))}</span></li>`
+    ).join("")}</ul>`
+    : "";
+
+  document.getElementById("tab-events").innerHTML = `
+    <div class="grid-2">
+      <div class="card">
+        <h3>${esc(eventId ? humanizeKey(eventId) : t("events.seasonal"))}</h3>
+        ${seasonalHtml}
+      </div>
+      <div class="card">
+        <h3>${esc(t("events.carnival.title"))}</h3>
+        <ul class="list-compact">
+          ${carnivalSkill ? `<li><span>${esc(t("events.carnival.skill"))}</span><span>${esc(t("events.carnival.level", { level: carnivalSkill.level }))}</span></li>` : ""}
+          ${carnivalTickets ? `<li><span>${esc(t("events.carnival.tickets"))}</span><span>${fmt(carnivalTickets.qty)}</span></li>` : ""}
+        </ul>
+        <h4>${esc(t("events.carnival.cooldowns"))}</h4>
+        <ul class="list-compact">${carnivalCooldowns || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>
+        ${diffHtml}
+      </div>
+    </div>`;
+}
+
 function renderCombat(d) {
   const recent = (d.recent_sessions || [])
     .map((s) => `<li><span>${esc(s.activity_display_name || s.activity_key)}</span><span>${esc(s.skill_name)}</span></li>`).join("");
@@ -2040,11 +2154,91 @@ function renderCombat(d) {
           </table>
         </div>
       </div>
+      <div class="card">
+        <h3>${esc(t("combat.dungeonLastRuns"))}</h3>
+        <div class="table-wrap">
+          <table class="combat-table" id="combat-last-runs-table">
+            <thead><tr>
+              <th>${esc(t("combat.entry"))}</th>
+              <th>${esc(t("combat.totalRuns"))}</th>
+              <th>${esc(t("combat.lastRunKills"))}</th>
+              <th>${esc(t("combat.foodConsumed"))}</th>
+              <th>${esc(t("combat.survived"))}</th>
+            </tr></thead>
+            <tbody id="combat-last-runs-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h3>${esc(t("expeditions.title"))}</h3>
+        <h4>${esc(t("expeditions.unlocked"))}</h4>
+        <ul class="list-compact" id="expeditions-unlocked"></ul>
+        <h4>${esc(t("expeditions.notes"))}</h4>
+        <ul class="list-compact" id="expeditions-notes"></ul>
+        <h4>${esc(t("expeditions.pity"))}</h4>
+        <ul class="list-compact" id="expeditions-pity"></ul>
+      </div>
       <div class="card"><h3>${esc(t("combat.recentActivity"))}</h3><ul class="list-compact">${recent || none}</ul></div>
       <div class="card"><h3>${esc(t("combat.activeSessions"))}</h3><ul class="list-compact">${active || none}</ul></div>
     </div>`;
 
+  renderCombatLastRuns(d);
+  renderExpeditions(d);
   ensureCombatTimeline().then(() => renderCombatBody(d));
+}
+
+function renderCombatLastRuns(d) {
+  const runs = d.combat?.dungeon_runs || {};
+  const stats = d.dungeon_stats || {};
+  const keys = [...new Set([...Object.keys(runs), ...Object.keys(stats)])].sort();
+  const tbody = document.getElementById("combat-last-runs-tbody");
+  if (!tbody) return;
+
+  tbody.innerHTML = keys.length
+    ? keys.map((key) => {
+      const last = stats[key];
+      const survived = last
+        ? (last.survived ? t("combat.yes") : t("combat.notSurvived"))
+        : "—";
+      return `<tr>
+        <td>${esc(humanizeKey(key))}</td>
+        <td>${fmt(runs[key] || 0)}</td>
+        <td>${last ? fmt(last.kill_count) : "—"}</td>
+        <td>${last ? fmt(last.food_consumed) : "—"}</td>
+        <td>${esc(survived)}</td>
+      </tr>`;
+    }).join("")
+    : `<tr><td colspan="5">${esc(t("empty.none"))}</td></tr>`;
+}
+
+function renderExpeditions(d) {
+  const exp = d.expeditions || {};
+  const none = `<li><span>${esc(t("empty.none"))}</span></li>`;
+
+  const unlockedEl = document.getElementById("expeditions-unlocked");
+  if (unlockedEl) {
+    const unlocked = (exp.unlocked || []).map((key) =>
+      `<li><span>${esc(humanizeKey(key))}</span></li>`
+    ).join("");
+    unlockedEl.innerHTML = unlocked || none;
+  }
+
+  const notesEl = document.getElementById("expeditions-notes");
+  if (notesEl) {
+    const notes = Object.entries(exp.notes || {})
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, val]) => `<li><span>${esc(humanizeKey(key))}</span><span>${fmt(val)}</span></li>`)
+      .join("");
+    notesEl.innerHTML = notes || none;
+  }
+
+  const pityEl = document.getElementById("expeditions-pity");
+  if (pityEl) {
+    const pity = Object.entries(exp.pity || {})
+      .map(([key, val]) => `<li><span>${esc(humanizeKey(key))}</span><span>${fmt(val)}</span></li>`)
+      .join("");
+    pityEl.innerHTML = pity || none;
+  }
 }
 
 function renderCombatBody(d) {
@@ -2468,6 +2662,10 @@ async function runDiff() {
       delta: `${coinDelta >= 0 ? "+" : ""}${fmt(coinDelta)}`,
       levelDelta: `${levelDelta >= 0 ? "+" : ""}${levelDelta}`,
     }))}</p>
+    ${(diff.summary?.seasonal_tokens_delta || diff.summary?.tower_floor_delta) ? `<p>${esc(t("history.progressSummary", {
+      tokens: `${(diff.summary.seasonal_tokens_delta || 0) >= 0 ? "+" : ""}${fmt(diff.summary.seasonal_tokens_delta || 0)}`,
+      tower: `${(diff.summary.tower_floor_delta || 0) >= 0 ? "+" : ""}${diff.summary.tower_floor_delta || 0}`,
+    }))}</p>` : ""}
     <h4 style="margin-top:16px">${esc(t("history.inventoryChanges", { count: diff.inventory_changes.length }))}</h4>
     <table><thead><tr>
       <th>${esc(t("inventory.item"))}</th>
@@ -2487,6 +2685,17 @@ async function runDiff() {
 function fmt(n) {
   if (n == null) return "—";
   return Number(n).toLocaleString(I18n.localeTag());
+}
+
+function humanizeKey(key) {
+  if (key == null || key === "") return "—";
+  return String(key).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatCooldown(ts) {
+  const ms = normalizeTimeMs(ts);
+  if (ms == null || ms <= 0 || ms <= Date.now()) return t("events.cooldownReady");
+  return t("events.cooldownUntil", { time: formatTs(ts) });
 }
 
 function formatTs(ts) {

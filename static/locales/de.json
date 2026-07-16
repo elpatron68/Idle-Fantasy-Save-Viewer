@@ -12,6 +12,7 @@
     "equipment": "Ausrüstung",
     "quests": "Quests",
     "combat": "Kampf",
+    "events": "Events",
     "history": "Verlauf",
     "data": "Daten",
     "backup": "Backup"
@@ -51,6 +52,8 @@
     "questsCompleted": "Story-Quests abgeschlossen",
     "slayerKills": "Slayer-Kills",
     "dungeonRuns": "Dungeon-Läufe",
+    "seasonalTokens": "Event-Tokens",
+    "towerFloor": "Tower-Floor",
     "topInventory": "Größte Inventar-Änderungen",
     "topSkills": "Größte Skill-Änderungen",
     "titleError": "Import-Fehler",
@@ -108,7 +111,18 @@
     "pets": "Haustiere",
     "farming": "Farming",
     "patch": "Patch {n}",
-    "guildRep": "Gilden-Ruf"
+    "guildRep": "Gilden-Ruf",
+    "tower": "Infinite Tower",
+    "towerFloor": "Aktueller / Bester Floor",
+    "towerMilestones": "Meilensteine",
+    "towerBonuses": "Boni",
+    "worker": "Worker",
+    "workerSlot": "Slot {slot}",
+    "titles": "Titel",
+    "titlesUnlocked": "Freigeschaltet",
+    "titlesEquipped": "Ausgerüstet",
+    "town": "Stadt",
+    "buildingTier": "Stufe {tier}"
   },
   "skills": {
     "search": "Skill suchen…",
@@ -199,7 +213,48 @@
     "recentActivity": "Letzte Aktivität",
     "activeSessions": "Aktive Sessions",
     "sessionDone": "fertig",
-    "sessionRunning": "läuft"
+    "sessionRunning": "läuft",
+    "dungeonLastRuns": "Letzter Dungeon-Lauf",
+    "lastRunKills": "Kills (letzter Lauf)",
+    "foodConsumed": "Food",
+    "survived": "Überlebt",
+    "notSurvived": "Nein",
+    "yes": "Ja",
+    "totalRuns": "Läufe gesamt"
+  },
+  "events": {
+    "seasonal": "Saison-Events",
+    "noActiveEvent": "Kein aktives Saison-Event",
+    "tokens": "Event-Tokens",
+    "minigame": "Minigame",
+    "banners": "Banner",
+    "bounties": "Bounties",
+    "bountyOpen": "Offen",
+    "bountyProgress": "Fortschritt: {progress}",
+    "easyMode": "Easy Mode",
+    "cooldownReady": "Bereit",
+    "cooldownUntil": "Verfügbar ab {time}",
+    "noneEquipped": "Keiner",
+    "carnival": {
+      "title": "Carnival",
+      "skill": "Carnival-Skill",
+      "level": "Level {level}",
+      "tickets": "Tickets",
+      "cooldowns": "Minigame-Cooldowns",
+      "difficulties": "Schwierigkeiten",
+      "ring_toss": "Ring Toss",
+      "hammer_strike": "Hammer Strike",
+      "potion_sequence": "Potion Sequence",
+      "item_appraisal": "Item Appraisal",
+      "shell_game": "Shell Game",
+      "higher_lower": "Higher Lower"
+    }
+  },
+  "expeditions": {
+    "title": "Expeditionen",
+    "unlocked": "Freigeschaltet",
+    "notes": "Skilling-Dungeons",
+    "pity": "Pity-Counter"
   },
   "history": {
     "loading": "Lade Verlauf…",
@@ -219,7 +274,8 @@
     "deleteSnapshot": "Snapshot löschen",
     "deleteSnapshotConfirm": "Diesen Snapshot wirklich löschen?",
     "deleteSnapshotFailed": "Snapshot konnte nicht gelöscht werden",
-    "coinsSummary": "Münzen: {delta} · Gesamtlevel: {levelDelta}"
+    "coinsSummary": "Münzen: {delta} · Gesamtlevel: {levelDelta}",
+    "progressSummary": "Event-Tokens: {tokens} · Tower-Floor: {tower}"
   },
   "search": {
     "global": "Items, Skills und Ziele suchen…",

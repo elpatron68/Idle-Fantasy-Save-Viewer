@@ -243,6 +243,20 @@ def get_latest_snapshot(conn: sqlite3.Connection | None = None, db_path: Path | 
     return json.loads(row["raw_json"])
 
 
+def _seasonal_tokens_total(data: dict[str, Any]) -> int:
+    seasonal = data.get("seasonal") or {}
+    tokens = seasonal.get("tokens_by_event") or {}
+    event_id = seasonal.get("active_event_id")
+    if event_id and event_id in tokens:
+        return int(tokens[event_id])
+    return sum(int(v) for v in tokens.values())
+
+
+def _tower_floor(data: dict[str, Any]) -> int:
+    tower = data.get("tower") or {}
+    return int(tower.get("current_floor") or 0)
+
+
 def diff_snapshots(
     older_id: int,
     newer_id: int,
@@ -319,6 +333,9 @@ def diff_snapshots(
                 "xp_delta": new_s["xp"] - old_s["xp"],
             })
 
+    older_data = get_snapshot(older_id, conn=conn, db_path=db_path) or {}
+    newer_data = get_snapshot(newer_id, conn=conn, db_path=db_path) or {}
+
     if own_conn:
         conn.close()
 
@@ -328,6 +345,8 @@ def diff_snapshots(
         "summary": {
             "coins_delta": newer_meta["coins"] - older_meta["coins"],
             "total_level_delta": newer_meta["total_level"] - older_meta["total_level"],
+            "seasonal_tokens_delta": _seasonal_tokens_total(newer_data) - _seasonal_tokens_total(older_data),
+            "tower_floor_delta": _tower_floor(newer_data) - _tower_floor(older_data),
         },
         "inventory_changes": inventory_changes,
         "skill_changes": skill_changes,
@@ -1035,6 +1054,9 @@ def summarize_import_changes(
     if own_conn:
         conn.close()
 
+    tokens_delta = _seasonal_tokens_total(newer_data) - _seasonal_tokens_total(older_data)
+    tower_delta = _tower_floor(newer_data) - _tower_floor(older_data)
+
     return {
         "has_previous": True,
         "older_id": older_id,
@@ -1046,6 +1068,8 @@ def summarize_import_changes(
         "quests_completed": quests_completed,
         "slayer_kills_delta": max(0, slayer_delta),
         "dungeon_runs_delta": dungeon_delta,
+        "seasonal_tokens_delta": tokens_delta,
+        "tower_floor_delta": tower_delta,
         "top_inventory": diff["inventory_changes"][:5],
         "top_skills": diff["skill_changes"][:5],
     }

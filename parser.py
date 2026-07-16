@@ -314,6 +314,54 @@ def normalize_save(
     warning_count = sum(1 for i in unique_issues if i["level"] == "warning")
     info_count = sum(1 for i in unique_issues if i["level"] == "info")
 
+    dungeon_stats_raw = _ensure_dict(
+        flags.get("dungeon_last_run_stats"), "flags.dungeon_last_run_stats", issues,
+    )
+    dungeon_stats: dict[str, dict[str, Any]] = {}
+    for key, stats in dungeon_stats_raw.items():
+        if not isinstance(stats, dict):
+            continue
+        dungeon_stats[str(key)] = {
+            "food_consumed": _safe_int(
+                stats.get("food_consumed"), f"flags.dungeon_last_run_stats.{key}.food_consumed", issues,
+            ),
+            "kill_count": _safe_int(
+                stats.get("kill_count"), f"flags.dungeon_last_run_stats.{key}.kill_count", issues,
+            ),
+            "survived": bool(stats.get("survived")),
+        }
+
+    workers: list[dict[str, Any]] = []
+    for slot, flag_key in ((1, "hired_worker"), (2, "hired_worker_2")):
+        worker = flags.get(flag_key)
+        if isinstance(worker, dict) and worker:
+            workers.append({
+                "slot": slot,
+                "tier": worker.get("tier"),
+                "daily_name": worker.get("daily_name"),
+                "session_queue": _ensure_list(
+                    worker.get("session_queue"), f"flags.{flag_key}.session_queue", issues,
+                ),
+            })
+
+    carnival_cooldowns = {
+        "ring_toss": flags.get("carnival_ring_toss_cooldown_at"),
+        "hammer_strike": flags.get("carnival_hammer_strike_cooldown_at"),
+        "potion_sequence": flags.get("carnival_potion_sequence_cooldown_at"),
+        "item_appraisal": flags.get("carnival_item_appraisal_cooldown_at"),
+        "shell_game": flags.get("carnival_shell_game_cooldown_at"),
+        "higher_lower": flags.get("carnival_higher_lower_cooldown_at"),
+    }
+
+    unlocked_titles = flags.get("unlocked_titles")
+    if unlocked_titles is not None and not isinstance(unlocked_titles, list):
+        issues.append(issue(
+            "warning", "invalid_titles_list",
+            'Field "flags.unlocked_titles" is not a list.',
+            field="flags.unlocked_titles",
+        ))
+        unlocked_titles = []
+
     return {
         "character": {
             "name": flags.get("character_name"),
@@ -326,6 +374,8 @@ def normalize_save(
             "active_blessing": flags.get("active_blessing_key"),
             "blessing_expires_at": flags.get("active_blessing_expires_at"),
             "theme": flags.get("theme_preference"),
+            "equipped_title": flags.get("equipped_title"),
+            "player_notes": flags.get("player_notes"),
         },
         "skills": skills,
         "inventory": inventory_items,
@@ -350,6 +400,50 @@ def normalize_save(
         "recent_sessions": _ensure_list(flags.get("recent_sessions"), "flags.recent_sessions", issues),
         "sessions": sessions,
         "town_buildings": _ensure_dict(flags.get("town_building_tiers"), "flags.town_building_tiers", issues),
+        "seasonal": {
+            "tokens_by_event": _ensure_dict(
+                flags.get("seasonal_tokens_by_event"), "flags.seasonal_tokens_by_event", issues,
+            ),
+            "active_event_id": flags.get("seasonal_bounty_event_id"),
+            "bounty_slots": _ensure_list(flags.get("seasonal_bounty_slots"), "flags.seasonal_bounty_slots", issues),
+            "bounty_progress": _ensure_dict(
+                flags.get("seasonal_bounty_progress"), "flags.seasonal_bounty_progress", issues,
+            ),
+            "bounty_cooldowns": _ensure_dict(
+                flags.get("seasonal_bounty_slot_cooldown"), "flags.seasonal_bounty_slot_cooldown", issues,
+            ),
+            "minigame_cooldown_at": flags.get("seasonal_minigame_cooldown_at"),
+            "minigame_easy_mode": bool(flags.get("seasonal_minigame_easy_mode")),
+            "banners_earned": _ensure_list(flags.get("seasonal_banners_earned"), "flags.seasonal_banners_earned", issues),
+        },
+        "tower": {
+            "current_floor": _safe_int(flags.get("tower_current_floor"), "flags.tower_current_floor", issues),
+            "best_floor": _safe_int(flags.get("tower_best_floor"), "flags.tower_best_floor", issues),
+            "milestones": (
+                flags.get("tower_milestones")
+                if isinstance(flags.get("tower_milestones"), list)
+                else []
+            ),
+            "xp_bonus_pct": _safe_int(flags.get("tower_xp_bonus_pct"), "flags.tower_xp_bonus_pct", issues),
+            "hp_bonus": _safe_int(flags.get("tower_hp_bonus"), "flags.tower_hp_bonus", issues),
+            "coin_bonus_pct": _safe_int(flags.get("tower_coin_bonus_pct"), "flags.tower_coin_bonus_pct", issues),
+        },
+        "carnival": {
+            "tab": _safe_int(flags.get("carnival_tab"), "flags.carnival_tab", issues),
+            "difficulties": _ensure_dict(flags.get("carnival_difficulties"), "flags.carnival_difficulties", issues),
+            "cooldowns": carnival_cooldowns,
+        },
+        "workers": workers,
+        "titles": {
+            "unlocked": unlocked_titles if isinstance(unlocked_titles, list) else [],
+            "equipped": flags.get("equipped_title"),
+        },
+        "expeditions": {
+            "unlocked": _ensure_list(flags.get("unlocked_dungeons"), "flags.unlocked_dungeons", issues),
+            "notes": _ensure_dict(flags.get("skilling_dungeon_notes"), "flags.skilling_dungeon_notes", issues),
+            "pity": _ensure_dict(flags.get("expedition_pity_runs"), "flags.expedition_pity_runs", issues),
+        },
+        "dungeon_stats": dungeon_stats,
         "meta": {
             "source_file": source_file,
             "exported_at": raw.get("exported_at"),
