@@ -1767,5 +1767,71 @@
     "output_quantity": 25,
     "xp_per_item": 25.0,
     "time_per_item": 60
+  },
+  "bronze_lockpick": {
+    "type": "tool",
+    "display_name": "Bronze Lockpick",
+    "level_required": 1,
+    "materials": {
+      "bronze_bar": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 10,
+    "time_per_item": 60
+  },
+  "iron_lockpick": {
+    "type": "tool",
+    "display_name": "Iron Lockpick",
+    "level_required": 15,
+    "materials": {
+      "iron_bar": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 20,
+    "time_per_item": 60
+  },
+  "steel_lockpick": {
+    "type": "tool",
+    "display_name": "Steel Lockpick",
+    "level_required": 30,
+    "materials": {
+      "steel_bar": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 30,
+    "time_per_item": 60
+  },
+  "mithril_lockpick": {
+    "type": "tool",
+    "display_name": "Mithril Lockpick",
+    "level_required": 55,
+    "materials": {
+      "mithril_bar": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 40,
+    "time_per_item": 60
+  },
+  "adamantite_lockpick": {
+    "type": "tool",
+    "display_name": "Adamantite Lockpick",
+    "level_required": 70,
+    "materials": {
+      "adamantite_bar": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 50,
+    "time_per_item": 60
+  },
+  "runite_lockpick": {
+    "type": "tool",
+    "display_name": "Runite Lockpick",
+    "level_required": 85,
+    "materials": {
+      "runite_bar": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 60,
+    "time_per_item": 60
   }
 }
