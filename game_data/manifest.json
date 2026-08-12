@@ -1,8 +1,8 @@
 {
   "source_repo": "https://github.com/tristinbaker/IdleFantasy",
   "source_ref": "main",
-  "source_sha": "e92ad722e84fdc10f98d88490409d3435dee8172",
-  "synced_at": "2026-08-10T08:00:22.378902+00:00",
+  "source_sha": "18ccfd3de1f69c1732fb0236f116780834d5d936",
+  "synced_at": "2026-08-12T08:00:23.946846+00:00",
   "files": [
     "smithing.json",
     "crafting.json",
