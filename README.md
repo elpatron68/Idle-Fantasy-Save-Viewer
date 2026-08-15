@@ -196,37 +196,36 @@ bash scripts/deploy.sh
 
 Configure via environment variables: `DEPLOY_HOST` (default `root@10.0.0.5`), `DEPLOY_DIR`, `DEPLOY_SERVICE`, `DEPLOY_HEALTH_RETRIES`, `DEPLOY_HEALTH_INTERVAL`. Requires a clean working tree, an upstream branch, and SSH access. The remote script lives in `scripts/deploy-remote.sh`.
 
-#### Gitea Actions (SSH → Proxmox LXC)
+#### GitHub Actions (WireGuard → Proxmox LXC)
 
-Workflow [`.gitea/workflows/deploy.yml`](.gitea/workflows/deploy.yml) deploys on every push to `master` and via **Actions → Deploy → Run workflow**. Same pattern as boule-score / Kugelstand:
+Primary origin is GitHub (`https://github.com/elpatron68/Idle-Fantasy-Save-Viewer.git`). Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) deploys on every push to `master` and via **Actions → Deploy → Run workflow**:
 
 1. Runs smoke tests
-2. Starts a **host-network** Docker sidecar (`scripts/ci-deploy-hostnet.sh`)
-3. SSHs to the LXC (reachable via the runner host LAN/WG — no WireGuard inside the job)
-4. Runs `scripts/deploy-remote.sh` (fetch/reset → `docker compose up --build` → health check)
+2. Installs `wireguard-tools` / `iproute2` on the GitHub-hosted runner
+3. Brings up WireGuard (`DEPLOY_WG_CONF`), SSHs to the LXC, tears the tunnel down
+4. On the LXC: `scripts/deploy-remote.sh` (set origin to GitHub → fetch → `docker compose up --build` → health check)
 
-`DEPLOY_WG_CONF` is optional and only used if `DEPLOY_HOST` is unreachable from host networking.
+GitHub-hosted runners are not on the LAN, so `DEPLOY_WG_CONF` is **required**. `DNS=` lines in the config are stripped automatically (`resolvconf` is missing in CI).
 
-Use the same Unraid `act_runner` as boule-score (`network: host` + Docker socket). No extra runner caps needed for the normal path.
-
-**Gitea repository secrets** (Settings → Secrets):
+**GitHub repository secrets** (Settings → Secrets and variables → Actions):
 
 | Secret | Required | Example / notes |
 |--------|----------|-----------------|
-| `DEPLOY_SSH_KEY` | yes | Private SSH key — prefer **one-line Base64** (`base64 -w0 deploy_ed25519`) so Gitea masks it reliably; PEM also works |
-| `DEPLOY_HOST` | yes | LXC address reachable from the runner host, e.g. `10.0.0.31` or `root@10.0.0.31` |
+| `DEPLOY_SSH_KEY` | yes | Private SSH key — prefer **one-line Base64** (`base64 -w0 deploy_ed25519`); PEM also works |
+| `DEPLOY_HOST` | yes | LXC WireGuard/LAN address, e.g. `10.66.0.10` or `root@10.66.0.10` |
 | `DEPLOY_DIR` | yes | `/opt/apps/Idle-Fantasy-Save-Viewer` |
+| `DEPLOY_WG_CONF` | yes | Full `wg-quick` config for a dedicated CI peer |
 | `DEPLOY_USER` | no | SSH user if `DEPLOY_HOST` has no `user@` (default `root`) |
-| `DEPLOY_WG_CONF` | no | Full `wg-quick` config — only if host networking cannot reach the LXC |
 | `DEPLOY_SERVICE` | no | Compose service name (default `viewer`) |
 | `DEPLOY_BRANCH` | no | Branch to deploy (default `master`) |
 | `DEPLOY_SSH_PORT` | no | SSH port (default `22`) |
 | `DEPLOY_HEALTH_RETRIES` | no | Default `30` |
 | `DEPLOY_HEALTH_INTERVAL` | no | Seconds between polls (default `2`) |
 | `DEPLOY_SSH_KNOWN_HOSTS` | no | `known_hosts` lines; if unset, `accept-new` is used |
+| `DEPLOY_GIT_REMOTE` | no | Origin URL on the LXC (default GitHub HTTPS) |
 | `AUTO_DEPLOY` | no | Set to `false` to skip deploy after upstream game_data sync |
 
-Example optional `DEPLOY_WG_CONF` (`DNS=` is stripped automatically):
+Example `DEPLOY_WG_CONF` (`DNS=` is stripped automatically):
 
 ```ini
 [Interface]
@@ -240,9 +239,11 @@ Endpoint = <vpn-host>:51820
 PersistentKeepalive = 25
 ```
 
-On the LXC: clone the repo into `DEPLOY_DIR`, install Docker Compose, and authorize the deploy public key for `DEPLOY_HOST`.
+On the LXC: clone the repo into `DEPLOY_DIR`, install Docker Compose, and authorize the deploy public key for `DEPLOY_HOST`. The first successful GitHub deploy switches the LXC `origin` to GitHub.
 
-Upstream sync (`.gitea/workflows/sync-upstream.yml`) reuses the same host-network deploy when `game_data` changes.
+Upstream sync (`.github/workflows/sync-upstream.yml`) reuses the same WireGuard deploy when `game_data` changes.
+
+Gitea remains a secondary remote (`gitea`). The leftover `.gitea/workflows/` path still uses host-network SSH for a LAN `act_runner` (boule-score pattern) and is not the primary deploy.
 
 ### More options
 

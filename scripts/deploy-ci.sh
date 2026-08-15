@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Deploy Idle Fantasy Save Viewer via SSH from CI.
-# Prefer running inside `docker run --network host` (same pattern as boule-score)
-# so the LXC is reachable on the runner host LAN/WG without bringing up WireGuard
-# inside the job.
+#
+# GitHub-hosted runners: bring up WireGuard (DEPLOY_WG_CONF), then SSH to the LXC.
+# Gitea act_runner on the LAN: wrap with scripts/ci-deploy-hostnet.sh instead.
 #
 # Required env:
 #   DEPLOY_SSH_KEY     OpenSSH private key (PEM) OR base64 of that PEM (one line)
@@ -10,13 +10,14 @@
 #   DEPLOY_DIR         absolute path to git checkout on the LXC
 # Optional:
 #   DEPLOY_USER        SSH user if DEPLOY_HOST has no user@ (default: root)
-#   DEPLOY_WG_CONF     wg-quick config — only if host unreachable and TUN/NET_ADMIN available
+#   DEPLOY_WG_CONF     wg-quick config — required on GitHub-hosted runners
 #   DEPLOY_SERVICE     compose service (default: viewer)
 #   DEPLOY_BRANCH      branch (default: master)
 #   EXPECTED_SHA       commit to deploy (default: git rev-parse HEAD)
 #   DEPLOY_SSH_PORT    default 22
 #   DEPLOY_HEALTH_RETRIES / DEPLOY_HEALTH_INTERVAL
 #   DEPLOY_SSH_KNOWN_HOSTS
+#   DEPLOY_GIT_REMOTE  origin URL on the LXC (default: GitHub HTTPS)
 #   DEPLOY_REMOTE_SCRIPT  path to deploy-remote.sh (default: beside this script)
 set -euo pipefail
 
@@ -35,6 +36,7 @@ BRANCH="${DEPLOY_BRANCH:-master}"
 HEALTH_RETRIES="${DEPLOY_HEALTH_RETRIES:-30}"
 HEALTH_INTERVAL="${DEPLOY_HEALTH_INTERVAL:-2}"
 WG_IFACE="${DEPLOY_WG_IFACE:-wgci0}"
+GIT_REMOTE="${DEPLOY_GIT_REMOTE:-https://github.com/elpatron68/Idle-Fantasy-Save-Viewer.git}"
 REMOTE_SCRIPT="${DEPLOY_REMOTE_SCRIPT:-$SCRIPT_DIR/deploy-remote.sh}"
 WG_UP=0
 SSH_DIR=""
@@ -176,6 +178,7 @@ ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s -- \
   "$SHA" \
   "$SERVICE" \
   "$HEALTH_RETRIES" \
-  "$HEALTH_INTERVAL" < "$REMOTE_SCRIPT"
+  "$HEALTH_INTERVAL" \
+  "$GIT_REMOTE" < "$REMOTE_SCRIPT"
 
 log "CI deployment finished successfully."

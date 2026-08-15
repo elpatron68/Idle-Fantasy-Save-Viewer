@@ -8,6 +8,7 @@ EXPECTED_SHA="$3"
 COMPOSE_SERVICE="$4"
 HEALTH_RETRIES="$5"
 HEALTH_INTERVAL="$6"
+ORIGIN_URL="${7:-https://github.com/elpatron68/Idle-Fantasy-Save-Viewer.git}"
 
 info() { printf '==> [remote] %s\n' "$*"; }
 die() { printf 'ERROR: [remote] %s\n' "$*" >&2; exit 1; }
@@ -21,6 +22,12 @@ cd "$REMOTE_DIR"
 
 if [[ -n "$(git status --porcelain)" ]]; then
   die "Remote working tree is dirty. Resolve local changes on the server first."
+fi
+
+current_origin="$(git remote get-url origin)"
+if [[ "$current_origin" != "$ORIGIN_URL" ]]; then
+  info "Switching origin from $current_origin to $ORIGIN_URL"
+  git remote set-url origin "$ORIGIN_URL"
 fi
 
 info "Fetching origin…"

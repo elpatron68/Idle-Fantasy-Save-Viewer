@@ -1,4 +1,5 @@
-# GitHub mirror of .gitea/workflows/sync-upstream.yml — use after moving the repo to GitHub.
+# Sync vendored recipe JSON, then deploy over WireGuard when game_data changed.
+# GitHub-hosted runners need WireGuard to reach the Proxmox LXC (not on the LAN).
 name: Sync Upstream Game Data
 
 on:
@@ -53,7 +54,13 @@ jobs:
           git push
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy to production
+      - name: Install WireGuard tools
+        if: steps.commit.outputs.changed == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools iproute2 openssh-client
+
+      - name: Deploy to production over WireGuard
         if: steps.commit.outputs.changed == 'true'
         env:
           AUTO_DEPLOY: ${{ secrets.AUTO_DEPLOY }}
@@ -68,9 +75,25 @@ jobs:
           DEPLOY_HEALTH_RETRIES: ${{ secrets.DEPLOY_HEALTH_RETRIES }}
           DEPLOY_HEALTH_INTERVAL: ${{ secrets.DEPLOY_HEALTH_INTERVAL }}
           DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          DEPLOY_GIT_REMOTE: ${{ secrets.DEPLOY_GIT_REMOTE }}
+          EXPECTED_SHA: ${{ github.sha }}
         run: |
           if [[ "${AUTO_DEPLOY:-}" == "false" ]]; then
             echo "AUTO_DEPLOY=false — skipping deploy"
             exit 0
           fi
-          bash scripts/ci-deploy-hostnet.sh
+          sudo -E env \
+            DEPLOY_SSH_KEY="$DEPLOY_SSH_KEY" \
+            DEPLOY_HOST="$DEPLOY_HOST" \
+            DEPLOY_DIR="$DEPLOY_DIR" \
+            DEPLOY_USER="$DEPLOY_USER" \
+            DEPLOY_WG_CONF="$DEPLOY_WG_CONF" \
+            DEPLOY_SERVICE="$DEPLOY_SERVICE" \
+            DEPLOY_BRANCH="$DEPLOY_BRANCH" \
+            DEPLOY_SSH_PORT="$DEPLOY_SSH_PORT" \
+            DEPLOY_HEALTH_RETRIES="$DEPLOY_HEALTH_RETRIES" \
+            DEPLOY_HEALTH_INTERVAL="$DEPLOY_HEALTH_INTERVAL" \
+            DEPLOY_SSH_KNOWN_HOSTS="$DEPLOY_SSH_KNOWN_HOSTS" \
+            DEPLOY_GIT_REMOTE="$DEPLOY_GIT_REMOTE" \
+            EXPECTED_SHA="$EXPECTED_SHA" \
+            bash scripts/deploy-ci.sh

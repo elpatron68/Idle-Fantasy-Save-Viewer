@@ -6,5 +6,6 @@ data/
 BUILD_REF
 fantasyidler_save.json
 .gitea-credentials.txt
+.gitea-creadentials.txt
 testfiles/
 .tmp/

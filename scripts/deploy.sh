@@ -53,12 +53,15 @@ git push origin "$BRANCH"
 
 info "Deploying to $REMOTE_HOST:$REMOTE_DIR"
 
+GIT_REMOTE="${DEPLOY_GIT_REMOTE:-https://github.com/elpatron68/Idle-Fantasy-Save-Viewer.git}"
+
 ssh "${SSH_OPTS[@]}" "$REMOTE_HOST" bash -s -- \
   "$REMOTE_DIR" \
   "$BRANCH" \
   "$LOCAL_SHA" \
   "$COMPOSE_SERVICE" \
   "$HEALTH_RETRIES" \
-  "$HEALTH_INTERVAL" < "$SCRIPT_DIR/deploy-remote.sh"
+  "$HEALTH_INTERVAL" \
+  "$GIT_REMOTE" < "$SCRIPT_DIR/deploy-remote.sh"
 
 info "Deployment finished successfully."
