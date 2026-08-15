@@ -520,4 +520,6 @@ Open `~/repos/if` in your editor to work on both projects in one workspace.
 
 ## License
 
-Private project — use at your own risk.
+This project is licensed under the [MIT License](LICENSE).
+
+Vendored recipe JSON in `game_data/` remains under the Idle Fantasy [GPL-3.0](game_data/ATTRIBUTION.md).
