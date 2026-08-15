@@ -224,7 +224,8 @@ The act_runner job container needs `/dev/net/tun` and `CAP_NET_ADMIN` (configure
 | `DEPLOY_SSH_KNOWN_HOSTS` | no | `known_hosts` lines; if unset, `accept-new` is used |
 | `AUTO_DEPLOY` | no | Set to `false` to skip deploy after upstream game_data sync |
 
-Example `DEPLOY_WG_CONF` (AllowedIPs must include the LXC WG address / subnet):
+Example `DEPLOY_WG_CONF` (AllowedIPs must include the LXC WG address / subnet).
+`DNS=` lines are stripped in CI (no `resolvconf` in the job image):
 
 ```ini
 [Interface]

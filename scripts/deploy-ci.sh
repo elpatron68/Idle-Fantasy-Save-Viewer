@@ -74,7 +74,10 @@ command -v wg >/dev/null 2>&1 || die "wg not found (install wireguard-tools)"
 info "Writing SSH key and WireGuard config…"
 install -m 600 /dev/stdin "$KEY_FILE" <<< "$DEPLOY_SSH_KEY"
 # Normalize line endings; secrets pasted from Windows editors often break wg-quick.
-printf '%s\n' "$DEPLOY_WG_CONF" | tr -d '\r' > "$WG_CONF"
+# Drop DNS= — wg-quick would call resolvconf, which is absent in job images; SSH uses WG IPs.
+printf '%s\n' "$DEPLOY_WG_CONF" | tr -d '\r' \
+  | sed -E '/^[[:space:]]*DNS[[:space:]]*=/d' \
+  > "$WG_CONF"
 chmod 600 "$WG_CONF"
 
 SSH_OPTS=(
@@ -102,7 +105,7 @@ fi
 
 info "Bringing WireGuard up ($WG_IFACE)…"
 if ! wg-quick up "$WG_CONF"; then
-  die "WireGuard failed to start. Need iproute2 in the job image, plus /dev/net/tun and CAP_NET_ADMIN on the runner (see README / setup-gitea-runner.sh)."
+  die "WireGuard failed to start. Check job image (iproute2, wireguard-tools) and runner TUN/CAP_NET_ADMIN (see README / setup-gitea-runner.sh)."
 fi
 WG_UP=1
 
