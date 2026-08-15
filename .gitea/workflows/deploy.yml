@@ -35,7 +35,7 @@ jobs:
       - name: Install WireGuard tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq wireguard-tools openssh-client
+          sudo apt-get install -y -qq wireguard-tools iproute2 openssh-client
 
       - name: Smoke tests
         run: |

@@ -54,7 +54,7 @@ jobs:
         if: steps.commit.outputs.changed == 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq wireguard-tools openssh-client
+          sudo apt-get install -y -qq wireguard-tools iproute2 openssh-client
 
       - name: Deploy to production over WireGuard
         if: steps.commit.outputs.changed == 'true'

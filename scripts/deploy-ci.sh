@@ -68,6 +68,8 @@ trap cleanup EXIT
 
 command -v ssh >/dev/null 2>&1 || die "ssh not found"
 command -v wg-quick >/dev/null 2>&1 || die "wg-quick not found (install wireguard-tools)"
+command -v ip >/dev/null 2>&1 || die "ip not found (install iproute2)"
+command -v wg >/dev/null 2>&1 || die "wg not found (install wireguard-tools)"
 
 info "Writing SSH key and WireGuard config…"
 install -m 600 /dev/stdin "$KEY_FILE" <<< "$DEPLOY_SSH_KEY"
@@ -93,7 +95,7 @@ fi
 
 info "Bringing WireGuard up ($WG_IFACE)…"
 if ! wg-quick up "$WG_CONF"; then
-  die "WireGuard failed to start. Ensure the runner job has /dev/net/tun and CAP_NET_ADMIN (see README / setup-gitea-runner.sh)."
+  die "WireGuard failed to start. Need iproute2 in the job image, plus /dev/net/tun and CAP_NET_ADMIN on the runner (see README / setup-gitea-runner.sh)."
 fi
 WG_UP=1
 
