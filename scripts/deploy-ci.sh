@@ -93,6 +93,13 @@ else
   SSH_OPTS+=(-o StrictHostKeyChecking=accept-new)
 fi
 
+# Leftover iface from a crashed prior job (shared runner netns) blocks wg-quick up.
+if ip link show "$WG_IFACE" &>/dev/null; then
+  info "Interface $WG_IFACE already exists; tearing down before up…"
+  wg-quick down "$WG_CONF" 2>/dev/null || true
+  ip link delete "$WG_IFACE" 2>/dev/null || true
+fi
+
 info "Bringing WireGuard up ($WG_IFACE)…"
 if ! wg-quick up "$WG_CONF"; then
   die "WireGuard failed to start. Need iproute2 in the job image, plus /dev/net/tun and CAP_NET_ADMIN on the runner (see README / setup-gitea-runner.sh)."
