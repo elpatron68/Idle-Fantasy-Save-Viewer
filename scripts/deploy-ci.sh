@@ -71,6 +71,15 @@ command -v wg-quick >/dev/null 2>&1 || die "wg-quick not found (install wireguar
 command -v ip >/dev/null 2>&1 || die "ip not found (install iproute2)"
 command -v wg >/dev/null 2>&1 || die "wg not found (install wireguard-tools)"
 
+# Fail fast with an actionable message when the runner job lacks CAP_NET_ADMIN.
+if [[ ! -e /dev/net/tun ]]; then
+  err "WARN: /dev/net/tun missing (ok for kernel WireGuard; required for some setups)"
+fi
+if ! ip link add "wg-ci-probe-$$" type wireguard 2>/dev/null; then
+  die "Cannot create WireGuard iface (need CAP_NET_ADMIN on job containers). On the runner host: bash scripts/patch-gitea-runner-wg.sh"
+fi
+ip link delete "wg-ci-probe-$$" 2>/dev/null || true
+
 info "Writing SSH key and WireGuard config…"
 install -m 600 /dev/stdin "$KEY_FILE" <<< "$DEPLOY_SSH_KEY"
 # Normalize line endings; secrets pasted from Windows editors often break wg-quick.

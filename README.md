@@ -206,7 +206,14 @@ Workflow [`.gitea/workflows/deploy.yml`](.gitea/workflows/deploy.yml) deploys on
 4. Runs `scripts/deploy-remote.sh` (fetch/reset → `docker compose up --build` → health check)
 5. Tears the tunnel down
 
-The act_runner job container needs `/dev/net/tun` and `CAP_NET_ADMIN` (configured by `scripts/setup-gitea-runner.sh`).
+The act_runner job container needs `/dev/net/tun` and `CAP_NET_ADMIN`. If deploy fails with `Operation not permitted` / `RTNETLINK`, patch the runner on its host and re-run Deploy:
+
+```bash
+bash scripts/patch-gitea-runner-wg.sh
+# or re-run: GITEA_RUNNER_TOKEN='…' bash scripts/setup-gitea-runner.sh
+```
+
+That sets `container.options: "--cap-add=NET_ADMIN --device=/dev/net/tun"` in the act_runner `config.yaml` and restarts the runner.
 
 **Gitea repository secrets** (Settings → Secrets) — all deploy parameters:
 
@@ -432,7 +439,8 @@ idle-fantasy-viewer/
 │   ├── deploy.sh           # Local: push + remote Docker deploy
 │   ├── deploy-ci.sh        # CI: WireGuard + SSH + deploy-remote.sh
 │   ├── deploy-remote.sh    # Runs on the server (git pull, compose)
-│   └── setup-gitea-runner.sh  # act_runner with TUN for WireGuard jobs
+│   ├── setup-gitea-runner.sh  # act_runner with TUN for WireGuard jobs
+│   ├── patch-gitea-runner-wg.sh  # Fix existing runner: NET_ADMIN + TUN
 │   └── sync_game_data.py   # Pull recipe JSON from IdleFantasy repo
 ├── static/
 │   ├── vendor/           # chart.umd.min.js (bundled)
