@@ -7,7 +7,7 @@ A web viewer for backups of the Android game **[Idle Fantasy](https://github.com
 ## Screenshots
 
 Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below link to expandable sections with full-size images.  
-*(Gitea/GitHub README: HTML `<details>` and `<img width="…">` are supported; JavaScript slideshows are not.)*
+*(GitHub README: HTML `<details>` and `<img width="…">` are supported; JavaScript slideshows are not.)*
 
 <table>
 <tr>
@@ -198,7 +198,7 @@ Configure via environment variables: `DEPLOY_HOST` (default `root@10.0.0.5`), `D
 
 #### GitHub Actions (WireGuard → Proxmox LXC)
 
-Primary origin is GitHub (`https://github.com/elpatron68/Idle-Fantasy-Save-Viewer.git`). Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) deploys on every push to `master` and via **Actions → Deploy → Run workflow**:
+Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) deploys on every push to `master` and via **Actions → Deploy → Run workflow**:
 
 1. Runs smoke tests
 2. Installs `wireguard-tools` / `iproute2` on the GitHub-hosted runner
@@ -239,11 +239,9 @@ Endpoint = <vpn-host>:51820
 PersistentKeepalive = 25
 ```
 
-On the LXC: clone the repo into `DEPLOY_DIR`, install Docker Compose, and authorize the deploy public key for `DEPLOY_HOST`. The first successful GitHub deploy switches the LXC `origin` to GitHub.
+On the LXC: clone the repo into `DEPLOY_DIR`, install Docker Compose, and authorize the deploy public key for `DEPLOY_HOST`.
 
 Upstream sync (`.github/workflows/sync-upstream.yml`) reuses the same WireGuard deploy when `game_data` changes.
-
-Gitea remains a secondary remote (`gitea`). The leftover `.gitea/workflows/` path still uses host-network SSH for a LAN `act_runner` (boule-score pattern) and is not the primary deploy.
 
 ### More options
 
@@ -432,11 +430,8 @@ idle-fantasy-viewer/
 ├── requirements.txt
 ├── scripts/
 │   ├── deploy.sh           # Local: push + remote Docker deploy
-│   ├── ci-deploy-hostnet.sh # CI: docker --network host + deploy-ci.sh
-│   ├── deploy-ci.sh        # CI: SSH (+ optional WG) + deploy-remote.sh
+│   ├── deploy-ci.sh        # CI: WireGuard + SSH + deploy-remote.sh
 │   ├── deploy-remote.sh    # Runs on the server (git pull, compose)
-│   ├── setup-gitea-runner.sh  # Optional act_runner bootstrap
-│   ├── patch-gitea-runner-wg.sh  # Optional: NET_ADMIN if WG fallback needed
 │   └── sync_game_data.py   # Pull recipe JSON from IdleFantasy repo
 ├── static/
 │   ├── vendor/           # chart.umd.min.js (bundled)

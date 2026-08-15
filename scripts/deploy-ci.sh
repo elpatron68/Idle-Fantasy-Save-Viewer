@@ -2,7 +2,6 @@
 # Deploy Idle Fantasy Save Viewer via SSH from CI.
 #
 # GitHub-hosted runners: bring up WireGuard (DEPLOY_WG_CONF), then SSH to the LXC.
-# Gitea act_runner on the LAN: wrap with scripts/ci-deploy-hostnet.sh instead.
 #
 # Required env:
 #   DEPLOY_SSH_KEY     OpenSSH private key (PEM) OR base64 of that PEM (one line)

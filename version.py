@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 BUILD_REF_FILE = ROOT / "BUILD_REF"
-REPO_URL = "https://gitea.elpatron.me/elpatron/Idle-Fantasy-Save-Viewer"
+REPO_URL = "https://github.com/elpatron68/Idle-Fantasy-Save-Viewer"
 
 
 def _git_head() -> str | None:
