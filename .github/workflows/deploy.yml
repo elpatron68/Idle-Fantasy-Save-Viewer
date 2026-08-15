@@ -18,14 +18,10 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install WireGuard tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq wireguard-tools iproute2 openssh-client
 
       - name: Smoke tests
         run: |
@@ -33,11 +29,12 @@ jobs:
           python3 test_advisor.py
           python3 test_parser.py
 
-      - name: Deploy over WireGuard
+      - name: Deploy to LXC
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_WG_CONF: ${{ secrets.DEPLOY_WG_CONF }}
           DEPLOY_SERVICE: ${{ secrets.DEPLOY_SERVICE }}
           DEPLOY_BRANCH: ${{ secrets.DEPLOY_BRANCH }}
@@ -45,4 +42,4 @@ jobs:
           DEPLOY_HEALTH_RETRIES: ${{ secrets.DEPLOY_HEALTH_RETRIES }}
           DEPLOY_HEALTH_INTERVAL: ${{ secrets.DEPLOY_HEALTH_INTERVAL }}
           DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
-        run: bash scripts/deploy-ci.sh
+        run: bash scripts/ci-deploy-hostnet.sh

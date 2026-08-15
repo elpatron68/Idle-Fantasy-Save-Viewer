@@ -1,100 +1,164 @@
 #!/usr/bin/env bash
-# Non-interactive deploy for Gitea Actions over WireGuard → Proxmox LXC.
+# Deploy Idle Fantasy Save Viewer via SSH from CI.
+# Prefer running inside `docker run --network host` (same pattern as boule-score)
+# so the LXC is reachable on the runner host LAN/WG without bringing up WireGuard
+# inside the job.
 #
-# Required secrets (env):
-#   DEPLOY_SSH_KEY   – private SSH key (PEM / OpenSSH)
-#   DEPLOY_HOST      – SSH target, e.g. root@10.66.0.10 (WireGuard IP of the LXC)
-#   DEPLOY_DIR       – git checkout on the LXC, e.g. /opt/apps/Idle-Fantasy-Save-Viewer
-#   DEPLOY_WG_CONF   – full WireGuard interface config (wg-quick style)
-#
-# Optional secrets (env):
-#   DEPLOY_SERVICE            – compose service name (default: viewer)
-#   DEPLOY_BRANCH             – git branch to deploy (default: current HEAD branch / master)
-#   DEPLOY_SSH_PORT           – SSH port (default: 22)
-#   DEPLOY_HEALTH_RETRIES     – health poll count (default: 30)
-#   DEPLOY_HEALTH_INTERVAL    – seconds between polls (default: 2)
-#   DEPLOY_SSH_KNOWN_HOSTS    – known_hosts entries (optional; otherwise accept-new)
-#
-# Runner requirements for WireGuard inside the job container:
-#   /dev/net/tun + CAP_NET_ADMIN (see scripts/setup-gitea-runner.sh)
+# Required env:
+#   DEPLOY_SSH_KEY     OpenSSH private key (PEM) OR base64 of that PEM (one line)
+#   DEPLOY_HOST        host or user@host (WG/LAN address of the LXC)
+#   DEPLOY_DIR         absolute path to git checkout on the LXC
+# Optional:
+#   DEPLOY_USER        SSH user if DEPLOY_HOST has no user@ (default: root)
+#   DEPLOY_WG_CONF     wg-quick config — only if host unreachable and TUN/NET_ADMIN available
+#   DEPLOY_SERVICE     compose service (default: viewer)
+#   DEPLOY_BRANCH      branch (default: master)
+#   EXPECTED_SHA       commit to deploy (default: git rev-parse HEAD)
+#   DEPLOY_SSH_PORT    default 22
+#   DEPLOY_HEALTH_RETRIES / DEPLOY_HEALTH_INTERVAL
+#   DEPLOY_SSH_KNOWN_HOSTS
+#   DEPLOY_REMOTE_SCRIPT  path to deploy-remote.sh (default: beside this script)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-cd "$ROOT"
 
-info() { printf '==> %s\n' "$*"; }
-err() { printf 'ERROR: %s\n' "$*" >&2; }
-die() { err "$@"; exit 1; }
+log() { printf '==> %s\n' "$*"; }
+die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
-require_secret() {
-  local name="$1"
-  [[ -n "${!name:-}" ]] || die "Missing required secret/env: $name"
-}
+: "${DEPLOY_SSH_KEY:?DEPLOY_SSH_KEY secret missing}"
+: "${DEPLOY_HOST:?DEPLOY_HOST secret missing}"
+: "${DEPLOY_DIR:?DEPLOY_DIR secret missing}"
 
-require_secret DEPLOY_SSH_KEY
-require_secret DEPLOY_HOST
-require_secret DEPLOY_DIR
-require_secret DEPLOY_WG_CONF
-
-HOST="$DEPLOY_HOST"
-DIR="$DEPLOY_DIR"
+DEPLOY_SSH_PORT="${DEPLOY_SSH_PORT:-22}"
 SERVICE="${DEPLOY_SERVICE:-viewer}"
-BRANCH="${DEPLOY_BRANCH:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)}"
-if [[ -z "$BRANCH" || "$BRANCH" == "HEAD" ]]; then
-  BRANCH="master"
-fi
-SSH_PORT="${DEPLOY_SSH_PORT:-22}"
+BRANCH="${DEPLOY_BRANCH:-master}"
 HEALTH_RETRIES="${DEPLOY_HEALTH_RETRIES:-30}"
 HEALTH_INTERVAL="${DEPLOY_HEALTH_INTERVAL:-2}"
-SHA="$(git rev-parse HEAD)"
-
-WG_IFACE="${DEPLOY_WG_IFACE:-wg0}"
-TMP_DIR="$(mktemp -d)"
-KEY_FILE="$TMP_DIR/deploy_key"
-WG_CONF="$TMP_DIR/${WG_IFACE}.conf"
-KNOWN_HOSTS="$TMP_DIR/known_hosts"
+WG_IFACE="${DEPLOY_WG_IFACE:-wgci0}"
+REMOTE_SCRIPT="${DEPLOY_REMOTE_SCRIPT:-$SCRIPT_DIR/deploy-remote.sh}"
 WG_UP=0
+SSH_DIR=""
+
+# user@host or host + DEPLOY_USER
+if [[ "$DEPLOY_HOST" == *@* ]]; then
+  SSH_TARGET="$DEPLOY_HOST"
+  SSH_HOST="${DEPLOY_HOST##*@}"
+else
+  SSH_USER="${DEPLOY_USER:-root}"
+  SSH_TARGET="${SSH_USER}@${DEPLOY_HOST}"
+  SSH_HOST="$DEPLOY_HOST"
+fi
+
+if [[ -n "${EXPECTED_SHA:-}" ]]; then
+  SHA="$EXPECTED_SHA"
+elif command -v git >/dev/null 2>&1 && git rev-parse HEAD >/dev/null 2>&1; then
+  SHA="$(git rev-parse HEAD)"
+else
+  die "EXPECTED_SHA not set and git HEAD unavailable"
+fi
 
 cleanup() {
+  local code=$?
   set +e
-  if [[ "$WG_UP" -eq 1 ]]; then
-    info "Bringing WireGuard down ($WG_IFACE)…"
-    wg-quick down "$WG_CONF" 2>/dev/null || true
+  if [[ "$WG_UP" -eq 1 && -f "/etc/wireguard/${WG_IFACE}.conf" ]]; then
+    log "bringing WireGuard down ($WG_IFACE)"
+    wg-quick down "$WG_IFACE" >/dev/null 2>&1 || true
   fi
-  rm -rf "$TMP_DIR"
+  if [[ -n "$SSH_DIR" ]]; then
+    rm -rf "$SSH_DIR"
+  fi
+  exit "$code"
 }
 trap cleanup EXIT
 
-command -v ssh >/dev/null 2>&1 || die "ssh not found"
-command -v wg-quick >/dev/null 2>&1 || die "wg-quick not found (install wireguard-tools)"
-command -v ip >/dev/null 2>&1 || die "ip not found (install iproute2)"
-command -v wg >/dev/null 2>&1 || die "wg not found (install wireguard-tools)"
+host_reachable() {
+  timeout 3 bash -c "exec 3<>/dev/tcp/${SSH_HOST}/${DEPLOY_SSH_PORT}" 2>/dev/null
+}
 
-# Fail fast with an actionable message when the runner job lacks CAP_NET_ADMIN.
-if [[ ! -e /dev/net/tun ]]; then
-  err "WARN: /dev/net/tun missing (ok for kernel WireGuard; required for some setups)"
-fi
-if ! ip link add "wg-ci-probe-$$" type wireguard 2>/dev/null; then
-  die "Cannot create WireGuard iface (need CAP_NET_ADMIN on job containers). On the runner host: bash scripts/patch-gitea-runner-wg.sh"
-fi
-ip link delete "wg-ci-probe-$$" 2>/dev/null || true
+decode_ssh_key() {
+  local raw=$1
+  if [[ "$raw" == *"BEGIN "* ]]; then
+    printf '%b\n' "$raw"
+    return
+  fi
+  local decoded
+  if decoded="$(printf '%s' "$raw" | base64 -d 2>/dev/null)" \
+    && [[ "$decoded" == *"BEGIN "* ]]; then
+    printf '%s\n' "$decoded"
+    return
+  fi
+  die "DEPLOY_SSH_KEY is neither PEM nor base64(PEM)"
+}
 
-info "Writing SSH key and WireGuard config…"
-install -m 600 /dev/stdin "$KEY_FILE" <<< "$DEPLOY_SSH_KEY"
-# Normalize line endings; secrets pasted from Windows editors often break wg-quick.
-# Drop DNS= — wg-quick would call resolvconf, which is absent in job images; SSH uses WG IPs.
-printf '%s\n' "$DEPLOY_WG_CONF" | tr -d '\r' \
-  | sed -E '/^[[:space:]]*DNS[[:space:]]*=/d' \
-  > "$WG_CONF"
-chmod 600 "$WG_CONF"
+bring_wg_up() {
+  [[ -n "${DEPLOY_WG_CONF:-}" ]] || die "${SSH_HOST}:${DEPLOY_SSH_PORT} unreachable (use host networking or set DEPLOY_WG_CONF)"
+  [[ -e /dev/net/tun ]] || die "host unreachable and /dev/net/tun missing"
+  if [[ "$(id -u)" -ne 0 ]]; then
+    if command -v sudo >/dev/null 2>&1; then
+      exec sudo -E bash "$0"
+    fi
+    die "root or sudo required for WireGuard"
+  fi
+  if ! command -v wg-quick >/dev/null 2>&1 || ! command -v ip >/dev/null 2>&1; then
+    log "installing wireguard-tools + iproute2"
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y -qq wireguard-tools iproute2 >/dev/null
+  fi
+  install -d -m 700 /etc/wireguard
+  umask 077
+  # Drop DNS= — no resolvconf in minimal images; SSH uses IPs.
+  printf '%s\n' "$DEPLOY_WG_CONF" | tr -d '\r' \
+    | sed -E '/^[[:space:]]*DNS[[:space:]]*=/d' \
+    > "/etc/wireguard/${WG_IFACE}.conf"
+  chmod 600 "/etc/wireguard/${WG_IFACE}.conf"
+  if ip link show "$WG_IFACE" &>/dev/null; then
+    log "interface $WG_IFACE already exists; tearing down"
+    wg-quick down "$WG_IFACE" 2>/dev/null || ip link delete "$WG_IFACE" 2>/dev/null || true
+  fi
+  log "bringing WireGuard up ($WG_IFACE)"
+  wg-quick up "$WG_IFACE"
+  WG_UP=1
+  local ready=0
+  for _ in $(seq 1 30); do
+    if host_reachable; then ready=1; break; fi
+    sleep 1
+  done
+  [[ "$ready" -eq 1 ]] || die "${SSH_HOST} still unreachable after WireGuard up"
+}
+
+if ! host_reachable; then
+  bring_wg_up
+else
+  log "${SSH_HOST}:${DEPLOY_SSH_PORT} reachable – skipping WireGuard"
+fi
+
+if ! command -v ssh >/dev/null 2>&1; then
+  log "installing openssh-client"
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -qq
+  apt-get install -y -qq openssh-client >/dev/null
+fi
+
+[[ -f "$REMOTE_SCRIPT" ]] || die "deploy-remote.sh not found at $REMOTE_SCRIPT"
+
+SSH_DIR="$(mktemp -d)"
+KEY_FILE="${SSH_DIR}/id_ed25519"
+KNOWN_HOSTS="${SSH_DIR}/known_hosts"
+umask 077
+decode_ssh_key "$DEPLOY_SSH_KEY" > "$KEY_FILE"
+chmod 600 "$KEY_FILE"
+
+if ! ssh-keygen -y -f "$KEY_FILE" >/dev/null 2>&1; then
+  die "DEPLOY_SSH_KEY could not be parsed as an OpenSSH private key"
+fi
 
 SSH_OPTS=(
   -i "$KEY_FILE"
-  -p "$SSH_PORT"
-  -o BatchMode=yes
+  -p "$DEPLOY_SSH_PORT"
   -o IdentitiesOnly=yes
-  -o ConnectTimeout=20
+  -o BatchMode=yes
+  -o ConnectTimeout=15
 )
 
 if [[ -n "${DEPLOY_SSH_KNOWN_HOSTS:-}" ]]; then
@@ -102,40 +166,16 @@ if [[ -n "${DEPLOY_SSH_KNOWN_HOSTS:-}" ]]; then
   chmod 600 "$KNOWN_HOSTS"
   SSH_OPTS+=(-o UserKnownHostsFile="$KNOWN_HOSTS" -o StrictHostKeyChecking=yes)
 else
-  SSH_OPTS+=(-o StrictHostKeyChecking=accept-new)
+  SSH_OPTS+=(-o UserKnownHostsFile="$KNOWN_HOSTS" -o StrictHostKeyChecking=accept-new)
 fi
 
-# Leftover iface from a crashed prior job (shared runner netns) blocks wg-quick up.
-if ip link show "$WG_IFACE" &>/dev/null; then
-  info "Interface $WG_IFACE already exists; tearing down before up…"
-  wg-quick down "$WG_CONF" 2>/dev/null || true
-  ip link delete "$WG_IFACE" 2>/dev/null || true
-fi
-
-info "Bringing WireGuard up ($WG_IFACE)…"
-if ! wg-quick up "$WG_CONF"; then
-  die "WireGuard failed to start. Check job image (iproute2, wireguard-tools) and runner TUN/CAP_NET_ADMIN (see README / setup-gitea-runner.sh)."
-fi
-WG_UP=1
-
-info "Waiting for SSH at $HOST:$SSH_PORT…"
-ready=0
-for _ in $(seq 1 30); do
-  if ssh "${SSH_OPTS[@]}" "$HOST" true 2>/dev/null; then
-    ready=1
-    break
-  fi
-  sleep 2
-done
-[[ "$ready" -eq 1 ]] || die "SSH to $HOST timed out over WireGuard."
-
-info "Deploying $BRANCH ($SHA) → $HOST:$DIR (service=$SERVICE)"
-ssh "${SSH_OPTS[@]}" "$HOST" bash -s -- \
-  "$DIR" \
+log "SSH ${SSH_TARGET}:${DEPLOY_SSH_PORT} → ${DEPLOY_DIR} ($BRANCH @ ${SHA:0:7})"
+ssh "${SSH_OPTS[@]}" "$SSH_TARGET" bash -s -- \
+  "$DEPLOY_DIR" \
   "$BRANCH" \
   "$SHA" \
   "$SERVICE" \
   "$HEALTH_RETRIES" \
-  "$HEALTH_INTERVAL" < "$SCRIPT_DIR/deploy-remote.sh"
+  "$HEALTH_INTERVAL" < "$REMOTE_SCRIPT"
 
-info "CI deployment finished successfully."
+log "CI deployment finished successfully."

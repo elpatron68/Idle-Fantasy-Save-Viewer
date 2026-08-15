@@ -196,33 +196,28 @@ bash scripts/deploy.sh
 
 Configure via environment variables: `DEPLOY_HOST` (default `root@10.0.0.5`), `DEPLOY_DIR`, `DEPLOY_SERVICE`, `DEPLOY_HEALTH_RETRIES`, `DEPLOY_HEALTH_INTERVAL`. Requires a clean working tree, an upstream branch, and SSH access. The remote script lives in `scripts/deploy-remote.sh`.
 
-#### Gitea Actions (WireGuard → Proxmox LXC)
+#### Gitea Actions (SSH → Proxmox LXC)
 
-Workflow [`.gitea/workflows/deploy.yml`](.gitea/workflows/deploy.yml) deploys on every push to `master` and via **Actions → Deploy → Run workflow**. It:
+Workflow [`.gitea/workflows/deploy.yml`](.gitea/workflows/deploy.yml) deploys on every push to `master` and via **Actions → Deploy → Run workflow**. Same pattern as boule-score / Kugelstand:
 
 1. Runs smoke tests
-2. Brings up WireGuard from a secret config
-3. SSHs to the LXC over the tunnel
+2. Starts a **host-network** Docker sidecar (`scripts/ci-deploy-hostnet.sh`)
+3. SSHs to the LXC (reachable via the runner host LAN/WG — no WireGuard inside the job)
 4. Runs `scripts/deploy-remote.sh` (fetch/reset → `docker compose up --build` → health check)
-5. Tears the tunnel down
 
-The act_runner job container needs `/dev/net/tun` and `CAP_NET_ADMIN`. If deploy fails with `Operation not permitted` / `RTNETLINK`, patch the runner on its host and re-run Deploy:
+`DEPLOY_WG_CONF` is optional and only used if `DEPLOY_HOST` is unreachable from host networking.
 
-```bash
-bash scripts/patch-gitea-runner-wg.sh
-# or re-run: GITEA_RUNNER_TOKEN='…' bash scripts/setup-gitea-runner.sh
-```
+Use the same Unraid `act_runner` as boule-score (`network: host` + Docker socket). No extra runner caps needed for the normal path.
 
-That sets `container.options: "--cap-add=NET_ADMIN --device=/dev/net/tun"` in the act_runner `config.yaml` and restarts the runner.
-
-**Gitea repository secrets** (Settings → Secrets) — all deploy parameters:
+**Gitea repository secrets** (Settings → Secrets):
 
 | Secret | Required | Example / notes |
 |--------|----------|-----------------|
-| `DEPLOY_SSH_KEY` | yes | Private SSH key for the LXC (OpenSSH / PEM, full file) |
-| `DEPLOY_HOST` | yes | `root@10.66.0.10` (WireGuard address of the LXC) |
+| `DEPLOY_SSH_KEY` | yes | Private SSH key — prefer **one-line Base64** (`base64 -w0 deploy_ed25519`) so Gitea masks it reliably; PEM also works |
+| `DEPLOY_HOST` | yes | LXC address reachable from the runner host, e.g. `10.0.0.31` or `root@10.0.0.31` |
 | `DEPLOY_DIR` | yes | `/opt/apps/Idle-Fantasy-Save-Viewer` |
-| `DEPLOY_WG_CONF` | yes | Full `wg-quick` config (see below) |
+| `DEPLOY_USER` | no | SSH user if `DEPLOY_HOST` has no `user@` (default `root`) |
+| `DEPLOY_WG_CONF` | no | Full `wg-quick` config — only if host networking cannot reach the LXC |
 | `DEPLOY_SERVICE` | no | Compose service name (default `viewer`) |
 | `DEPLOY_BRANCH` | no | Branch to deploy (default `master`) |
 | `DEPLOY_SSH_PORT` | no | SSH port (default `22`) |
@@ -231,8 +226,7 @@ That sets `container.options: "--cap-add=NET_ADMIN --device=/dev/net/tun"` in th
 | `DEPLOY_SSH_KNOWN_HOSTS` | no | `known_hosts` lines; if unset, `accept-new` is used |
 | `AUTO_DEPLOY` | no | Set to `false` to skip deploy after upstream game_data sync |
 
-Example `DEPLOY_WG_CONF` (AllowedIPs must include the LXC WG address / subnet).
-`DNS=` lines are stripped in CI (no `resolvconf` in the job image):
+Example optional `DEPLOY_WG_CONF` (`DNS=` is stripped automatically):
 
 ```ini
 [Interface]
@@ -248,7 +242,7 @@ PersistentKeepalive = 25
 
 On the LXC: clone the repo into `DEPLOY_DIR`, install Docker Compose, and authorize the deploy public key for `DEPLOY_HOST`.
 
-Upstream sync (`.gitea/workflows/sync-upstream.yml`) reuses the same WireGuard deploy when `game_data` changes.
+Upstream sync (`.gitea/workflows/sync-upstream.yml`) reuses the same host-network deploy when `game_data` changes.
 
 ### More options
 
@@ -437,10 +431,11 @@ idle-fantasy-viewer/
 ├── requirements.txt
 ├── scripts/
 │   ├── deploy.sh           # Local: push + remote Docker deploy
-│   ├── deploy-ci.sh        # CI: WireGuard + SSH + deploy-remote.sh
+│   ├── ci-deploy-hostnet.sh # CI: docker --network host + deploy-ci.sh
+│   ├── deploy-ci.sh        # CI: SSH (+ optional WG) + deploy-remote.sh
 │   ├── deploy-remote.sh    # Runs on the server (git pull, compose)
-│   ├── setup-gitea-runner.sh  # act_runner with TUN for WireGuard jobs
-│   ├── patch-gitea-runner-wg.sh  # Fix existing runner: NET_ADMIN + TUN
+│   ├── setup-gitea-runner.sh  # Optional act_runner bootstrap
+│   ├── patch-gitea-runner-wg.sh  # Optional: NET_ADMIN if WG fallback needed
 │   └── sync_game_data.py   # Pull recipe JSON from IdleFantasy repo
 ├── static/
 │   ├── vendor/           # chart.umd.min.js (bundled)

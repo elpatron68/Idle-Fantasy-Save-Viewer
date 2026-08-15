@@ -19,6 +19,7 @@ permissions:
 jobs:
   sync-test-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -52,19 +53,14 @@ jobs:
           git push
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Install WireGuard tools
-        if: steps.commit.outputs.changed == 'true'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq wireguard-tools iproute2 openssh-client
-
-      - name: Deploy to production over WireGuard
+      - name: Deploy to production
         if: steps.commit.outputs.changed == 'true'
         env:
           AUTO_DEPLOY: ${{ secrets.AUTO_DEPLOY }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_WG_CONF: ${{ secrets.DEPLOY_WG_CONF }}
           DEPLOY_SERVICE: ${{ secrets.DEPLOY_SERVICE }}
           DEPLOY_BRANCH: ${{ secrets.DEPLOY_BRANCH }}
@@ -77,4 +73,4 @@ jobs:
             echo "AUTO_DEPLOY=false — skipping deploy"
             exit 0
           fi
-          bash scripts/deploy-ci.sh
+          bash scripts/ci-deploy-hostnet.sh
