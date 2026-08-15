@@ -21,8 +21,9 @@ let state = {
 
 const CATEGORY_ORDER = [
   "Currency", "Ores & Mining", "Bars & Smithing", "Wood & Planks", "Runes",
-  "Raw Food", "Cooked Food", "Seeds & Farming", "Melee Weapons", "Ranged",
-  "Magic", "Armor", "Bones & Hides", "Gems & Jewelry", "Potions & Brews", "Misc",
+  "Raw Food", "Cooked Food", "Seeds & Farming", "Herbs", "Melee Weapons", "Ranged",
+  "Magic", "Armor", "Bones & Hides", "Gems & Jewelry", "Potions & Brews",
+  "Tools", "Construction", "Misc",
 ];
 
 const CATEGORY_I18N_KEYS = {
@@ -34,6 +35,7 @@ const CATEGORY_I18N_KEYS = {
   "Raw Food": "category.raw_food",
   "Cooked Food": "category.cooked_food",
   "Seeds & Farming": "category.seeds_farming",
+  "Herbs": "category.herbs",
   "Melee Weapons": "category.melee_weapons",
   "Ranged": "category.ranged",
   "Magic": "category.magic",
@@ -41,6 +43,8 @@ const CATEGORY_I18N_KEYS = {
   "Bones & Hides": "category.bones_hides",
   "Gems & Jewelry": "category.gems_jewelry",
   "Potions & Brews": "category.potions_brews",
+  "Tools": "category.tools",
+  "Construction": "category.construction",
   "Misc": "category.misc",
 };
 
@@ -493,18 +497,36 @@ function renderAll() {
 function renderHeader(d) {
   const c = d.character;
   const m = d.meta;
+  const title = c.title_name ? ` · ${esc(c.title_name)}` : "";
+  const ironman = c.ironman ? ` <span class="badge badge-warning">${esc(t("overview.ironman"))}</span>` : "";
   document.getElementById("character-header").innerHTML = `
-    <h2>${esc(c.name || t("empty.unknown"))}</h2>
+    <h2>${esc(c.name || t("empty.unknown"))}${ironman}</h2>
     <div class="character-meta">
-      ${esc(c.race || "")} · ${esc(c.gender || "")} · ${t("meta.export")}: ${formatTs(m.exported_at)}
+      ${esc(c.race || "")} · ${esc(c.gender || "")}${title} · ${t("meta.export")}: ${formatTs(m.exported_at)}
     </div>`;
 
+  const towerKpi = (d.tower?.best_floor)
+    ? `<div class="kpi"><div class="kpi-label">${esc(t("kpi.towerBest"))}</div><div class="kpi-value">${d.tower.best_floor}</div></div>`
+    : "";
   document.getElementById("kpi-row").innerHTML = `
     <div class="kpi"><div class="kpi-label">${esc(t("kpi.coins"))}</div><div class="kpi-value">${fmt(m.coins)}</div></div>
     <div class="kpi"><div class="kpi-label">${esc(t("kpi.totalLevel"))}</div><div class="kpi-value">${m.total_level}</div></div>
     <div class="kpi"><div class="kpi-label">${esc(t("kpi.items"))}</div><div class="kpi-value">${m.item_count}</div></div>
     <div class="kpi"><div class="kpi-label">${esc(t("kpi.totalQty"))}</div><div class="kpi-value">${fmt(m.total_items)}</div></div>
+    ${towerKpi}
     ${state.goalsOverview ? `<div class="kpi kpi-goals"><div class="kpi-label">${esc(t("kpi.goalsOpen"))}</div><div class="kpi-value">${state.goalsOverview.open}</div></div>` : ""}`;
+}
+
+function compactList(items, emptyKey = "empty.empty") {
+  return items?.length
+    ? items.join("")
+    : `<li><span>${esc(t(emptyKey))}</span></li>`;
+}
+
+function prestigeStars(level) {
+  const n = Math.max(0, Math.min(3, Number(level) || 0));
+  if (!n) return "";
+  return `<span class="prestige-stars" title="${esc(t("skills.prestigeLevel", { n }))}">${"★".repeat(n)}</span>`;
 }
 
 function renderOverview(d) {
@@ -514,17 +536,28 @@ function renderOverview(d) {
   ).join("");
 
   const slayer = d.combat.slayer_task;
+  const foretold = (d.combat.foretold_tasks || []).map((task) =>
+    `<li><span>${esc(task.display_name)}</span><span>0/${task.target_kills}</span></li>`
+  ).join("");
   const slayerHtml = slayer
-    ? `<p><strong>${esc(slayer.display_name)}</strong>: ${slayer.kills_completed}/${slayer.target_kills} (${d.combat.slayer_points} ${esc(t("meta.points"))})</p>`
+    ? `<p><strong>${esc(slayer.display_name)}</strong>: ${slayer.kills_completed}/${slayer.target_kills} (${d.combat.slayer_points} ${esc(t("meta.points"))})</p>
+       ${foretold ? `<h4>${esc(t("overview.foretold"))}</h4><ul class="list-compact">${foretold}</ul>` : ""}`
     : `<p class='empty-state'>${esc(t("overview.noSlayerTask"))}</p>`;
 
   const pets = (d.pets || []).map((p) =>
-    `<li><span>${esc(p.id.replace(/_/g, " "))}</span><span>+${p.boost_percent}%</span></li>`
+    `<li><span>${esc((p.id || "").replace(/_/g, " "))}</span><span>+${p.boost_percent}%</span></li>`
   ).join("");
 
-  const farming = (d.farming || []).map((p) =>
-    `<li><span>${esc(t("overview.patch", { n: p.patchNumber }))}</span><span>${esc(p.cropType || "—")}</span></li>`
-  ).join("");
+  const farming = (d.farming || []).map((p) => {
+    const fert = p.fertilizer ? ` · ${esc(String(p.fertilizer).replace(/_/g, " "))}` : "";
+    return `<li><span>${esc(t("overview.patch", { n: p.patchNumber }))}</span><span>${esc(p.cropType || "—")}${fert}</span></li>`;
+  }).join("");
+
+  const monument = d.monument || {};
+  const monumentRows = monument.tier
+    ? `<li><span>${esc(t("overview.monumentTier"))}</span><span>${monument.tier}</span></li>
+       <li><span>${esc(t("overview.monumentFund"))}</span><span>${fmt(monument.fund || 0)}</span></li>`
+    : "";
 
   const tower = d.tower || {};
   const towerHtml = tower.current_floor || tower.best_floor
@@ -536,7 +569,7 @@ function renderOverview(d) {
     : `<p class="empty-state">${esc(t("empty.none"))}</p>`;
 
   const workersHtml = (d.workers || []).map((w) =>
-    `<li><span>${esc(t("overview.workerSlot", { slot: w.slot }))}</span><span>${esc(w.daily_name || "?")} (${esc(w.tier || "?")})</span></li>`
+    `<li><span>${esc(t("overview.workerSlot", { slot: w.slot }))}</span><span>${esc(w.daily_name || w.name || "?")} (${esc(w.tier || "?")})</span></li>`
   ).join("");
 
   const titles = d.titles || {};
@@ -556,15 +589,18 @@ function renderOverview(d) {
         <h3>${esc(t("overview.character"))}</h3>
         <ul class="list-compact">
           <li><span>${esc(t("overview.hp"))}</span><span>${c.hp ?? "—"}</span></li>
+          ${c.title_name ? `<li><span>${esc(t("overview.title"))}</span><span>${esc(c.title_name)}</span></li>` : ""}
+          ${c.ironman ? `<li><span>${esc(t("overview.mode"))}</span><span>${esc(t("overview.ironman"))}</span></li>` : ""}
           <li><span>${esc(t("overview.activePotion"))}</span><span>${esc(c.active_potion || "—")}</span></li>
           <li><span>${esc(t("overview.activeSpell"))}</span><span>${esc(c.active_spell || "—")}</span></li>
           <li><span>${esc(t("overview.weaponSlot"))}</span><span>${esc(c.active_weapon_slot || "—")}</span></li>
           <li><span>${esc(t("overview.blessing"))}</span><span>${esc(c.active_blessing || "—")}</span></li>
         </ul>
+        ${c.notes ? `<p class="character-notes">${esc(c.notes)}</p>` : ""}
       </div>
       <div class="card">
         <h3>${esc(t("overview.sessionQueue"))}</h3>
-        <ul class="list-compact">${queue || `<li><span>${esc(t("empty.empty"))}</span></li>`}</ul>
+        <ul class="list-compact">${compactList(queue ? [queue] : [])}</ul>
       </div>
       <div class="card">
         <h3>${esc(t("overview.slayer"))}</h3>
@@ -581,7 +617,11 @@ function renderOverview(d) {
       <div class="card">
         <h3>${esc(t("overview.guildRep"))}</h3>
         <ul class="list-compact">${Object.entries(d.guild_reputation || {}).map(([k, v]) =>
-          `<li><span>${esc(k)}</span><span>${fmt(v)}</span></li>`).join("")}</ul>
+          `<li><span>${esc(k)}</span><span>${fmt(v)}</span></li>`).join("") || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>
+      </div>
+      <div class="card">
+        <h3>${esc(t("overview.monument"))}</h3>
+        <ul class="list-compact">${monumentRows || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>
       </div>
       <div class="card">
         <h3>${esc(t("overview.tower"))}</h3>
@@ -656,6 +696,7 @@ function renderSkills(d) {
         <select class="select-input" id="skill-sort">
           <option value="level"></option>
           <option value="xp"></option>
+          <option value="prestige"></option>
           <option value="name"></option>
         </select>
       </div>
@@ -670,8 +711,9 @@ function renderSkills(d) {
           <thead><tr id="skills-thead-row">
             <th data-sort="name"></th>
             <th data-sort="level"></th>
+            <th data-sort="prestige"></th>
             <th data-sort="xp">XP</th>
-            <th></th>
+            <th class="col-progress"></th>
             <th class="col-actions"></th>
           </tr></thead>
           <tbody id="skill-tbody"></tbody>
@@ -706,10 +748,12 @@ function renderSkills(d) {
   document.getElementById("skill-search").placeholder = t("skills.search");
   document.getElementById("skill-sort").options[0].textContent = t("skills.sortLevel");
   document.getElementById("skill-sort").options[1].textContent = t("skills.sortXp");
-  document.getElementById("skill-sort").options[2].textContent = t("skills.sortName");
+  document.getElementById("skill-sort").options[2].textContent = t("skills.sortPrestige");
+  document.getElementById("skill-sort").options[3].textContent = t("skills.sortName");
   panel.querySelector('th[data-sort="name"]').textContent = t("skills.skill");
   panel.querySelector('th[data-sort="level"]').textContent = t("skills.level");
-  panel.querySelectorAll("thead tr th")[3].textContent = t("skills.progress");
+  panel.querySelector('th[data-sort="prestige"]').textContent = t("skills.prestige");
+  panel.querySelector("thead tr th.col-progress").textContent = t("skills.progress");
   panel.querySelector("thead tr th.col-actions").textContent = t("goals.actions");
 
   document.getElementById("skill-search").value = s.search;
@@ -752,6 +796,7 @@ function renderSkillsBody(d) {
     let cmp = 0;
     if (s.sort === "name") cmp = a.name.localeCompare(b.name);
     else if (s.sort === "level") cmp = a.level - b.level;
+    else if (s.sort === "prestige") cmp = (a.prestige || 0) - (b.prestige || 0);
     else cmp = a.xp - b.xp;
     return s.sortAsc ? cmp : -cmp;
   });
@@ -764,6 +809,7 @@ function renderSkillsBody(d) {
       <td>${esc(sk.name)}${hasGoal ? `<span class="goal-mark" title="${esc(t("goals.hasGoal"))}">🎯</span>` : ""}</td>
       ${showTrend ? renderSkillSparkCell(sk) : ""}
       <td>${sk.level}</td>
+      <td class="col-prestige">${prestigeStars(sk.prestige) || "—"}</td>
       <td>${fmt(sk.xp)}</td>
       <td style="min-width:140px">
         ${sk.progress_pct}%
@@ -1972,6 +2018,18 @@ function showGoalsCompletedBanner(result) {
 }
 
 function renderEquipment(d) {
+  const loadouts = (d.loadouts || []).map((loadout) => `
+    <div class="card">
+      <h3>${esc(t("equipment.loadout", { style: loadout.style_name }))}</h3>
+      <div class="equip-grid">
+        ${(loadout.items || []).map((eq) => `
+          <div class="equip-slot ${eq.key ? "" : "empty"}">
+            <div class="slot-name">${esc(eq.slot_name)}</div>
+            <div class="item-name">${eq.name ? esc(eq.name) : "—"}</div>
+          </div>`).join("")}
+      </div>
+    </div>`).join("");
+
   document.getElementById("tab-equipment").innerHTML = `
     <div class="card">
       <h3>${esc(t("equipment.title"))}</h3>
@@ -1982,7 +2040,8 @@ function renderEquipment(d) {
             <div class="item-name">${eq.name ? esc(eq.name) : "—"}</div>
           </div>`).join("")}
       </div>
-    </div>`;
+    </div>
+    ${loadouts}`;
 }
 
 function renderQuests(d) {
@@ -2005,6 +2064,9 @@ function renderQuests(d) {
   }
 
   const isStory = q.tab === "story";
+  const weeklyNote = q.tab === "weekly" && d.quests.weekly_bonus_claimed
+    ? `<p class="quest-note">${esc(t("quests.weeklyBonusClaimed"))}</p>`
+    : "";
   panel.innerHTML = `
     <div class="quest-tabs">
       ${tabs.map((tab) => `<button class="quest-tab ${q.tab === tab.key ? "active" : ""}" data-tab="${tab.key}">${esc(tab.label)}</button>`).join("")}
@@ -2016,6 +2078,7 @@ function renderQuests(d) {
         <option value="done" ${q.filter === "done" ? "selected" : ""}>${esc(t("quests.filterDone"))}</option>
       </select>
     </div>
+    ${weeklyNote}
     <div class="card">
       <table>
         <thead><tr>
@@ -2123,7 +2186,11 @@ function renderCombat(d) {
     .map((s) => `<li><span>${esc(s.activity_display_name || s.activity_key)}</span><span>${esc(s.skill_name)}</span></li>`).join("");
 
   const active = (d.sessions || [])
-    .map((s) => `<li><span>${esc(s.activity)}</span><span>${esc(s.skill)} · ${esc(s.completed ? t("combat.sessionDone") : t("combat.sessionRunning"))}</span></li>`).join("");
+    .map((s) => {
+      const status = s.completed ? t("combat.sessionDone") : t("combat.sessionRunning");
+      const worker = s.is_worker ? ` · ${t("combat.workerSession", { n: s.worker_slot || "?" })}` : "";
+      return `<li><span>${esc(s.activity)}</span><span>${esc(s.skill)} · ${esc(status)}${esc(worker)}</span></li>`;
+    }).join("");
 
   const none = `<li>${esc(t("empty.none"))}</li>`;
   document.getElementById("tab-combat").innerHTML = `

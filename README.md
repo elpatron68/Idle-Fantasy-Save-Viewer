@@ -423,7 +423,7 @@ idle-fantasy-viewer/
 
 ## Save format
 
-The backup file contains doubly JSON-encoded fields (`skillLevels`, `inventory`, `flags`, …). The parser decodes these automatically.
+The backup file contains doubly JSON-encoded fields (`skillLevels`, `inventory`, `flags`, …). The parser decodes these automatically. Current exports may also include a top-level `sig` (integrity hash) plus newer flag data such as Infinite Tower, skill prestige, armor loadouts, workers, seasonal events, titles, and monument progress — the viewer surfaces these on the overview, skills, equipment, and combat tabs.
 
 ## Notes
 
@@ -446,9 +446,10 @@ After import, errors and warnings appear as a banner in the dashboard; in the CL
 ```powershell
 python test_db_goals.py
 python test_advisor.py
+python test_parser.py
 ```
 
-Smoke tests for goals/import helpers, skill timeline, snapshot deletion, and the training advisor (recipe loading, rankings, item goals from recipes).
+Smoke tests for goals/import helpers, skill timeline, snapshot deletion, the training advisor (recipe loading, rankings, item goals from recipes), and save-format parsing (including current export fields such as `sig`, prestige, and tower).
 
 ## Analytics (optional)
 

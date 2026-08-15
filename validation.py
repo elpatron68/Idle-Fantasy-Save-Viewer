@@ -7,7 +7,7 @@ from typing import Any
 # Known top-level fields (viewer baseline) – new fields are OK, reported as info.
 KNOWN_TOP_LEVEL_KEYS = frozenset({
     "skillLevels", "skillXp", "inventory", "equipped", "flags", "pets", "coins",
-    "questProgress", "farmingPatches", "sessions", "exported_at",
+    "questProgress", "farmingPatches", "sessions", "exported_at", "sig",
 })
 
 IMPORTANT_TOP_LEVEL_KEYS = frozenset({

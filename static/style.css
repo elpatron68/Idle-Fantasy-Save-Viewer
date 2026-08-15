@@ -208,6 +208,41 @@ body {
   font-size: 1.5rem;
 }
 
+.character-header h2 .badge {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.character-notes {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+
+.prestige-stars {
+  color: var(--warning);
+  letter-spacing: 0.05em;
+}
+
+.col-prestige {
+  white-space: nowrap;
+}
+
+.quest-note {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.card h4 {
+  margin: 12px 0 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .character-meta {
   color: var(--text-muted);
   font-size: 0.9rem;

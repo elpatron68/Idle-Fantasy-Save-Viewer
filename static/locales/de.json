@@ -96,41 +96,61 @@
     "totalLevel": "Gesamtlevel",
     "items": "Items",
     "totalQty": "Gesamtmenge",
-    "goalsOpen": "Offene Ziele"
+    "goalsOpen": "Offene Ziele",
+    "towerBest": "Turm-Rekord"
   },
   "overview": {
     "character": "Charakter",
     "hp": "HP",
+    "title": "Titel",
+    "mode": "Modus",
+    "ironman": "Ironman",
     "activePotion": "Aktiver Trank",
     "activeSpell": "Aktiver Zauber",
     "weaponSlot": "Waffenslot",
     "blessing": "Segen",
     "sessionQueue": "Session-Warteschlange",
     "slayer": "Slayer",
+    "foretold": "Vorhergesagte Aufgaben",
     "noSlayerTask": "Keine aktive Slayer-Aufgabe",
     "pets": "Haustiere",
     "farming": "Farming",
     "patch": "Patch {n}",
     "guildRep": "Gilden-Ruf",
-    "tower": "Infinite Tower",
+    "tower": "Unendlicher Turm",
     "towerFloor": "Aktueller / Bester Floor",
     "towerMilestones": "Meilensteine",
     "towerBonuses": "Boni",
-    "worker": "Worker",
+    "towerCurrent": "Aktuelles Stockwerk",
+    "towerBest": "Bestes Stockwerk",
+    "towerXp": "XP-Bonus",
+    "towerHp": "HP-Bonus",
+    "towerCoins": "Münz-Bonus",
+    "worker": "Arbeiter",
+    "workers": "Arbeiter",
     "workerSlot": "Slot {slot}",
     "titles": "Titel",
     "titlesUnlocked": "Freigeschaltet",
     "titlesEquipped": "Ausgerüstet",
+    "equippedTitle": "Ausgerüstet",
     "town": "Stadt",
-    "buildingTier": "Stufe {tier}"
+    "buildingTier": "Stufe {tier}",
+    "tier": "Stufe {n}",
+    "monument": "Großes Monument",
+    "monumentTier": "Stufe",
+    "monumentFund": "Fonds",
+    "seasonal": "Saison-Event"
   },
   "skills": {
     "search": "Skill suchen…",
     "sortLevel": "Nach Level",
     "sortXp": "Nach XP",
     "sortName": "Nach Name",
+    "sortPrestige": "Nach Prestige",
     "skill": "Skill",
     "level": "Level",
+    "prestige": "Prestige",
+    "prestigeLevel": "Prestige {n}",
     "progress": "Fortschritt",
     "addGoal": "Ziel hinzufügen",
     "addGoalFor": "Ziel für {name} hinzufügen",
@@ -183,7 +203,8 @@
     "addGoalFor": "Ziel für {name} hinzufügen"
   },
   "equipment": {
-    "title": "Ausrüstung"
+    "title": "Ausrüstung",
+    "loadout": "{style}-Loadout"
   },
   "quests": {
     "story": "Story",
@@ -197,7 +218,8 @@
     "progress": "Fortschritt",
     "status": "Status",
     "done": "Erledigt",
-    "open": "Offen"
+    "open": "Offen",
+    "weeklyBonusClaimed": "Wöchentliche Bonus-Truhe abgeholt"
   },
   "combat": {
     "enemyKills": "Gegner-Kills",
@@ -214,13 +236,15 @@
     "activeSessions": "Aktive Sessions",
     "sessionDone": "fertig",
     "sessionRunning": "läuft",
+    "workerSession": "Arbeiter {n}",
     "dungeonLastRuns": "Letzter Dungeon-Lauf",
     "lastRunKills": "Kills (letzter Lauf)",
-    "foodConsumed": "Food",
+    "foodConsumed": "Essen",
     "survived": "Überlebt",
     "notSurvived": "Nein",
     "yes": "Ja",
-    "totalRuns": "Läufe gesamt"
+    "totalRuns": "Läufe gesamt",
+    "died": "Gestorben"
   },
   "events": {
     "seasonal": "Saison-Events",
@@ -295,6 +319,7 @@
     "raw_food": "Rohkost",
     "cooked_food": "Gekochtes",
     "seeds_farming": "Samen & Farming",
+    "herbs": "Kräuter",
     "melee_weapons": "Nahkampfwaffen",
     "ranged": "Fernkampf",
     "magic": "Magie",
@@ -302,6 +327,8 @@
     "bones_hides": "Knochen & Felle",
     "gems_jewelry": "Edelsteine & Schmuck",
     "potions_brews": "Tränke & Brauerei",
+    "tools": "Werkzeuge",
+    "construction": "Baukunst",
     "misc": "Sonstiges"
   },
   "viewer": {

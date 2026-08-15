@@ -96,17 +96,22 @@
     "totalLevel": "Total level",
     "items": "Items",
     "totalQty": "Total quantity",
-    "goalsOpen": "Open goals"
+    "goalsOpen": "Open goals",
+    "towerBest": "Tower best"
   },
   "overview": {
     "character": "Character",
     "hp": "HP",
+    "title": "Title",
+    "mode": "Mode",
+    "ironman": "Ironman",
     "activePotion": "Active potion",
     "activeSpell": "Active spell",
     "weaponSlot": "Weapon slot",
     "blessing": "Blessing",
     "sessionQueue": "Session queue",
     "slayer": "Slayer",
+    "foretold": "Foretold tasks",
     "noSlayerTask": "No active slayer task",
     "pets": "Pets",
     "farming": "Farming",
@@ -116,21 +121,36 @@
     "towerFloor": "Current / best floor",
     "towerMilestones": "Milestones",
     "towerBonuses": "Bonuses",
+    "towerCurrent": "Current floor",
+    "towerBest": "Best floor",
+    "towerXp": "XP bonus",
+    "towerHp": "HP bonus",
+    "towerCoins": "Coin bonus",
     "worker": "Worker",
+    "workers": "Workers",
     "workerSlot": "Slot {slot}",
     "titles": "Titles",
     "titlesUnlocked": "Unlocked",
     "titlesEquipped": "Equipped",
+    "equippedTitle": "Equipped",
     "town": "Town",
-    "buildingTier": "Tier {tier}"
+    "buildingTier": "Tier {tier}",
+    "tier": "Tier {n}",
+    "monument": "Grand Monument",
+    "monumentTier": "Stage",
+    "monumentFund": "Fund",
+    "seasonal": "Seasonal event"
   },
   "skills": {
     "search": "Search skills…",
     "sortLevel": "By level",
     "sortXp": "By XP",
     "sortName": "By name",
+    "sortPrestige": "By prestige",
     "skill": "Skill",
     "level": "Level",
+    "prestige": "Prestige",
+    "prestigeLevel": "Prestige {n}",
     "progress": "Progress",
     "addGoal": "Add goal",
     "addGoalFor": "Add goal for {name}",
@@ -183,7 +203,8 @@
     "addGoalFor": "Add goal for {name}"
   },
   "equipment": {
-    "title": "Equipment"
+    "title": "Equipment",
+    "loadout": "{style} loadout"
   },
   "quests": {
     "story": "Story",
@@ -197,7 +218,8 @@
     "progress": "Progress",
     "status": "Status",
     "done": "Done",
-    "open": "Open"
+    "open": "Open",
+    "weeklyBonusClaimed": "Weekly bonus chest claimed"
   },
   "combat": {
     "enemyKills": "Enemy kills",
@@ -214,13 +236,15 @@
     "activeSessions": "Active sessions",
     "sessionDone": "done",
     "sessionRunning": "running",
+    "workerSession": "worker {n}",
     "dungeonLastRuns": "Last dungeon run",
     "lastRunKills": "Kills (last run)",
     "foodConsumed": "Food",
     "survived": "Survived",
     "notSurvived": "No",
     "yes": "Yes",
-    "totalRuns": "Total runs"
+    "totalRuns": "Total runs",
+    "died": "Died"
   },
   "events": {
     "seasonal": "Seasonal events",
@@ -295,6 +319,7 @@
     "raw_food": "Raw Food",
     "cooked_food": "Cooked Food",
     "seeds_farming": "Seeds & Farming",
+    "herbs": "Herbs",
     "melee_weapons": "Melee Weapons",
     "ranged": "Ranged",
     "magic": "Magic",
@@ -302,6 +327,8 @@
     "bones_hides": "Bones & Hides",
     "gems_jewelry": "Gems & Jewelry",
     "potions_brews": "Potions & Brews",
+    "tools": "Tools",
+    "construction": "Construction",
     "misc": "Misc"
   },
   "viewer": {
