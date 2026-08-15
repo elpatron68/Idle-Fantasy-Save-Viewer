@@ -186,6 +186,8 @@ docker compose down
 
 ### Deploy to production
 
+#### Local (manual)
+
 For a git-based rollout to a remote Docker host (push → pull → `docker compose up --build` → wait for health check):
 
 ```bash
@@ -193,6 +195,52 @@ bash scripts/deploy.sh
 ```
 
 Configure via environment variables: `DEPLOY_HOST` (default `root@10.0.0.5`), `DEPLOY_DIR`, `DEPLOY_SERVICE`, `DEPLOY_HEALTH_RETRIES`, `DEPLOY_HEALTH_INTERVAL`. Requires a clean working tree, an upstream branch, and SSH access. The remote script lives in `scripts/deploy-remote.sh`.
+
+#### Gitea Actions (WireGuard → Proxmox LXC)
+
+Workflow [`.gitea/workflows/deploy.yml`](.gitea/workflows/deploy.yml) deploys on every push to `master` and via **Actions → Deploy → Run workflow**. It:
+
+1. Runs smoke tests
+2. Brings up WireGuard from a secret config
+3. SSHs to the LXC over the tunnel
+4. Runs `scripts/deploy-remote.sh` (fetch/reset → `docker compose up --build` → health check)
+5. Tears the tunnel down
+
+The act_runner job container needs `/dev/net/tun` and `CAP_NET_ADMIN` (configured by `scripts/setup-gitea-runner.sh`).
+
+**Gitea repository secrets** (Settings → Secrets) — all deploy parameters:
+
+| Secret | Required | Example / notes |
+|--------|----------|-----------------|
+| `DEPLOY_SSH_KEY` | yes | Private SSH key for the LXC (OpenSSH / PEM, full file) |
+| `DEPLOY_HOST` | yes | `root@10.66.0.10` (WireGuard address of the LXC) |
+| `DEPLOY_DIR` | yes | `/opt/apps/Idle-Fantasy-Save-Viewer` |
+| `DEPLOY_WG_CONF` | yes | Full `wg-quick` config (see below) |
+| `DEPLOY_SERVICE` | no | Compose service name (default `viewer`) |
+| `DEPLOY_BRANCH` | no | Branch to deploy (default `master`) |
+| `DEPLOY_SSH_PORT` | no | SSH port (default `22`) |
+| `DEPLOY_HEALTH_RETRIES` | no | Default `30` |
+| `DEPLOY_HEALTH_INTERVAL` | no | Seconds between polls (default `2`) |
+| `DEPLOY_SSH_KNOWN_HOSTS` | no | `known_hosts` lines; if unset, `accept-new` is used |
+| `AUTO_DEPLOY` | no | Set to `false` to skip deploy after upstream game_data sync |
+
+Example `DEPLOY_WG_CONF` (AllowedIPs must include the LXC WG address / subnet):
+
+```ini
+[Interface]
+PrivateKey = <runner-peer-private-key>
+Address = 10.66.0.2/32
+
+[Peer]
+PublicKey = <server-public-key>
+AllowedIPs = 10.66.0.0/24
+Endpoint = <vpn-host>:51820
+PersistentKeepalive = 25
+```
+
+On the LXC: clone the repo into `DEPLOY_DIR`, install Docker Compose, and authorize the deploy public key for `DEPLOY_HOST`.
+
+Upstream sync (`.gitea/workflows/sync-upstream.yml`) reuses the same WireGuard deploy when `game_data` changes.
 
 ### More options
 
@@ -380,8 +428,10 @@ idle-fantasy-viewer/
 ├── docker-compose.yml
 ├── requirements.txt
 ├── scripts/
-│   ├── deploy.sh           # Push + remote Docker deploy
+│   ├── deploy.sh           # Local: push + remote Docker deploy
+│   ├── deploy-ci.sh        # CI: WireGuard + SSH + deploy-remote.sh
 │   ├── deploy-remote.sh    # Runs on the server (git pull, compose)
+│   └── setup-gitea-runner.sh  # act_runner with TUN for WireGuard jobs
 │   └── sync_game_data.py   # Pull recipe JSON from IdleFantasy repo
 ├── static/
 │   ├── vendor/           # chart.umd.min.js (bundled)

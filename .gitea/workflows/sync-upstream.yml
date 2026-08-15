@@ -1,8 +1,9 @@
-# Sync vendored recipe JSON from tristinbaker/IdleFantasy, run smoke tests, deploy.
+# Sync vendored recipe JSON from tristinbaker/IdleFantasy, run smoke tests,
+# then deploy over WireGuard when game_data changed.
 #
-# Requires: act_runner registered for this repo/org/instance (label ubuntu-latest).
-# Secrets: DEPLOY_SSH_KEY (optional, for deploy)
-# Variables: AUTO_DEPLOY=false to skip deploy; DEPLOY_HOST, DEPLOY_DIR, DEPLOY_SERVICE
+# Requires: act_runner with /dev/net/tun + CAP_NET_ADMIN for job containers.
+# Secrets (all deploy params): see README "Gitea deploy secrets"
+# Optional secret: AUTO_DEPLOY=false to skip deploy after sync
 name: Sync Upstream Game Data
 
 on:
@@ -32,6 +33,7 @@ jobs:
         run: |
           python3 test_db_goals.py
           python3 test_advisor.py
+          python3 test_parser.py
 
       - name: Commit and push if game_data changed
         id: commit
@@ -48,11 +50,29 @@ jobs:
           git push
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy to production
-        if: steps.commit.outputs.changed == 'true' && vars.AUTO_DEPLOY != 'false'
+      - name: Install WireGuard tools
+        if: steps.commit.outputs.changed == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq wireguard-tools openssh-client
+
+      - name: Deploy to production over WireGuard
+        if: steps.commit.outputs.changed == 'true'
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
-          DEPLOY_SERVICE: ${{ vars.DEPLOY_SERVICE }}
+          AUTO_DEPLOY: ${{ secrets.AUTO_DEPLOY }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: bash scripts/deploy-ci.sh
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_DIR: ${{ secrets.DEPLOY_DIR }}
+          DEPLOY_WG_CONF: ${{ secrets.DEPLOY_WG_CONF }}
+          DEPLOY_SERVICE: ${{ secrets.DEPLOY_SERVICE }}
+          DEPLOY_BRANCH: ${{ secrets.DEPLOY_BRANCH }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          DEPLOY_HEALTH_RETRIES: ${{ secrets.DEPLOY_HEALTH_RETRIES }}
+          DEPLOY_HEALTH_INTERVAL: ${{ secrets.DEPLOY_HEALTH_INTERVAL }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          if [[ "${AUTO_DEPLOY:-}" == "false" ]]; then
+            echo "AUTO_DEPLOY=false — skipping deploy"
+            exit 0
+          fi
+          bash scripts/deploy-ci.sh
