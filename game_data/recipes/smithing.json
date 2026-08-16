@@ -1768,6 +1768,15 @@
     "xp_per_item": 25.0,
     "time_per_item": 60
   },
+  "runite_nail": {
+    "type": "component",
+    "display_name": "Runite Nails",
+    "level_required": 85,
+    "materials": { "runite_bar": 1 },
+    "output_quantity": 30,
+    "xp_per_item": 45.0,
+    "time_per_item": 60
+  },
   "bronze_lockpick": {
     "type": "tool",
     "display_name": "Bronze Lockpick",

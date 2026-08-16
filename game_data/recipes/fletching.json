@@ -454,5 +454,15 @@
     "materials": { "magic_log": 1 },
     "output_quantity": 1,
     "time_per_batch": 1
+  },
+  "redwood_plank": {
+    "item_name": "redwood_plank",
+    "display_name": "Redwood Plank",
+    "type": "component",
+    "level_required": 85,
+    "xp_per_item": 230,
+    "materials": { "redwood_log": 1 },
+    "output_quantity": 1,
+    "time_per_batch": 1
   }
 }

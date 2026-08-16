@@ -78,5 +78,29 @@
     "output_quantity": 1,
     "xp_per_item": 360.0,
     "time_per_item": 60
+  },
+  "redwood_bench": {
+    "display_name": "Redwood Bench",
+    "level_required": 80,
+    "materials": { "redwood_plank": 6, "runite_nail": 10 },
+    "output_quantity": 1,
+    "xp_per_item": 450.0,
+    "time_per_item": 60
+  },
+  "redwood_bookcase": {
+    "display_name": "Redwood Bookcase",
+    "level_required": 88,
+    "materials": { "redwood_plank": 8, "runite_nail": 12 },
+    "output_quantity": 1,
+    "xp_per_item": 560.0,
+    "time_per_item": 60
+  },
+  "redwood_grand_bed": {
+    "display_name": "Redwood Grand Bed",
+    "level_required": 95,
+    "materials": { "redwood_plank": 10, "runite_nail": 15 },
+    "output_quantity": 1,
+    "xp_per_item": 700.0,
+    "time_per_item": 60
   }
 }
