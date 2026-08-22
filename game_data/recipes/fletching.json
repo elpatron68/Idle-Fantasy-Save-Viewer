@@ -243,6 +243,42 @@
       "ranged": 60
     }
   },
+  "elven_shortbow": {
+    "item_name": "elven_shortbow",
+    "display_name": "Elven Shortbow",
+    "type": "weapon",
+    "level_required": 90,
+    "xp_per_item": 120,
+    "materials": {
+      "magic_log": 2
+    },
+    "output_quantity": 1,
+    "time_per_batch": 1,
+    "combat_style": "ranged",
+    "attack_bonus": 85,
+    "strength_bonus": 0,
+    "requirements": {
+      "ranged": 75
+    }
+  },
+  "elven_longbow": {
+    "item_name": "elven_longbow",
+    "display_name": "Elven Longbow",
+    "type": "weapon",
+    "level_required": 95,
+    "xp_per_item": 150,
+    "materials": {
+      "redwood_log": 2
+    },
+    "output_quantity": 1,
+    "time_per_batch": 1,
+    "combat_style": "ranged",
+    "attack_bonus": 100,
+    "strength_bonus": 0,
+    "requirements": {
+      "ranged": 85
+    }
+  },
   "staff_of_air": {
     "item_name": "staff_of_air",
     "display_name": "Staff of Air",
@@ -401,7 +437,9 @@
     "type": "component",
     "level_required": 1,
     "xp_per_item": 20,
-    "materials": { "log": 1 },
+    "materials": {
+      "log": 1
+    },
     "output_quantity": 1,
     "time_per_batch": 1
   },
@@ -411,7 +449,9 @@
     "type": "component",
     "level_required": 15,
     "xp_per_item": 40,
-    "materials": { "oak_log": 1 },
+    "materials": {
+      "oak_log": 1
+    },
     "output_quantity": 1,
     "time_per_batch": 1
   },
@@ -421,7 +461,9 @@
     "type": "component",
     "level_required": 30,
     "xp_per_item": 60,
-    "materials": { "willow_log": 1 },
+    "materials": {
+      "willow_log": 1
+    },
     "output_quantity": 1,
     "time_per_batch": 1
   },
@@ -431,7 +473,9 @@
     "type": "component",
     "level_required": 45,
     "xp_per_item": 90,
-    "materials": { "maple_log": 1 },
+    "materials": {
+      "maple_log": 1
+    },
     "output_quantity": 1,
     "time_per_batch": 1
   },
@@ -441,7 +485,9 @@
     "type": "component",
     "level_required": 60,
     "xp_per_item": 130,
-    "materials": { "yew_log": 1 },
+    "materials": {
+      "yew_log": 1
+    },
     "output_quantity": 1,
     "time_per_batch": 1
   },
@@ -451,7 +497,9 @@
     "type": "component",
     "level_required": 75,
     "xp_per_item": 175,
-    "materials": { "magic_log": 1 },
+    "materials": {
+      "magic_log": 1
+    },
     "output_quantity": 1,
     "time_per_batch": 1
   },
@@ -461,7 +509,9 @@
     "type": "component",
     "level_required": 85,
     "xp_per_item": 230,
-    "materials": { "redwood_log": 1 },
+    "materials": {
+      "redwood_log": 1
+    },
     "output_quantity": 1,
     "time_per_batch": 1
   }
