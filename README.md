@@ -26,11 +26,14 @@ Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below li
 <td align="center"><a href="#screenshot-history"><img src="docs/screenshots/history.png?v=6694843" alt="" width="220"></a><br><strong>History</strong></td>
 </tr>
 <tr>
+<td align="center"><a href="#screenshot-house"><img src="docs/screenshots/house.png" alt="" width="220"></a><br><strong>House</strong></td>
+<td align="center"><a href="#screenshot-prestige"><img src="docs/screenshots/prestige.png" alt="" width="220"></a><br><strong>Prestige</strong></td>
+<td align="center"><a href="#screenshot-events"><img src="docs/screenshots/events.png" alt="" width="220"></a><br><strong>Events</strong></td>
+</tr>
+<tr>
 <td align="center" colspan="3"><a href="#screenshot-data"><img src="docs/screenshots/data.png" alt="" width="220"></a><br><strong>Data</strong> (export / import / delete viewer)</td>
 </tr>
 </table>
-
-**Also available (no gallery screenshot yet):** [House](#house), [Prestige](#prestige), [Events](#events) tabs.
 
 <a name="screenshot-overview"></a>
 <details>
@@ -84,6 +87,24 @@ Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below li
 <details>
 <summary><strong>History</strong> — charts and snapshot comparison</summary>
 <p><img src="docs/screenshots/history.png?v=6694843" alt="History tab"></p>
+</details>
+
+<a name="screenshot-house"></a>
+<details>
+<summary><strong>House</strong> — floor plan, rooms, furnishings, storage, blueprints</summary>
+<p><img src="docs/screenshots/house.png" alt="House tab"></p>
+</details>
+
+<a name="screenshot-prestige"></a>
+<details>
+<summary><strong>Prestige</strong> — talent trees, node status, active bonuses</summary>
+<p><img src="docs/screenshots/prestige.png" alt="Prestige tab"></p>
+</details>
+
+<a name="screenshot-events"></a>
+<details>
+<summary><strong>Events</strong> — seasonal bounties and carnival minigames</summary>
+<p><img src="docs/screenshots/events.png" alt="Events tab"></p>
 </details>
 
 <a name="screenshot-data"></a>
