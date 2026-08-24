@@ -32,13 +32,13 @@ jobs:
           python-version: "3.12"
 
       - name: Sync recipe JSON from upstream IdleFantasy
-        run: python scripts/sync_game_data.py
+        run: python3 scripts/sync_game_data.py
 
       - name: Smoke tests
         run: |
-          python test_db_goals.py
-          python test_advisor.py
-          python test_parser.py
+          python3 test_db_goals.py
+          python3 test_advisor.py
+          python3 test_parser.py
 
       - name: Commit and push if game_data changed
         id: commit
@@ -76,12 +76,12 @@ jobs:
           DEPLOY_HEALTH_INTERVAL: ${{ secrets.DEPLOY_HEALTH_INTERVAL }}
           DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
           DEPLOY_GIT_REMOTE: ${{ secrets.DEPLOY_GIT_REMOTE }}
-          EXPECTED_SHA: ${{ github.sha }}
         run: |
           if [[ "${AUTO_DEPLOY:-}" == "false" ]]; then
             echo "AUTO_DEPLOY=false — skipping deploy"
             exit 0
           fi
+          # Use HEAD after the sync commit/push, not github.sha (pre-sync checkout).
           sudo -E env \
             DEPLOY_SSH_KEY="$DEPLOY_SSH_KEY" \
             DEPLOY_HOST="$DEPLOY_HOST" \
@@ -95,5 +95,5 @@ jobs:
             DEPLOY_HEALTH_INTERVAL="$DEPLOY_HEALTH_INTERVAL" \
             DEPLOY_SSH_KNOWN_HOSTS="$DEPLOY_SSH_KNOWN_HOSTS" \
             DEPLOY_GIT_REMOTE="$DEPLOY_GIT_REMOTE" \
-            EXPECTED_SHA="$EXPECTED_SHA" \
+            EXPECTED_SHA="$(git rev-parse HEAD)" \
             bash scripts/deploy-ci.sh
