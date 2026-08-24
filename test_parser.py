@@ -33,6 +33,8 @@ def _save(**overrides) -> dict:
             "equipped_title": "godslayer",
             "unlocked_titles": ["godslayer", "devout"],
             "skill_prestige": {"agility": 3},
+            "prestige_points_earned": {"agility": 9, "attack": 3},
+            "prestige_nodes": {"agility": ["agility_endurance_1"]},
             "tower_current_floor": 80,
             "tower_best_floor": 86,
             "tower_milestones": [10, 20],
@@ -160,6 +162,23 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(blueprints[0]["name"], "Cozy")
         self.assertEqual(blueprints[0]["layout"]["stats"]["room_count"], 1)
 
+    def test_prestige_talent_tree(self) -> None:
+        data = normalize_save(_save())
+        prestige = data["prestige"]
+        self.assertEqual(prestige["player_race"], "human")
+        agility = next(s for s in prestige["skills"] if s["key"] == "agility")
+        self.assertEqual(agility["prestige_count"], 3)
+        self.assertEqual(agility["points_earned"], 9)
+        self.assertEqual(agility["points_spent"], 2)
+        self.assertEqual(agility["points_unspent"], 7)
+        endurance = next(p for p in agility["paths"] if p["key"] == "endurance")
+        owned = next(n for n in endurance["nodes"] if n["id"] == "agility_endurance_1")
+        self.assertTrue(owned["owned"])
+        xp_path = next(p for p in agility["paths"] if p["key"] == "xp")
+        self.assertTrue(xp_path["auto"])
+        self.assertTrue(all(n["owned"] for n in xp_path["nodes"][:3]))
+        self.assertTrue(any(e["effect"] == "xp_pct" for e in agility["effects"]))
+
     def test_legacy_save_without_new_fields_still_works(self) -> None:
         data = normalize_save({
             "exported_at": 1,
@@ -175,6 +194,7 @@ class ParserTests(unittest.TestCase):
         self.assertIsNone(data["house"])
         self.assertIsNone(data["house_draft"])
         self.assertEqual(data["house_blueprints"], [])
+        self.assertEqual(data["prestige"]["skills"], [])
         self.assertFalse(data["meta"]["signed"])
         mining = data["skills"][0]
         self.assertEqual(mining["prestige"], 0)

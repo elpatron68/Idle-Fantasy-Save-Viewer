@@ -8,6 +8,7 @@ from typing import Any
 
 from categories import categorize_item
 from house_data import house_ground_name, house_item_meta, house_item_name, house_max_rooms
+from prestige_data import build_prestige_bundle
 from validation import Issue, analyze_save, has_errors, issue
 
 
@@ -633,6 +634,61 @@ def normalize_save(
     recent_sessions = _ensure_list(flags.get("recent_sessions"), "flags.recent_sessions", issues)
     town_buildings = _ensure_dict(flags.get("town_building_tiers"), "flags.town_building_tiers", issues)
     house_bundle = _normalize_house_bundle(flags, issues)
+
+    points_earned_map = _ensure_dict(
+        flags.get("prestige_points_earned"), "flags.prestige_points_earned", issues,
+    )
+    prestige_nodes_raw = _ensure_dict(flags.get("prestige_nodes"), "flags.prestige_nodes", issues)
+    prestige_nodes_map: dict[str, list[str]] = {}
+    for skill_key, node_ids in prestige_nodes_raw.items():
+        if isinstance(node_ids, list):
+            prestige_nodes_map[str(skill_key)] = [str(node_id) for node_id in node_ids]
+        else:
+            issues.append(issue(
+                "warning", "invalid_prestige_nodes",
+                f'Prestige nodes for "{skill_key}" are not a list – skipped.',
+                field=f"flags.prestige_nodes.{skill_key}",
+            ))
+
+    respec_at_map = {
+        str(skill_key): _safe_int(
+            value, f"flags.prestige_last_respec_at.{skill_key}", issues,
+        )
+        for skill_key, value in _ensure_dict(
+            flags.get("prestige_last_respec_at"), "flags.prestige_last_respec_at", issues,
+        ).items()
+    }
+    xp_boost_map = {
+        str(skill_key): _safe_int(
+            value, f"flags.prestige_xp_boosts.{skill_key}", issues,
+        )
+        for skill_key, value in _ensure_dict(
+            flags.get("prestige_xp_boosts"), "flags.prestige_xp_boosts", issues,
+        ).items()
+    }
+    level_map = {
+        str(key): _safe_int(value, f"skillLevels.{key}", issues, default=1)
+        for key, value in skill_levels.items()
+    }
+    prestige_map_int = {
+        str(key): _safe_int(value, f"flags.skill_prestige.{key}", issues)
+        for key, value in prestige_map.items()
+    }
+    points_earned_int = {
+        str(key): _safe_int(value, f"flags.prestige_points_earned.{key}", issues)
+        for key, value in points_earned_map.items()
+    }
+    prestige = build_prestige_bundle(
+        skill_levels=level_map,
+        skill_prestige=prestige_map_int,
+        points_earned=points_earned_int,
+        prestige_nodes=prestige_nodes_map,
+        respec_at=respec_at_map,
+        xp_boosts=xp_boost_map,
+        character_race=flags.get("character_race"),
+        ironman=bool(flags.get("ironman")),
+    )
+
     coins = _safe_int(raw.get("coins"), "coins", issues)
     inventory_coins = _safe_int(inventory.get("coins"), "inventory.coins", issues)
 
@@ -808,6 +864,7 @@ def normalize_save(
         "house": house_bundle["layout"],
         "house_draft": house_bundle["draft"],
         "house_blueprints": house_bundle["blueprints"],
+        "prestige": prestige,
         "meta": {
             "source_file": source_file,
             "exported_at": raw.get("exported_at"),

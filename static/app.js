@@ -6,6 +6,7 @@ let state = {
   timeline: [],
   inventory: { search: "", categories: new Set(), sort: "category", highlightEquipped: false, collapsedGroups: new Set() },
   skills: { search: "", sort: "level", sortAsc: false, advisorKey: null, advisor: null, advisorLoading: false },
+  prestige: { skillKey: null },
   quests: { tab: "story", filter: "all" },
   goals: { filter: "all", collapsedGroups: new Set(), data: { groups: [], ungrouped: [] } },
   goalsOverview: null,
@@ -511,6 +512,7 @@ function renderAll() {
   renderOverview(d);
   bindImportChangesCard();
   renderSkills(d);
+  renderPrestige(d);
   renderInventory(d);
   renderGoals();
   renderEquipment(d);
@@ -1410,6 +1412,161 @@ function bindSparklines(container) {
   container.querySelectorAll(".inv-spark-btn[data-combat-key]").forEach((btn) => {
     btn.addEventListener("click", () => {
       openCombatChartModal(btn.dataset.combatType, btn.dataset.combatKey, btn.dataset.combatName);
+    });
+  });
+}
+
+function prestigeEffectSummary(effect, value, unlock) {
+  const labelKey = `prestige.effect.${effect}`;
+  const label = I18n.t(labelKey) !== labelKey ? t(labelKey) : humanizeKey(effect);
+  if (effect === "unlock_recipe" && unlock) {
+    return `${label}: ${humanizeKey(unlock)}`;
+  }
+  if (effect === "second_chance" || effect === "crop_rotation_always" || effect === "slayer_multi_task") {
+    return label;
+  }
+  if (effect === "session_floor_min" || effect === "flow_interval_reduction") {
+    return `${label} ${value} min`;
+  }
+  if (Number.isInteger(value) || Math.abs(value - Math.round(value)) < 0.001) {
+    return `${label} +${Math.round(value)}`;
+  }
+  return `${label} +${value}`;
+}
+
+function prestigeNodeBadge(node) {
+  const badges = {
+    owned: t("prestige.nodeOwned"),
+    available: t("prestige.nodeAvailable"),
+    unaffordable: t("prestige.nodeUnaffordable"),
+    locked: t("prestige.nodeLocked"),
+    race_locked: t("prestige.nodeRaceLocked"),
+  };
+  return badges[node.state] || node.state;
+}
+
+function prestigePathHtml(path) {
+  const autoBadge = path.auto
+    ? `<span class="prestige-auto-badge">${esc(t("prestige.autoPath"))}</span>`
+    : "";
+  const nodes = (path.nodes || []).map((node) => {
+    const races = node.races?.length
+      ? `<span class="prestige-node-races">${esc(node.races.map(humanizeKey).join(", "))}</span>`
+      : "";
+    const cost = path.auto ? t("prestige.autoTier", { tier: node.tier }) : `${node.cost} ${esc(t("prestige.pointsShort"))}`;
+    return `<li class="prestige-node prestige-node-${esc(node.state)}">
+      <div class="prestige-node-head">
+        <strong>${esc(path.key_name)} ${node.tier}</strong>
+        <span class="prestige-node-badge">${esc(prestigeNodeBadge(node))}</span>
+      </div>
+      <div class="prestige-node-body">
+        <span>${esc(prestigeEffectSummary(node.effect, node.value, node.unlock))}</span>
+        <span>${esc(cost)}</span>
+        ${races}
+      </div>
+    </li>`;
+  }).join("");
+
+  return `<div class="prestige-path">
+    <h4>${esc(path.key_name)} ${autoBadge}</h4>
+    <ul class="prestige-node-list">${nodes || `<li>${esc(t("empty.none"))}</li>`}</ul>
+  </div>`;
+}
+
+function renderPrestigeDetail(skill) {
+  const xpBoost = skill.xp_boost_expires_at && skill.xp_boost_expires_at > Date.now()
+    ? `<li><span>${esc(t("prestige.xpBoost"))}</span><span>${formatTs(skill.xp_boost_expires_at)}</span></li>`
+    : "";
+  const respec = skill.respec_at
+    ? `<li><span>${esc(t("prestige.lastRespec"))}</span><span>${formatTs(skill.respec_at)}</span></li>`
+    : "";
+  const effects = (skill.effects || []).map((entry) =>
+    `<li><span>${esc(prestigeEffectSummary(entry.effect, entry.total, null))}</span><span>${esc(t("prestige.activeTotal"))}</span></li>`
+  ).join("");
+
+  return `<div class="card prestige-detail-card">
+    <h3>${esc(skill.name)} ${prestigeStars(skill.prestige_count)}</h3>
+    <ul class="list-compact">
+      <li><span>${esc(t("skills.level"))}</span><span>${skill.level}</span></li>
+      <li><span>${esc(t("prestige.prestigeCount"))}</span><span>${skill.prestige_count}</span></li>
+      <li><span>${esc(t("prestige.pointsEarned"))}</span><span>${skill.points_earned} / ${skill.point_cap || "—"}</span></li>
+      <li><span>${esc(t("prestige.pointsUnspent"))}</span><span>${skill.points_unspent}</span></li>
+      <li><span>${esc(t("prestige.pointsSpent"))}</span><span>${skill.points_spent}</span></li>
+      <li><span>${esc(t("prestige.purchasedNodes"))}</span><span>${skill.purchased_count}</span></li>
+      ${xpBoost}
+      ${respec}
+    </ul>
+    ${effects ? `<h4>${esc(t("prestige.activeEffects"))}</h4><ul class="list-compact">${effects}</ul>` : ""}
+    <h4>${esc(t("prestige.talentTree"))}</h4>
+    <div class="prestige-paths">${(skill.paths || []).map(prestigePathHtml).join("")}</div>
+  </div>`;
+}
+
+function renderPrestige(d) {
+  const panel = document.getElementById("tab-prestige");
+  if (!panel) return;
+
+  const prestige = d.prestige;
+  if (!prestige?.skills?.length) {
+    panel.innerHTML = `<div class="card"><p class="empty-state">${esc(t("prestige.noData"))}</p></div>`;
+    return;
+  }
+
+  if (!state.prestige.skillKey || !prestige.skills.some((s) => s.key === state.prestige.skillKey)) {
+    state.prestige.skillKey = prestige.skills[0].key;
+  }
+
+  if (!panel.querySelector("#prestige-skill-select")) {
+    panel.innerHTML = `
+      <div class="toolbar">
+        <label class="prestige-select-label">
+          <span>${esc(t("prestige.selectSkill"))}</span>
+          <select class="select-input" id="prestige-skill-select"></select>
+        </label>
+      </div>
+      <div id="prestige-detail"></div>
+      <div class="card prestige-overview-card">
+        <h3>${esc(t("prestige.allSkills"))}</h3>
+        <div class="table-wrap">
+          <table class="combat-table" id="prestige-summary-table">
+            <thead><tr>
+              <th>${esc(t("skills.skill"))}</th>
+              <th>${esc(t("skills.prestige"))}</th>
+              <th>${esc(t("prestige.pointsUnspent"))}</th>
+              <th>${esc(t("prestige.pointsEarned"))}</th>
+            </tr></thead>
+            <tbody id="prestige-summary-tbody"></tbody>
+          </table>
+        </div>
+      </div>`;
+
+    document.getElementById("prestige-skill-select").addEventListener("change", (e) => {
+      state.prestige.skillKey = e.target.value;
+      renderPrestige(d);
+    });
+  }
+
+  const select = document.getElementById("prestige-skill-select");
+  select.innerHTML = prestige.skills.map((skill) =>
+    `<option value="${esc(skill.key)}"${skill.key === state.prestige.skillKey ? " selected" : ""}>${esc(skill.name)} (${skill.points_unspent} ${esc(t("prestige.pointsShort"))})</option>`
+  ).join("");
+
+  const selected = prestige.skills.find((s) => s.key === state.prestige.skillKey) || prestige.skills[0];
+  document.getElementById("prestige-detail").innerHTML = renderPrestigeDetail(selected);
+
+  document.getElementById("prestige-summary-tbody").innerHTML = prestige.skills.map((skill) =>
+    `<tr class="prestige-summary-row${skill.key === selected.key ? " active" : ""}" data-skill-key="${esc(skill.key)}">
+      <td>${esc(skill.name)}</td>
+      <td>${prestigeStars(skill.prestige_count) || "—"}</td>
+      <td>${skill.points_unspent}</td>
+      <td>${skill.points_earned}${skill.point_cap ? ` / ${skill.point_cap}` : ""}</td>
+    </tr>`
+  ).join("");
+
+  panel.querySelectorAll(".prestige-summary-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      state.prestige.skillKey = row.dataset.skillKey;
+      renderPrestige(d);
     });
   });
 }
