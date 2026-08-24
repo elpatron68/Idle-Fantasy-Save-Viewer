@@ -229,6 +229,12 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(categorize_item("oak_bookshelf"), "Construction")
         self.assertEqual(categorize_item("mithril_axe"), "Tools")
         self.assertEqual(categorize_item("iron_battleaxe"), "Melee Weapons")
+        self.assertEqual(categorize_item("abyssal_whip"), "Melee Weapons")
+        self.assertEqual(categorize_item("maple_dresser"), "Construction")
+        self.assertEqual(categorize_item("manta_ray"), "Raw Food")
+        self.assertEqual(categorize_item("crab"), "Raw Food")
+        self.assertEqual(categorize_item("sea_turtle"), "Raw Food")
+        self.assertEqual(categorize_item("void_lotus"), "Herbs")
 
     def test_real_export_if_present(self) -> None:
         path = Path(__file__).parent / ".tmp" / "fantasyidler_save (20).json"

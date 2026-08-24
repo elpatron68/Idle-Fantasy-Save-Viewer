@@ -42,7 +42,7 @@ JEWELRY = frozenset({
 })
 
 HERBS = frozenset({
-    "magic_herb", "spirit_herb", "celestial_bloom",
+    "magic_herb", "spirit_herb", "celestial_bloom", "void_lotus",
 })
 
 CONSTRUCTION = frozenset({
@@ -50,9 +50,14 @@ CONSTRUCTION = frozenset({
     "stone_block", "plank",
 })
 
+# Raw catches sold or stacked without the raw_ prefix (cooked forms live in COOKED_FOOD).
+RAW_FOOD = frozenset({
+    "manta_ray", "crab", "sea_turtle", "squid", "eel", "oyster", "clam",
+})
+
 MELEE_SUFFIXES = (
     "_sword", "_dagger", "_scimitar", "_longsword", "_battleaxe",
-    "_warhammer", "_mace", "_spear", "_halberd", "_claws", "_2h_sword",
+    "_warhammer", "_mace", "_spear", "_halberd", "_claws", "_2h_sword", "_whip",
 )
 
 ARMOR_PARTS = (
@@ -84,7 +89,7 @@ def categorize_item(key: str) -> str:
     if k.endswith("_rune"):
         return "Runes"
 
-    if k.startswith("raw_"):
+    if k.startswith("raw_") or k in RAW_FOOD:
         return "Raw Food"
 
     if k.startswith("cooked_") or k in COOKED_FOOD:
@@ -124,7 +129,7 @@ def categorize_item(key: str) -> str:
     if k.endswith("_potion") or k.endswith("_brew"):
         return "Potions & Brews"
 
-    if k in CONSTRUCTION or k.endswith("_bookshelf") or k.endswith("_cabinet") or k.endswith("_shelf") or k.endswith("_rack"):
+    if k in CONSTRUCTION or k.endswith(("_bookshelf", "_cabinet", "_shelf", "_rack", "_dresser")):
         return "Construction"
 
     if k == "lockpick":
