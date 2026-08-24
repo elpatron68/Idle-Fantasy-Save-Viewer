@@ -181,6 +181,100 @@ def _normalize_loadouts(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     return result
 
 
+def _format_boss_coin_day(day: int) -> str | None:
+    if day <= 0:
+        return None
+    text = str(day)
+    if len(text) == 8 and text.isdigit():
+        return f"{text[0:4]}-{text[4:6]}-{text[6:8]}"
+    return text
+
+
+def _normalize_repeat_progress(index: Any, total: Any, label: str, issues: list[Issue]) -> dict[str, Any]:
+    idx = _safe_int(index, f"flags.{label}_index", issues)
+    tot = _safe_int(total, f"flags.{label}_total", issues)
+    active = tot > 0 and idx > 0
+    return {
+        "index": idx,
+        "total": tot,
+        "active": active,
+        "label": f"{idx}/{tot}" if tot > 0 else None,
+    }
+
+
+def _normalize_combat_loadout(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    food_raw = _ensure_dict(flags.get("equipped_food"), "flags.equipped_food", issues)
+    food: list[dict[str, Any]] = []
+    for key, qty in sorted(food_raw.items()):
+        count = _safe_int(qty, f"flags.equipped_food.{key}", issues)
+        if count <= 0:
+            continue
+        food.append({
+            "key": str(key),
+            "name": format_item_name(str(key)),
+            "qty": count,
+        })
+
+    boss_kills_raw = _ensure_dict(
+        flags.get("boss_coin_kills_by_boss"), "flags.boss_coin_kills_by_boss", issues,
+    )
+    boss_kills = [
+        {
+            "key": str(key),
+            "name": format_key(str(key)),
+            "kills": _safe_int(value, f"flags.boss_coin_kills_by_boss.{key}", issues),
+        }
+        for key, value in sorted(boss_kills_raw.items(), key=lambda item: item[0])
+    ]
+    boss_coin_day = _safe_int(flags.get("boss_coin_day"), "flags.boss_coin_day", issues)
+
+    arrows_key = flags.get("equipped_arrows")
+    runes_key = flags.get("equipped_runes")
+    magic_spell = flags.get("magic_loadout_spell_name") or flags.get("active_spell")
+    ranged_arrow = flags.get("ranged_loadout_arrow_key")
+
+    def _optional_item(key: Any) -> dict[str, Any] | None:
+        if key is None or key == "":
+            return None
+        text = str(key)
+        return {"key": text, "name": format_item_name(text)}
+
+    boss_repeat = _normalize_repeat_progress(
+        flags.get("active_boss_repeat_index"),
+        flags.get("active_boss_repeat_total"),
+        "active_boss_repeat",
+        issues,
+    )
+    dungeon_repeat = _normalize_repeat_progress(
+        flags.get("active_dungeon_repeat_index"),
+        flags.get("active_dungeon_repeat_total"),
+        "active_dungeon_repeat",
+        issues,
+    )
+
+    return {
+        "food": food,
+        "food_count": len(food),
+        "food_eat_threshold_pct": _safe_int(
+            flags.get("food_eat_threshold_pct"), "flags.food_eat_threshold_pct", issues, default=50,
+        ),
+        "arrows": _optional_item(arrows_key),
+        "runes": _optional_item(runes_key),
+        "magic_spell": _optional_item(magic_spell),
+        "ranged_arrow": _optional_item(ranged_arrow),
+        "boss_coin_day": boss_coin_day,
+        "boss_coin_day_label": _format_boss_coin_day(boss_coin_day),
+        "boss_coin_kills": boss_kills,
+        "boss_repeat": boss_repeat,
+        "dungeon_repeat": dungeon_repeat,
+        "has_data": bool(
+            food or boss_kills or boss_coin_day > 0
+            or arrows_key or runes_key or magic_spell or ranged_arrow
+            or boss_repeat["active"] or dungeon_repeat["active"]
+        ),
+    }
+
+
 def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     stats_raw = _ensure_dict(raw, "flags.dungeon_last_run_stats", issues)
     result = []
@@ -607,6 +701,7 @@ def normalize_save(
         for k, v in _ensure_dict(flags.get("skilling_dungeon_notes"), "flags.skilling_dungeon_notes", issues).items()
     }
     slayer_points = _safe_int(flags.get("slayer_points"), "flags.slayer_points", issues)
+    combat_loadout = _normalize_combat_loadout(flags, issues)
     foretold_tasks = [
         task for task in (
             _normalize_slayer_task(entry)
@@ -809,6 +904,7 @@ def normalize_save(
             "slayer_task": _normalize_slayer_task(flags.get("active_slayer_task")),
             "slayer_points": slayer_points,
             "foretold_tasks": foretold_tasks,
+            "loadout": combat_loadout,
         },
         "guild_reputation": guild_reputation,
         "pets": pets,

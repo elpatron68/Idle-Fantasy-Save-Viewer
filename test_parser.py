@@ -60,6 +60,14 @@ def _save(**overrides) -> dict:
             "seasonal_bounty_slots": ["sunspire_firewood"],
             "seasonal_bounty_progress": {"sunspire_firewood": 20},
             "player_notes": "  next: willow logs  ",
+            "magic_loadout_spell_name": "blood_wave",
+            "equipped_food": {"lobster": 1, "shark": 2},
+            "equipped_arrows": "mithril_arrows",
+            "food_eat_threshold_pct": 60,
+            "boss_coin_day": 20260714,
+            "boss_coin_kills_by_boss": {"demon_lord": 5, "void_sovereign": 2},
+            "active_boss_repeat_index": 2,
+            "active_boss_repeat_total": 5,
             "house": {
                 "rooms": [{"x": 7, "y": 7, "w": 4, "h": 4, "floor": "dark"}],
                 "placements": [{"item": "bed_default", "x": 30, "y": 30}],
@@ -161,6 +169,19 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(len(blueprints), 1)
         self.assertEqual(blueprints[0]["name"], "Cozy")
         self.assertEqual(blueprints[0]["layout"]["stats"]["room_count"], 1)
+
+    def test_combat_loadout(self) -> None:
+        data = normalize_save(_save())
+        loadout = data["combat"]["loadout"]
+        self.assertTrue(loadout["has_data"])
+        self.assertEqual(loadout["food_count"], 2)
+        self.assertEqual(loadout["food_eat_threshold_pct"], 60)
+        self.assertEqual(loadout["magic_spell"]["key"], "blood_wave")
+        self.assertEqual(loadout["arrows"]["key"], "mithril_arrows")
+        self.assertEqual(loadout["boss_coin_day_label"], "2026-07-14")
+        self.assertEqual(len(loadout["boss_coin_kills"]), 2)
+        self.assertTrue(loadout["boss_repeat"]["active"])
+        self.assertEqual(loadout["boss_repeat"]["label"], "2/5")
 
     def test_prestige_talent_tree(self) -> None:
         data = normalize_save(_save())

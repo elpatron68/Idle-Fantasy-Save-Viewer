@@ -246,7 +246,22 @@
     "notSurvived": "No",
     "yes": "Yes",
     "totalRuns": "Total runs",
-    "died": "Died"
+    "died": "Died",
+    "loadout": {
+      "title": "Combat loadout",
+      "foodPreset": "Food preset",
+      "eatThreshold": "Eat when HP below {pct}%",
+      "combatStyles": "Style presets",
+      "magicSpell": "Magic spell",
+      "rangedArrow": "Ranged arrow",
+      "arrows": "Equipped arrows",
+      "runes": "Equipped runes",
+      "bossCoins": "Boss coin progress",
+      "bossCoinDay": "Tracking day",
+      "repeatRuns": "Repeat runs",
+      "bossRepeat": "Boss repeat",
+      "dungeonRepeat": "Dungeon repeat"
+    }
   },
   "events": {
     "seasonal": "Seasonal events",

@@ -1544,6 +1544,31 @@ tr.has-goal td:first-child { font-weight: 600; }
   font-weight: normal;
 }
 
+.combat-loadout-card {
+  grid-column: 1 / -1;
+}
+
+.combat-loadout-sections {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .combat-loadout-sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.combat-loadout-section h4 {
+  margin: 0 0 8px;
+}
+
+.combat-loadout-meta {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
 .prestige-select-label {
   display: flex;
   flex-direction: column;

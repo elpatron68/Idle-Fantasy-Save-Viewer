@@ -2570,6 +2570,68 @@ function renderEvents(d) {
     </div>`;
 }
 
+function renderCombatLoadoutHtml(loadout) {
+  if (!loadout?.has_data) return "";
+
+  const foodList = (loadout.food || []).map((item) =>
+    `<li><span>${esc(item.name)}</span><span>${fmt(item.qty)}</span></li>`
+  ).join("");
+
+  const styleLines = [
+    loadout.magic_spell
+      ? `<li><span>${esc(t("combat.loadout.magicSpell"))}</span><span>${esc(loadout.magic_spell.name)}</span></li>`
+      : "",
+    loadout.ranged_arrow
+      ? `<li><span>${esc(t("combat.loadout.rangedArrow"))}</span><span>${esc(loadout.ranged_arrow.name)}</span></li>`
+      : "",
+    loadout.arrows
+      ? `<li><span>${esc(t("combat.loadout.arrows"))}</span><span>${esc(loadout.arrows.name)}</span></li>`
+      : "",
+    loadout.runes
+      ? `<li><span>${esc(t("combat.loadout.runes"))}</span><span>${esc(loadout.runes.name)}</span></li>`
+      : "",
+  ].filter(Boolean).join("");
+
+  const bossDay = loadout.boss_coin_day_label
+    ? `<li><span>${esc(t("combat.loadout.bossCoinDay"))}</span><span>${esc(loadout.boss_coin_day_label)}</span></li>`
+    : "";
+  const bossKills = (loadout.boss_coin_kills || []).map((entry) =>
+    `<li><span>${esc(entry.name)}</span><span>${fmt(entry.kills)}</span></li>`
+  ).join("");
+
+  const repeatLines = [
+    loadout.boss_repeat?.active
+      ? `<li><span>${esc(t("combat.loadout.bossRepeat"))}</span><span>${esc(loadout.boss_repeat.label)}</span></li>`
+      : "",
+    loadout.dungeon_repeat?.active
+      ? `<li><span>${esc(t("combat.loadout.dungeonRepeat"))}</span><span>${esc(loadout.dungeon_repeat.label)}</span></li>`
+      : "",
+  ].filter(Boolean).join("");
+
+  return `<div class="card combat-loadout-card">
+    <h3>${esc(t("combat.loadout.title"))}</h3>
+    <div class="combat-loadout-sections">
+      ${foodList ? `<div class="combat-loadout-section">
+        <h4>${esc(t("combat.loadout.foodPreset"))}</h4>
+        <p class="combat-loadout-meta">${esc(t("combat.loadout.eatThreshold", { pct: loadout.food_eat_threshold_pct }))}</p>
+        <ul class="list-compact">${foodList}</ul>
+      </div>` : ""}
+      ${styleLines ? `<div class="combat-loadout-section">
+        <h4>${esc(t("combat.loadout.combatStyles"))}</h4>
+        <ul class="list-compact">${styleLines}</ul>
+      </div>` : ""}
+      ${bossDay || bossKills ? `<div class="combat-loadout-section">
+        <h4>${esc(t("combat.loadout.bossCoins"))}</h4>
+        <ul class="list-compact">${bossDay}${bossKills}</ul>
+      </div>` : ""}
+      ${repeatLines ? `<div class="combat-loadout-section">
+        <h4>${esc(t("combat.loadout.repeatRuns"))}</h4>
+        <ul class="list-compact">${repeatLines}</ul>
+      </div>` : ""}
+    </div>
+  </div>`;
+}
+
 function renderCombat(d) {
   const recent = (d.recent_sessions || [])
     .map((s) => `<li><span>${esc(s.activity_display_name || s.activity_key)}</span><span>${esc(s.skill_name)}</span></li>`).join("");
@@ -2584,6 +2646,7 @@ function renderCombat(d) {
   const none = `<li>${esc(t("empty.none"))}</li>`;
   document.getElementById("tab-combat").innerHTML = `
     <div class="grid-2">
+      ${renderCombatLoadoutHtml(d.combat?.loadout)}
       <div class="card">
         <h3>${esc(t("combat.enemyKills"))}</h3>
         <div class="table-wrap" id="combat-kills-wrap">

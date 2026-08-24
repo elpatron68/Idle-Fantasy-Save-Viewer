@@ -246,7 +246,22 @@
     "notSurvived": "Nein",
     "yes": "Ja",
     "totalRuns": "Läufe gesamt",
-    "died": "Gestorben"
+    "died": "Gestorben",
+    "loadout": {
+      "title": "Kampf-Loadout",
+      "foodPreset": "Nahrungs-Preset",
+      "eatThreshold": "Essen unter {pct}% HP",
+      "combatStyles": "Stil-Presets",
+      "magicSpell": "Magie-Zauber",
+      "rangedArrow": "Fernkampf-Pfeil",
+      "arrows": "Ausgerüstete Pfeile",
+      "runes": "Ausgerüstete Runen",
+      "bossCoins": "Boss-Münzen-Fortschritt",
+      "bossCoinDay": "Tracking-Tag",
+      "repeatRuns": "Wiederholungs-Läufe",
+      "bossRepeat": "Boss-Wiederholung",
+      "dungeonRepeat": "Dungeon-Wiederholung"
+    }
   },
   "events": {
     "seasonal": "Saison-Events",
