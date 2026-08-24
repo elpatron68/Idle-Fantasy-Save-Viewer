@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from categories import categorize_item
+from house_data import house_ground_name, house_item_meta, house_item_name, house_max_rooms
+from prestige_data import build_prestige_bundle
 from validation import Issue, analyze_save, has_errors, issue
 
 
@@ -179,6 +181,100 @@ def _normalize_loadouts(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     return result
 
 
+def _format_boss_coin_day(day: int) -> str | None:
+    if day <= 0:
+        return None
+    text = str(day)
+    if len(text) == 8 and text.isdigit():
+        return f"{text[0:4]}-{text[4:6]}-{text[6:8]}"
+    return text
+
+
+def _normalize_repeat_progress(index: Any, total: Any, label: str, issues: list[Issue]) -> dict[str, Any]:
+    idx = _safe_int(index, f"flags.{label}_index", issues)
+    tot = _safe_int(total, f"flags.{label}_total", issues)
+    active = tot > 0 and idx > 0
+    return {
+        "index": idx,
+        "total": tot,
+        "active": active,
+        "label": f"{idx}/{tot}" if tot > 0 else None,
+    }
+
+
+def _normalize_combat_loadout(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    food_raw = _ensure_dict(flags.get("equipped_food"), "flags.equipped_food", issues)
+    food: list[dict[str, Any]] = []
+    for key, qty in sorted(food_raw.items()):
+        count = _safe_int(qty, f"flags.equipped_food.{key}", issues)
+        if count <= 0:
+            continue
+        food.append({
+            "key": str(key),
+            "name": format_item_name(str(key)),
+            "qty": count,
+        })
+
+    boss_kills_raw = _ensure_dict(
+        flags.get("boss_coin_kills_by_boss"), "flags.boss_coin_kills_by_boss", issues,
+    )
+    boss_kills = [
+        {
+            "key": str(key),
+            "name": format_key(str(key)),
+            "kills": _safe_int(value, f"flags.boss_coin_kills_by_boss.{key}", issues),
+        }
+        for key, value in sorted(boss_kills_raw.items(), key=lambda item: item[0])
+    ]
+    boss_coin_day = _safe_int(flags.get("boss_coin_day"), "flags.boss_coin_day", issues)
+
+    arrows_key = flags.get("equipped_arrows")
+    runes_key = flags.get("equipped_runes")
+    magic_spell = flags.get("magic_loadout_spell_name") or flags.get("active_spell")
+    ranged_arrow = flags.get("ranged_loadout_arrow_key")
+
+    def _optional_item(key: Any) -> dict[str, Any] | None:
+        if key is None or key == "":
+            return None
+        text = str(key)
+        return {"key": text, "name": format_item_name(text)}
+
+    boss_repeat = _normalize_repeat_progress(
+        flags.get("active_boss_repeat_index"),
+        flags.get("active_boss_repeat_total"),
+        "active_boss_repeat",
+        issues,
+    )
+    dungeon_repeat = _normalize_repeat_progress(
+        flags.get("active_dungeon_repeat_index"),
+        flags.get("active_dungeon_repeat_total"),
+        "active_dungeon_repeat",
+        issues,
+    )
+
+    return {
+        "food": food,
+        "food_count": len(food),
+        "food_eat_threshold_pct": _safe_int(
+            flags.get("food_eat_threshold_pct"), "flags.food_eat_threshold_pct", issues, default=50,
+        ),
+        "arrows": _optional_item(arrows_key),
+        "runes": _optional_item(runes_key),
+        "magic_spell": _optional_item(magic_spell),
+        "ranged_arrow": _optional_item(ranged_arrow),
+        "boss_coin_day": boss_coin_day,
+        "boss_coin_day_label": _format_boss_coin_day(boss_coin_day),
+        "boss_coin_kills": boss_kills,
+        "boss_repeat": boss_repeat,
+        "dungeon_repeat": dungeon_repeat,
+        "has_data": bool(
+            food or boss_kills or boss_coin_day > 0
+            or arrows_key or runes_key or magic_spell or ranged_arrow
+            or boss_repeat["active"] or dungeon_repeat["active"]
+        ),
+    }
+
+
 def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     stats_raw = _ensure_dict(raw, "flags.dungeon_last_run_stats", issues)
     result = []
@@ -194,6 +290,161 @@ def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str
         })
     result.sort(key=lambda row: row["kill_count"], reverse=True)
     return result
+
+
+HOUSE_GRID_SIZE = 18
+
+
+def _normalize_house_layout(
+    raw: Any,
+    issues: list[Issue],
+    field_prefix: str,
+) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        issues.append(issue(
+            "warning", "invalid_house_layout",
+            f'Field "{field_prefix}" is not an object – house layout ignored.',
+            field=field_prefix,
+        ))
+        return None
+
+    rooms_raw = _ensure_list(raw.get("rooms"), f"{field_prefix}.rooms", issues)
+    rooms: list[dict[str, Any]] = []
+    for idx, room in enumerate(rooms_raw):
+        if not isinstance(room, dict):
+            issues.append(issue(
+                "warning", "invalid_house_room",
+                f"House room #{idx + 1} was skipped.",
+                field=f"{field_prefix}.rooms[{idx}]",
+            ))
+            continue
+        w = _safe_int(room.get("w"), f"{field_prefix}.rooms[{idx}].w", issues, default=1)
+        h = _safe_int(room.get("h"), f"{field_prefix}.rooms[{idx}].h", issues, default=1)
+        floor = str(room.get("floor") or "dark")
+        rooms.append({
+            "index": idx + 1,
+            "x": _safe_int(room.get("x"), f"{field_prefix}.rooms[{idx}].x", issues),
+            "y": _safe_int(room.get("y"), f"{field_prefix}.rooms[{idx}].y", issues),
+            "w": max(w, 1),
+            "h": max(h, 1),
+            "floor": floor,
+            "floor_name": format_key(floor),
+            "cells": max(w, 1) * max(h, 1),
+        })
+
+    coord_scale = _safe_int(raw.get("coord_scale"), f"{field_prefix}.coord_scale", issues, default=1)
+    if coord_scale < 1:
+        coord_scale = 1
+
+    placements_raw = _ensure_list(raw.get("placements"), f"{field_prefix}.placements", issues)
+    placements: list[dict[str, Any]] = []
+    for idx, placement in enumerate(placements_raw):
+        if not isinstance(placement, dict):
+            issues.append(issue(
+                "warning", "invalid_house_placement",
+                f"House placement #{idx + 1} was skipped.",
+                field=f"{field_prefix}.placements[{idx}]",
+            ))
+            continue
+        item_key = str(placement.get("item") or "")
+        meta = house_item_meta(item_key)
+        px = _safe_int(placement.get("x"), f"{field_prefix}.placements[{idx}].x", issues)
+        py = _safe_int(placement.get("y"), f"{field_prefix}.placements[{idx}].y", issues)
+        placements.append({
+            "item": item_key,
+            "name": house_item_name(item_key),
+            "x": px,
+            "y": py,
+            "cell_x": px // coord_scale,
+            "cell_y": py // coord_scale,
+            "category": meta["category"],
+            "footprint_w": meta["footprint_w"],
+            "footprint_h": meta["footprint_h"],
+            "wall_mounted": meta["wall_mounted"],
+            "anchor": meta["anchor"],
+            "level_required": meta["level_required"],
+        })
+
+    storage_raw = _ensure_dict(raw.get("storage"), f"{field_prefix}.storage", issues)
+    storage: list[dict[str, Any]] = []
+    for key, qty in sorted(storage_raw.items()):
+        count = _safe_int(qty, f"{field_prefix}.storage.{key}", issues)
+        if count <= 0:
+            continue
+        storage.append({
+            "key": str(key),
+            "name": house_item_name(str(key)),
+            "qty": count,
+        })
+
+    ground = str(raw.get("ground") or "ground_1")
+    room_cells = sum(room["cells"] for room in rooms)
+
+    return {
+        "rooms": rooms,
+        "placements": placements,
+        "storage": storage,
+        "ground": ground,
+        "ground_name": house_ground_name(ground),
+        "coord_scale": coord_scale,
+        "grid_size": HOUSE_GRID_SIZE,
+        "stats": {
+            "room_count": len(rooms),
+            "room_cells": room_cells,
+            "placement_count": len(placements),
+            "storage_items": sum(entry["qty"] for entry in storage),
+            "storage_kinds": len(storage),
+            "max_rooms": house_max_rooms(),
+        },
+    }
+
+
+def _normalize_house_bundle(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    layout = _normalize_house_layout(flags.get("house"), issues, "flags.house")
+
+    draft: dict[str, Any] | None = None
+    draft_raw = flags.get("house_draft")
+    if isinstance(draft_raw, dict):
+        draft_layout = _normalize_house_layout(
+            draft_raw.get("layout"), issues, "flags.house_draft.layout",
+        )
+        built_room_index = _ensure_list(
+            draft_raw.get("built_room_index"), "flags.house_draft.built_room_index", issues,
+        )
+        if draft_layout is not None:
+            draft = {
+                "layout": draft_layout,
+                "built_room_index": built_room_index,
+            }
+
+    blueprints: list[dict[str, Any]] = []
+    for idx, blueprint in enumerate(_ensure_list(flags.get("house_blueprints"), "flags.house_blueprints", issues)):
+        if not isinstance(blueprint, dict):
+            issues.append(issue(
+                "warning", "invalid_house_blueprint",
+                f"House blueprint #{idx + 1} was skipped.",
+                field=f"flags.house_blueprints[{idx}]",
+            ))
+            continue
+        blueprint_layout = _normalize_house_layout(
+            blueprint.get("layout"), issues, f"flags.house_blueprints[{idx}].layout",
+        )
+        if blueprint_layout is None:
+            continue
+        blueprints.append({
+            "slot": _safe_int(blueprint.get("slot"), f"flags.house_blueprints[{idx}].slot", issues, default=idx),
+            "name": str(blueprint.get("name") or f"Blueprint {idx + 1}"),
+            "layout": blueprint_layout,
+        })
+    blueprints.sort(key=lambda row: row["slot"])
+
+    return {
+        "layout": layout,
+        "draft": draft,
+        "blueprints": blueprints,
+    }
 
 
 def _normalize_seasonal(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
@@ -450,6 +701,7 @@ def normalize_save(
         for k, v in _ensure_dict(flags.get("skilling_dungeon_notes"), "flags.skilling_dungeon_notes", issues).items()
     }
     slayer_points = _safe_int(flags.get("slayer_points"), "flags.slayer_points", issues)
+    combat_loadout = _normalize_combat_loadout(flags, issues)
     foretold_tasks = [
         task for task in (
             _normalize_slayer_task(entry)
@@ -476,6 +728,62 @@ def normalize_save(
     session_queue = _ensure_list(flags.get("session_queue"), "flags.session_queue", issues)
     recent_sessions = _ensure_list(flags.get("recent_sessions"), "flags.recent_sessions", issues)
     town_buildings = _ensure_dict(flags.get("town_building_tiers"), "flags.town_building_tiers", issues)
+    house_bundle = _normalize_house_bundle(flags, issues)
+
+    points_earned_map = _ensure_dict(
+        flags.get("prestige_points_earned"), "flags.prestige_points_earned", issues,
+    )
+    prestige_nodes_raw = _ensure_dict(flags.get("prestige_nodes"), "flags.prestige_nodes", issues)
+    prestige_nodes_map: dict[str, list[str]] = {}
+    for skill_key, node_ids in prestige_nodes_raw.items():
+        if isinstance(node_ids, list):
+            prestige_nodes_map[str(skill_key)] = [str(node_id) for node_id in node_ids]
+        else:
+            issues.append(issue(
+                "warning", "invalid_prestige_nodes",
+                f'Prestige nodes for "{skill_key}" are not a list – skipped.',
+                field=f"flags.prestige_nodes.{skill_key}",
+            ))
+
+    respec_at_map = {
+        str(skill_key): _safe_int(
+            value, f"flags.prestige_last_respec_at.{skill_key}", issues,
+        )
+        for skill_key, value in _ensure_dict(
+            flags.get("prestige_last_respec_at"), "flags.prestige_last_respec_at", issues,
+        ).items()
+    }
+    xp_boost_map = {
+        str(skill_key): _safe_int(
+            value, f"flags.prestige_xp_boosts.{skill_key}", issues,
+        )
+        for skill_key, value in _ensure_dict(
+            flags.get("prestige_xp_boosts"), "flags.prestige_xp_boosts", issues,
+        ).items()
+    }
+    level_map = {
+        str(key): _safe_int(value, f"skillLevels.{key}", issues, default=1)
+        for key, value in skill_levels.items()
+    }
+    prestige_map_int = {
+        str(key): _safe_int(value, f"flags.skill_prestige.{key}", issues)
+        for key, value in prestige_map.items()
+    }
+    points_earned_int = {
+        str(key): _safe_int(value, f"flags.prestige_points_earned.{key}", issues)
+        for key, value in points_earned_map.items()
+    }
+    prestige = build_prestige_bundle(
+        skill_levels=level_map,
+        skill_prestige=prestige_map_int,
+        points_earned=points_earned_int,
+        prestige_nodes=prestige_nodes_map,
+        respec_at=respec_at_map,
+        xp_boosts=xp_boost_map,
+        character_race=flags.get("character_race"),
+        ironman=bool(flags.get("ironman")),
+    )
+
     coins = _safe_int(raw.get("coins"), "coins", issues)
     inventory_coins = _safe_int(inventory.get("coins"), "inventory.coins", issues)
 
@@ -596,6 +904,7 @@ def normalize_save(
             "slayer_task": _normalize_slayer_task(flags.get("active_slayer_task")),
             "slayer_points": slayer_points,
             "foretold_tasks": foretold_tasks,
+            "loadout": combat_loadout,
         },
         "guild_reputation": guild_reputation,
         "pets": pets,
@@ -648,6 +957,10 @@ def normalize_save(
         "recent_sessions": recent_sessions,
         "sessions": sessions,
         "town_buildings": town_buildings,
+        "house": house_bundle["layout"],
+        "house_draft": house_bundle["draft"],
+        "house_blueprints": house_bundle["blueprints"],
+        "prestige": prestige,
         "meta": {
             "source_file": source_file,
             "exported_at": raw.get("exported_at"),

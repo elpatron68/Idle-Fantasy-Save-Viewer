@@ -6,6 +6,7 @@ let state = {
   timeline: [],
   inventory: { search: "", categories: new Set(), sort: "category", highlightEquipped: false, collapsedGroups: new Set() },
   skills: { search: "", sort: "level", sortAsc: false, advisorKey: null, advisor: null, advisorLoading: false },
+  prestige: { skillKey: null },
   quests: { tab: "story", filter: "all" },
   goals: { filter: "all", collapsedGroups: new Set(), data: { groups: [], ungrouped: [] } },
   goalsOverview: null,
@@ -317,6 +318,31 @@ function renderGlobalSearchResults() {
       });
     }
   }
+  const house = d.house;
+  if (house) {
+    for (const placement of house.placements || []) {
+      if (placement.name.toLowerCase().includes(q) || placement.item.toLowerCase().includes(q)) {
+        hits.push({
+          type: "houseItem",
+          tab: "house",
+          key: placement.item,
+          name: placement.name,
+          sub: t("house.placements"),
+        });
+      }
+    }
+    for (const stored of house.storage || []) {
+      if (stored.name.toLowerCase().includes(q) || stored.key.toLowerCase().includes(q)) {
+        hits.push({
+          type: "houseItem",
+          tab: "house",
+          key: stored.key,
+          name: stored.name,
+          sub: `${t("house.storage")} · ${fmt(stored.qty)}`,
+        });
+      }
+    }
+  }
 
   if (!hits.length) {
     el.hidden = false;
@@ -486,9 +512,11 @@ function renderAll() {
   renderOverview(d);
   bindImportChangesCard();
   renderSkills(d);
+  renderPrestige(d);
   renderInventory(d);
   renderGoals();
   renderEquipment(d);
+  renderHouse(d);
   renderQuests(d);
   renderCombat(d);
   renderEvents(d);
@@ -1388,6 +1416,161 @@ function bindSparklines(container) {
   });
 }
 
+function prestigeEffectSummary(effect, value, unlock) {
+  const labelKey = `prestige.effect.${effect}`;
+  const label = I18n.t(labelKey) !== labelKey ? t(labelKey) : humanizeKey(effect);
+  if (effect === "unlock_recipe" && unlock) {
+    return `${label}: ${humanizeKey(unlock)}`;
+  }
+  if (effect === "second_chance" || effect === "crop_rotation_always" || effect === "slayer_multi_task") {
+    return label;
+  }
+  if (effect === "session_floor_min" || effect === "flow_interval_reduction") {
+    return `${label} ${value} min`;
+  }
+  if (Number.isInteger(value) || Math.abs(value - Math.round(value)) < 0.001) {
+    return `${label} +${Math.round(value)}`;
+  }
+  return `${label} +${value}`;
+}
+
+function prestigeNodeBadge(node) {
+  const badges = {
+    owned: t("prestige.nodeOwned"),
+    available: t("prestige.nodeAvailable"),
+    unaffordable: t("prestige.nodeUnaffordable"),
+    locked: t("prestige.nodeLocked"),
+    race_locked: t("prestige.nodeRaceLocked"),
+  };
+  return badges[node.state] || node.state;
+}
+
+function prestigePathHtml(path) {
+  const autoBadge = path.auto
+    ? `<span class="prestige-auto-badge">${esc(t("prestige.autoPath"))}</span>`
+    : "";
+  const nodes = (path.nodes || []).map((node) => {
+    const races = node.races?.length
+      ? `<span class="prestige-node-races">${esc(node.races.map(humanizeKey).join(", "))}</span>`
+      : "";
+    const cost = path.auto ? t("prestige.autoTier", { tier: node.tier }) : `${node.cost} ${esc(t("prestige.pointsShort"))}`;
+    return `<li class="prestige-node prestige-node-${esc(node.state)}">
+      <div class="prestige-node-head">
+        <strong>${esc(path.key_name)} ${node.tier}</strong>
+        <span class="prestige-node-badge">${esc(prestigeNodeBadge(node))}</span>
+      </div>
+      <div class="prestige-node-body">
+        <span>${esc(prestigeEffectSummary(node.effect, node.value, node.unlock))}</span>
+        <span>${esc(cost)}</span>
+        ${races}
+      </div>
+    </li>`;
+  }).join("");
+
+  return `<div class="prestige-path">
+    <h4>${esc(path.key_name)} ${autoBadge}</h4>
+    <ul class="prestige-node-list">${nodes || `<li>${esc(t("empty.none"))}</li>`}</ul>
+  </div>`;
+}
+
+function renderPrestigeDetail(skill) {
+  const xpBoost = skill.xp_boost_expires_at && skill.xp_boost_expires_at > Date.now()
+    ? `<li><span>${esc(t("prestige.xpBoost"))}</span><span>${formatTs(skill.xp_boost_expires_at)}</span></li>`
+    : "";
+  const respec = skill.respec_at
+    ? `<li><span>${esc(t("prestige.lastRespec"))}</span><span>${formatTs(skill.respec_at)}</span></li>`
+    : "";
+  const effects = (skill.effects || []).map((entry) =>
+    `<li><span>${esc(prestigeEffectSummary(entry.effect, entry.total, null))}</span><span>${esc(t("prestige.activeTotal"))}</span></li>`
+  ).join("");
+
+  return `<div class="card prestige-detail-card">
+    <h3>${esc(skill.name)} ${prestigeStars(skill.prestige_count)}</h3>
+    <ul class="list-compact">
+      <li><span>${esc(t("skills.level"))}</span><span>${skill.level}</span></li>
+      <li><span>${esc(t("prestige.prestigeCount"))}</span><span>${skill.prestige_count}</span></li>
+      <li><span>${esc(t("prestige.pointsEarned"))}</span><span>${skill.points_earned} / ${skill.point_cap || "—"}</span></li>
+      <li><span>${esc(t("prestige.pointsUnspent"))}</span><span>${skill.points_unspent}</span></li>
+      <li><span>${esc(t("prestige.pointsSpent"))}</span><span>${skill.points_spent}</span></li>
+      <li><span>${esc(t("prestige.purchasedNodes"))}</span><span>${skill.purchased_count}</span></li>
+      ${xpBoost}
+      ${respec}
+    </ul>
+    ${effects ? `<h4>${esc(t("prestige.activeEffects"))}</h4><ul class="list-compact">${effects}</ul>` : ""}
+    <h4>${esc(t("prestige.talentTree"))}</h4>
+    <div class="prestige-paths">${(skill.paths || []).map(prestigePathHtml).join("")}</div>
+  </div>`;
+}
+
+function renderPrestige(d) {
+  const panel = document.getElementById("tab-prestige");
+  if (!panel) return;
+
+  const prestige = d.prestige;
+  if (!prestige?.skills?.length) {
+    panel.innerHTML = `<div class="card"><p class="empty-state">${esc(t("prestige.noData"))}</p></div>`;
+    return;
+  }
+
+  if (!state.prestige.skillKey || !prestige.skills.some((s) => s.key === state.prestige.skillKey)) {
+    state.prestige.skillKey = prestige.skills[0].key;
+  }
+
+  if (!panel.querySelector("#prestige-skill-select")) {
+    panel.innerHTML = `
+      <div class="toolbar">
+        <label class="prestige-select-label">
+          <span>${esc(t("prestige.selectSkill"))}</span>
+          <select class="select-input" id="prestige-skill-select"></select>
+        </label>
+      </div>
+      <div id="prestige-detail"></div>
+      <div class="card prestige-overview-card">
+        <h3>${esc(t("prestige.allSkills"))}</h3>
+        <div class="table-wrap">
+          <table class="combat-table" id="prestige-summary-table">
+            <thead><tr>
+              <th>${esc(t("skills.skill"))}</th>
+              <th>${esc(t("skills.prestige"))}</th>
+              <th>${esc(t("prestige.pointsUnspent"))}</th>
+              <th>${esc(t("prestige.pointsEarned"))}</th>
+            </tr></thead>
+            <tbody id="prestige-summary-tbody"></tbody>
+          </table>
+        </div>
+      </div>`;
+
+    document.getElementById("prestige-skill-select").addEventListener("change", (e) => {
+      state.prestige.skillKey = e.target.value;
+      renderPrestige(d);
+    });
+  }
+
+  const select = document.getElementById("prestige-skill-select");
+  select.innerHTML = prestige.skills.map((skill) =>
+    `<option value="${esc(skill.key)}"${skill.key === state.prestige.skillKey ? " selected" : ""}>${esc(skill.name)} (${skill.points_unspent} ${esc(t("prestige.pointsShort"))})</option>`
+  ).join("");
+
+  const selected = prestige.skills.find((s) => s.key === state.prestige.skillKey) || prestige.skills[0];
+  document.getElementById("prestige-detail").innerHTML = renderPrestigeDetail(selected);
+
+  document.getElementById("prestige-summary-tbody").innerHTML = prestige.skills.map((skill) =>
+    `<tr class="prestige-summary-row${skill.key === selected.key ? " active" : ""}" data-skill-key="${esc(skill.key)}">
+      <td>${esc(skill.name)}</td>
+      <td>${prestigeStars(skill.prestige_count) || "—"}</td>
+      <td>${skill.points_unspent}</td>
+      <td>${skill.points_earned}${skill.point_cap ? ` / ${skill.point_cap}` : ""}</td>
+    </tr>`
+  ).join("");
+
+  panel.querySelectorAll(".prestige-summary-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      state.prestige.skillKey = row.dataset.skillKey;
+      renderPrestige(d);
+    });
+  });
+}
+
 function renderInventoryTable(d, inv) {
   const items = getFilteredInventoryItems(d, inv);
   const showTrend = inventoryTrendEnabled();
@@ -2044,6 +2227,212 @@ function renderEquipment(d) {
     ${loadouts}`;
 }
 
+function houseCategoryLabel(category) {
+  const key = `house.categoryLabel.${category}`;
+  const label = t(key);
+  return label !== key ? label : humanizeKey(category || "furniture");
+}
+
+function houseGridHtml(layout) {
+  const size = layout.grid_size || 18;
+  const scale = layout.coord_scale || 1;
+  const cells = Array.from({ length: size }, () => Array(size).fill(null));
+
+  for (const room of layout.rooms || []) {
+    for (let dy = 0; dy < room.h; dy++) {
+      for (let dx = 0; dx < room.w; dx++) {
+        const cx = room.x + dx;
+        const cy = room.y + dy;
+        if (cx >= 0 && cx < size && cy >= 0 && cy < size) {
+          cells[cy][cx] = { kind: "room", room, floor: room.floor || "dark" };
+        }
+      }
+    }
+  }
+
+  for (const placement of layout.placements || []) {
+    const fw = placement.footprint_w || 1;
+    const fh = placement.footprint_h || 1;
+    const baseX = placement.cell_x ?? Math.floor(placement.x / scale);
+    const baseY = placement.cell_y ?? Math.floor(placement.y / scale);
+    for (let dy = 0; dy < fh; dy++) {
+      for (let dx = 0; dx < fw; dx++) {
+        const cx = baseX + dx;
+        const cy = baseY + dy;
+        if (cx >= 0 && cx < size && cy >= 0 && cy < size && cells[cy][cx]) {
+          cells[cy][cx].placement = placement;
+        }
+      }
+    }
+  }
+
+  const gridCells = [];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const cell = cells[y][x];
+      if (!cell) {
+        gridCells.push(`<div class="house-cell house-outside" title="(${x}, ${y})"></div>`);
+        continue;
+      }
+      const floorClass = cell.floor === "brick" ? "house-floor-brick" : "house-floor-dark";
+      const itemClass = cell.placement ? " house-has-item" : "";
+      const title = cell.placement
+        ? `${cell.placement.name} (${x}, ${y})`
+        : `${t("house.room")} ${cell.room.index} (${x}, ${y})`;
+      const label = cell.placement ? "•" : String(cell.room.index);
+      gridCells.push(
+        `<div class="house-cell house-room ${floorClass}${itemClass}" title="${esc(title)}">${esc(label)}</div>`
+      );
+    }
+  }
+
+  return `<div class="house-map-wrap">
+    <div class="house-map" style="--house-grid:${size}">${gridCells.join("")}</div>
+    <ul class="house-legend">
+      <li><span class="house-legend-swatch house-outside"></span>${esc(t("house.legendOutside"))}</li>
+      <li><span class="house-legend-swatch house-floor-dark"></span>${esc(t("house.legendRoom"))}</li>
+      <li><span class="house-legend-swatch house-has-item house-floor-dark"></span>${esc(t("house.legendItem"))}</li>
+    </ul>
+  </div>`;
+}
+
+function houseSummaryHtml(layout) {
+  const stats = layout.stats || {};
+  return `<ul class="list-compact">
+    <li><span>${esc(t("house.ground"))}</span><span>${esc(layout.ground_name || layout.ground || "—")}</span></li>
+    <li><span>${esc(t("house.roomCount"))}</span><span>${stats.room_count || 0} / ${stats.max_rooms || "—"}</span></li>
+    <li><span>${esc(t("house.roomCells"))}</span><span>${fmt(stats.room_cells || 0)}</span></li>
+    <li><span>${esc(t("house.placementCount"))}</span><span>${fmt(stats.placement_count || 0)}</span></li>
+    <li><span>${esc(t("house.storageItems"))}</span><span>${fmt(stats.storage_items || 0)}</span></li>
+    <li><span>${esc(t("house.coordScale"))}</span><span>${esc(t("house.coordScaleValue", { scale: layout.coord_scale || 1 }))}</span></li>
+  </ul>`;
+}
+
+function houseRoomsTableHtml(layout) {
+  const rows = (layout.rooms || []).map((room) => `<tr>
+    <td>${room.index}</td>
+    <td>(${room.x}, ${room.y})</td>
+    <td>${esc(t("house.cells", { w: room.w, h: room.h }))}</td>
+    <td>${esc(room.floor_name || humanizeKey(room.floor || "dark"))}</td>
+  </tr>`).join("");
+  return `<div class="table-wrap">
+    <table class="combat-table">
+      <thead><tr>
+        <th>#</th>
+        <th>${esc(t("house.position"))}</th>
+        <th>${esc(t("house.size"))}</th>
+        <th>${esc(t("house.floor"))}</th>
+      </tr></thead>
+      <tbody>${rows || `<tr><td colspan="4">${esc(t("empty.none"))}</td></tr>`}</tbody>
+    </table>
+  </div>`;
+}
+
+function housePlacementsTableHtml(layout) {
+  const rows = (layout.placements || []).map((placement) => `<tr>
+    <td>${esc(placement.name)}</td>
+    <td>${esc(houseCategoryLabel(placement.category))}</td>
+    <td>(${placement.x}, ${placement.y})</td>
+    <td>${esc(t("house.cells", { w: placement.footprint_w || 1, h: placement.footprint_h || 1 }))}</td>
+    <td>${placement.wall_mounted ? esc(t("house.yes")) : esc(t("house.no"))}</td>
+  </tr>`).join("");
+  return `<div class="table-wrap">
+    <table class="combat-table">
+      <thead><tr>
+        <th>${esc(t("house.item"))}</th>
+        <th>${esc(t("house.category"))}</th>
+        <th>${esc(t("house.position"))}</th>
+        <th>${esc(t("house.footprint"))}</th>
+        <th>${esc(t("house.wallMounted"))}</th>
+      </tr></thead>
+      <tbody>${rows || `<tr><td colspan="5">${esc(t("empty.none"))}</td></tr>`}</tbody>
+    </table>
+  </div>`;
+}
+
+function houseStorageListHtml(layout) {
+  const items = (layout.storage || []).map((entry) =>
+    `<li><span>${esc(entry.name)}</span><span>${fmt(entry.qty)}</span></li>`
+  ).join("");
+  return `<ul class="list-compact">${items || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>`;
+}
+
+function houseDraftHtml(draft) {
+  if (!draft?.layout) return "";
+  const layout = draft.layout;
+  const roomNotes = (draft.built_room_index || []).map((idx, i) => {
+    const label = idx == null
+      ? t("house.newRoom")
+      : t("house.builtFrom", { n: Number(idx) + 1 });
+    return `<li><span>${esc(t("house.room"))} ${i + 1}</span><span>${esc(label)}</span></li>`;
+  }).join("");
+  return `<div class="card house-draft-card">
+    <h3>${esc(t("house.draft"))}</h3>
+    <p class="house-draft-hint">${esc(t("house.draftHint"))}</p>
+    ${houseSummaryHtml(layout)}
+    ${roomNotes ? `<h4>${esc(t("house.rooms"))}</h4><ul class="list-compact">${roomNotes}</ul>` : ""}
+    <h4>${esc(t("house.mapTitle"))}</h4>
+    ${houseGridHtml(layout)}
+  </div>`;
+}
+
+function houseBlueprintsHtml(blueprints) {
+  if (!blueprints?.length) return "";
+  const cards = blueprints.map((bp) => {
+    const layout = bp.layout || {};
+    const stats = layout.stats || {};
+    return `<div class="card house-blueprint-card">
+      <h3>${esc(bp.name)} <span class="house-blueprint-slot">${esc(t("house.blueprintSlot", { slot: bp.slot + 1 }))}</span></h3>
+      <ul class="list-compact">
+        <li><span>${esc(t("house.roomCount"))}</span><span>${stats.room_count || 0}</span></li>
+        <li><span>${esc(t("house.placementCount"))}</span><span>${stats.placement_count || 0}</span></li>
+        <li><span>${esc(t("house.storageItems"))}</span><span>${stats.storage_items || 0}</span></li>
+      </ul>
+    </div>`;
+  }).join("");
+  return `<div class="house-blueprints-wrap">
+    <h3 class="house-section-title">${esc(t("house.blueprints"))}</h3>
+    <div class="grid-2">${cards}</div>
+  </div>`;
+}
+
+function renderHouse(d) {
+  const panel = document.getElementById("tab-house");
+  if (!panel) return;
+
+  const house = d.house;
+  if (!house) {
+    panel.innerHTML = `<div class="card"><p class="empty-state">${esc(t("house.noHouse"))}</p></div>`;
+    return;
+  }
+
+  panel.innerHTML = `
+    <div class="grid-2">
+      <div class="card">
+        <h3>${esc(t("house.summary"))}</h3>
+        ${houseSummaryHtml(house)}
+      </div>
+      ${d.house_draft ? houseDraftHtml(d.house_draft) : ""}
+      <div class="card house-map-card">
+        <h3>${esc(t("house.mapTitle"))}</h3>
+        ${houseGridHtml(house)}
+      </div>
+      <div class="card">
+        <h3>${esc(t("house.rooms"))}</h3>
+        ${houseRoomsTableHtml(house)}
+      </div>
+      <div class="card">
+        <h3>${esc(t("house.placements"))}</h3>
+        ${housePlacementsTableHtml(house)}
+      </div>
+      <div class="card">
+        <h3>${esc(t("house.storage"))}</h3>
+        ${houseStorageListHtml(house)}
+      </div>
+    </div>
+    ${houseBlueprintsHtml(d.house_blueprints)}`;
+}
+
 function renderQuests(d) {
   const panel = document.getElementById("tab-quests");
   const q = state.quests;
@@ -2181,6 +2570,68 @@ function renderEvents(d) {
     </div>`;
 }
 
+function renderCombatLoadoutHtml(loadout) {
+  if (!loadout?.has_data) return "";
+
+  const foodList = (loadout.food || []).map((item) =>
+    `<li><span>${esc(item.name)}</span><span>${fmt(item.qty)}</span></li>`
+  ).join("");
+
+  const styleLines = [
+    loadout.magic_spell
+      ? `<li><span>${esc(t("combat.loadout.magicSpell"))}</span><span>${esc(loadout.magic_spell.name)}</span></li>`
+      : "",
+    loadout.ranged_arrow
+      ? `<li><span>${esc(t("combat.loadout.rangedArrow"))}</span><span>${esc(loadout.ranged_arrow.name)}</span></li>`
+      : "",
+    loadout.arrows
+      ? `<li><span>${esc(t("combat.loadout.arrows"))}</span><span>${esc(loadout.arrows.name)}</span></li>`
+      : "",
+    loadout.runes
+      ? `<li><span>${esc(t("combat.loadout.runes"))}</span><span>${esc(loadout.runes.name)}</span></li>`
+      : "",
+  ].filter(Boolean).join("");
+
+  const bossDay = loadout.boss_coin_day_label
+    ? `<li><span>${esc(t("combat.loadout.bossCoinDay"))}</span><span>${esc(loadout.boss_coin_day_label)}</span></li>`
+    : "";
+  const bossKills = (loadout.boss_coin_kills || []).map((entry) =>
+    `<li><span>${esc(entry.name)}</span><span>${fmt(entry.kills)}</span></li>`
+  ).join("");
+
+  const repeatLines = [
+    loadout.boss_repeat?.active
+      ? `<li><span>${esc(t("combat.loadout.bossRepeat"))}</span><span>${esc(loadout.boss_repeat.label)}</span></li>`
+      : "",
+    loadout.dungeon_repeat?.active
+      ? `<li><span>${esc(t("combat.loadout.dungeonRepeat"))}</span><span>${esc(loadout.dungeon_repeat.label)}</span></li>`
+      : "",
+  ].filter(Boolean).join("");
+
+  return `<div class="card combat-loadout-card">
+    <h3>${esc(t("combat.loadout.title"))}</h3>
+    <div class="combat-loadout-sections">
+      ${foodList ? `<div class="combat-loadout-section">
+        <h4>${esc(t("combat.loadout.foodPreset"))}</h4>
+        <p class="combat-loadout-meta">${esc(t("combat.loadout.eatThreshold", { pct: loadout.food_eat_threshold_pct }))}</p>
+        <ul class="list-compact">${foodList}</ul>
+      </div>` : ""}
+      ${styleLines ? `<div class="combat-loadout-section">
+        <h4>${esc(t("combat.loadout.combatStyles"))}</h4>
+        <ul class="list-compact">${styleLines}</ul>
+      </div>` : ""}
+      ${bossDay || bossKills ? `<div class="combat-loadout-section">
+        <h4>${esc(t("combat.loadout.bossCoins"))}</h4>
+        <ul class="list-compact">${bossDay}${bossKills}</ul>
+      </div>` : ""}
+      ${repeatLines ? `<div class="combat-loadout-section">
+        <h4>${esc(t("combat.loadout.repeatRuns"))}</h4>
+        <ul class="list-compact">${repeatLines}</ul>
+      </div>` : ""}
+    </div>
+  </div>`;
+}
+
 function renderCombat(d) {
   const recent = (d.recent_sessions || [])
     .map((s) => `<li><span>${esc(s.activity_display_name || s.activity_key)}</span><span>${esc(s.skill_name)}</span></li>`).join("");
@@ -2195,6 +2646,7 @@ function renderCombat(d) {
   const none = `<li>${esc(t("empty.none"))}</li>`;
   document.getElementById("tab-combat").innerHTML = `
     <div class="grid-2">
+      ${renderCombatLoadoutHtml(d.combat?.loadout)}
       <div class="card">
         <h3>${esc(t("combat.enemyKills"))}</h3>
         <div class="table-wrap" id="combat-kills-wrap">

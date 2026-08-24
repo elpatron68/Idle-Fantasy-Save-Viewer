@@ -33,6 +33,8 @@ def _save(**overrides) -> dict:
             "equipped_title": "godslayer",
             "unlocked_titles": ["godslayer", "devout"],
             "skill_prestige": {"agility": 3},
+            "prestige_points_earned": {"agility": 9, "attack": 3},
+            "prestige_nodes": {"agility": ["agility_endurance_1"]},
             "tower_current_floor": 80,
             "tower_best_floor": 86,
             "tower_milestones": [10, 20],
@@ -58,6 +60,44 @@ def _save(**overrides) -> dict:
             "seasonal_bounty_slots": ["sunspire_firewood"],
             "seasonal_bounty_progress": {"sunspire_firewood": 20},
             "player_notes": "  next: willow logs  ",
+            "magic_loadout_spell_name": "blood_wave",
+            "equipped_food": {"lobster": 1, "shark": 2},
+            "equipped_arrows": "mithril_arrows",
+            "food_eat_threshold_pct": 60,
+            "boss_coin_day": 20260714,
+            "boss_coin_kills_by_boss": {"demon_lord": 5, "void_sovereign": 2},
+            "active_boss_repeat_index": 2,
+            "active_boss_repeat_total": 5,
+            "house": {
+                "rooms": [{"x": 7, "y": 7, "w": 4, "h": 4, "floor": "dark"}],
+                "placements": [{"item": "bed_default", "x": 30, "y": 30}],
+                "storage": {"lamp": 2},
+                "ground": "ground_1",
+                "coord_scale": 2,
+            },
+            "house_draft": {
+                "layout": {
+                    "rooms": [{"x": 7, "y": 7, "w": 5, "h": 4, "floor": "brick"}],
+                    "placements": [],
+                    "storage": {},
+                    "ground": "ground_2",
+                    "coord_scale": 2,
+                },
+                "built_room_index": [0],
+            },
+            "house_blueprints": [
+                {
+                    "slot": 0,
+                    "name": "Cozy",
+                    "layout": {
+                        "rooms": [{"x": 8, "y": 8, "w": 3, "h": 3, "floor": "dark"}],
+                        "placements": [],
+                        "storage": {},
+                        "ground": "ground_1",
+                        "coord_scale": 2,
+                    },
+                }
+            ],
         },
         "pets": [],
         "questProgress": [],
@@ -109,6 +149,57 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(data["sessions"][0]["is_worker"])
         self.assertEqual(data["farming"][0]["cropType"], "starfruit")
 
+    def test_house_layout_draft_and_blueprints(self) -> None:
+        data = normalize_save(_save())
+        house = data["house"]
+        self.assertIsNotNone(house)
+        self.assertEqual(house["stats"]["room_count"], 1)
+        self.assertEqual(house["ground"], "ground_1")
+        self.assertEqual(house["placements"][0]["item"], "bed_default")
+        self.assertEqual(house["placements"][0]["cell_x"], 15)
+        self.assertEqual(house["storage"][0]["key"], "lamp")
+        self.assertEqual(house["storage"][0]["qty"], 2)
+
+        draft = data["house_draft"]
+        self.assertIsNotNone(draft)
+        self.assertEqual(draft["layout"]["rooms"][0]["floor"], "brick")
+        self.assertEqual(draft["built_room_index"], [0])
+
+        blueprints = data["house_blueprints"]
+        self.assertEqual(len(blueprints), 1)
+        self.assertEqual(blueprints[0]["name"], "Cozy")
+        self.assertEqual(blueprints[0]["layout"]["stats"]["room_count"], 1)
+
+    def test_combat_loadout(self) -> None:
+        data = normalize_save(_save())
+        loadout = data["combat"]["loadout"]
+        self.assertTrue(loadout["has_data"])
+        self.assertEqual(loadout["food_count"], 2)
+        self.assertEqual(loadout["food_eat_threshold_pct"], 60)
+        self.assertEqual(loadout["magic_spell"]["key"], "blood_wave")
+        self.assertEqual(loadout["arrows"]["key"], "mithril_arrows")
+        self.assertEqual(loadout["boss_coin_day_label"], "2026-07-14")
+        self.assertEqual(len(loadout["boss_coin_kills"]), 2)
+        self.assertTrue(loadout["boss_repeat"]["active"])
+        self.assertEqual(loadout["boss_repeat"]["label"], "2/5")
+
+    def test_prestige_talent_tree(self) -> None:
+        data = normalize_save(_save())
+        prestige = data["prestige"]
+        self.assertEqual(prestige["player_race"], "human")
+        agility = next(s for s in prestige["skills"] if s["key"] == "agility")
+        self.assertEqual(agility["prestige_count"], 3)
+        self.assertEqual(agility["points_earned"], 9)
+        self.assertEqual(agility["points_spent"], 2)
+        self.assertEqual(agility["points_unspent"], 7)
+        endurance = next(p for p in agility["paths"] if p["key"] == "endurance")
+        owned = next(n for n in endurance["nodes"] if n["id"] == "agility_endurance_1")
+        self.assertTrue(owned["owned"])
+        xp_path = next(p for p in agility["paths"] if p["key"] == "xp")
+        self.assertTrue(xp_path["auto"])
+        self.assertTrue(all(n["owned"] for n in xp_path["nodes"][:3]))
+        self.assertTrue(any(e["effect"] == "xp_pct" for e in agility["effects"]))
+
     def test_legacy_save_without_new_fields_still_works(self) -> None:
         data = normalize_save({
             "exported_at": 1,
@@ -121,6 +212,10 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(data["character"]["name"], "Old")
         self.assertEqual(data["tower"]["best_floor"], 0)
         self.assertEqual(data["workers"], [])
+        self.assertIsNone(data["house"])
+        self.assertIsNone(data["house_draft"])
+        self.assertEqual(data["house_blueprints"], [])
+        self.assertEqual(data["prestige"]["skills"], [])
         self.assertFalse(data["meta"]["signed"])
         mining = data["skills"][0]
         self.assertEqual(mining["prestige"], 0)

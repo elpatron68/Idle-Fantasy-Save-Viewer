@@ -1450,3 +1450,223 @@ tr.has-goal td:first-child { font-weight: 600; }
   .main { margin-left: 0; padding: 16px; }
   .nav { flex-direction: row; flex-wrap: wrap; }
 }
+
+.house-map-wrap {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.house-map {
+  display: grid;
+  grid-template-columns: repeat(var(--house-grid, 18), 14px);
+  gap: 1px;
+  width: max-content;
+  padding: 4px;
+  background: var(--border);
+  border-radius: 8px;
+}
+
+.house-cell {
+  width: 14px;
+  height: 14px;
+  font-size: 0.55rem;
+  line-height: 14px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.house-outside {
+  background: #12121a;
+}
+
+.house-floor-dark {
+  background: #3d3d5c;
+}
+
+.house-floor-brick {
+  background: #6b5344;
+}
+
+.house-has-item {
+  box-shadow: inset 0 0 0 1px #d4af37;
+  color: #f5d76e;
+}
+
+.house-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.house-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.house-legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.house-map-card {
+  grid-column: 1 / -1;
+}
+
+.house-draft-card {
+  border-color: var(--warning);
+}
+
+.house-draft-hint {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.house-blueprints-wrap {
+  margin-top: 16px;
+}
+
+.house-section-title {
+  margin: 0 0 12px;
+}
+
+.house-blueprint-slot {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: normal;
+}
+
+.combat-loadout-card {
+  grid-column: 1 / -1;
+}
+
+.combat-loadout-sections {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .combat-loadout-sections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.combat-loadout-section h4 {
+  margin: 0 0 8px;
+}
+
+.combat-loadout-meta {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.prestige-select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.prestige-detail-card h4 {
+  margin: 16px 0 8px;
+}
+
+.prestige-paths {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .prestige-paths {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.prestige-path h4 {
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prestige-auto-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--warning);
+}
+
+.prestige-node-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.prestige-node {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.prestige-node-owned {
+  border-color: rgba(76, 175, 80, 0.45);
+}
+
+.prestige-node-available {
+  border-color: rgba(212, 175, 55, 0.55);
+}
+
+.prestige-node-race_locked,
+.prestige-node-locked,
+.prestige-node-unaffordable {
+  opacity: 0.72;
+}
+
+.prestige-node-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.prestige-node-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.prestige-node-badge {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.prestige-node-races {
+  font-style: italic;
+}
+
+.prestige-overview-card {
+  margin-top: 16px;
+}
+
+.prestige-summary-row {
+  cursor: pointer;
+}
+
+.prestige-summary-row.active td {
+  color: var(--accent);
+}
