@@ -1,6 +1,6 @@
 # Idle Fantasy Save Viewer
 
-A web viewer for backups of the Android game **[Idle Fantasy](https://github.com/tristinbaker/IdleFantasy)**. Parses `fantasyidler_save.json` and displays skills, inventory, quests, and combat stats in a dark dashboard — with filters, item grouping, snapshot history in SQLite, **trend sparklines**, and a **training advisor** powered by vendored game recipe data.
+A web viewer for backups of the Android game **[Idle Fantasy](https://github.com/tristinbaker/IdleFantasy)**. Parses `fantasyidler_save.json` and displays skills, inventory, quests, combat, housing, prestige talent trees, and seasonal events in a dark dashboard — with filters, item grouping, snapshot history in SQLite, **trend sparklines**, and a **training advisor** powered by vendored game recipe data.
 
 **[Live demo](https://if-viewer.elpatron.me/)** — try the viewer in your browser (create a personal link, no account required).
 
@@ -29,6 +29,8 @@ Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below li
 <td align="center" colspan="3"><a href="#screenshot-data"><img src="docs/screenshots/data.png" alt="" width="220"></a><br><strong>Data</strong> (export / import / delete viewer)</td>
 </tr>
 </table>
+
+**Also available (no gallery screenshot yet):** [House](#house), [Prestige](#prestige), [Events](#events) tabs.
 
 <a name="screenshot-overview"></a>
 <details>
@@ -68,7 +70,7 @@ Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below li
 
 <a name="screenshot-quests"></a>
 <details>
-<summary><strong>Quests</strong> — story, daily, and achievement progress</summary>
+<summary><strong>Quests</strong> — story, daily, weekly, and guild progress</summary>
 <p><img src="docs/screenshots/quests.png" alt="Quests tab"></p>
 </details>
 
@@ -92,14 +94,19 @@ Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below li
 
 ## Features
 
-- **Dashboard** — character, coins, slayer task, skills, inventory, equipment, quests, and combat at a glance
+- **Overview** — character, KPIs, session queue, slayer, pets, farming, guild reputation, monument, tower, workers, titles, town buildings, import summary
+- **Skills** — sortable table with level/XP progress, prestige stars, per-skill level sparklines, and **training advisor** (XP/min rankings from recipe data)
+- **Prestige** — talent trees for all skills with purchased nodes, unspent points, auto XP paths, and active bonus summary
 - **Inventory** — text search, category filters, sorting, grouped tables, equipped-item highlighting, quantity sparklines (click to enlarge)
-- **Skills** — sortable table with level/XP progress, per-skill level sparklines, and **training advisor** (XP/min rankings from recipe data)
-- **Combat** — enemy kills and dungeon runs (tables with trend sparklines), recent activity, active sessions
-- **History** — coins and total level over time, top-skills chart, snapshot comparison (inventory/skill deltas), delete snapshots
 - **Goals** — item and skill targets in groups (absolute or relative), progress/ETA, completion on import; **one-click goals** from the training advisor
-- **Global search** across items, skills, and goals; deep links to tabs (`#overview`, `#goals`, …)
-- **Import summary** — dashboard card with changes since the previous snapshot (coins, level, top deltas)
+- **Equipment** — equipped gear by slot and per-style armor loadouts (attack, strength, ranged, magic)
+- **House** — floor plan grid, rooms, furnishings, storage, editor draft, and saved blueprints
+- **Quests** — story, daily, weekly, and guild quest lists with open/done filters
+- **Combat** — kills, dungeon runs, last-run stats, expeditions, **combat loadout** (food preset, style presets, boss coins), recent activity, active sessions
+- **Events** — seasonal bounties/tokens/minigame and carnival cooldowns
+- **History** — coins and total level over time, top-skills chart, snapshot comparison (inventory/skill deltas), delete snapshots
+- **Data** — export/import the viewer SQLite database (snapshots, history, goals) or delete the viewer
+- **Global search** across items, skills, goals, and house furnishings; deep links to tabs (`#overview`, `#house`, `#prestige`, …)
 - **Viewer backup** — export/import the viewer SQLite database (snapshots, history, goals)
 - **Import** via CLI or browser upload
 - **Multi-user** without login — each player gets their own viewer via a secret link
@@ -241,7 +248,7 @@ PersistentKeepalive = 25
 
 On the LXC: clone the repo into `DEPLOY_DIR`, install Docker Compose, and authorize the deploy public key for `DEPLOY_HOST`.
 
-Upstream sync (`.github/workflows/sync-upstream.yml`) reuses the same WireGuard deploy when `game_data` changes.
+Upstream sync (`.github/workflows/sync-upstream.yml`) runs daily (and on `workflow_dispatch`), pulls recipe JSON from the Idle Fantasy repo, runs smoke tests, commits `game_data/` when changed, then reuses the same WireGuard deploy. Deploy uses `git rev-parse HEAD` after the sync push (not the pre-sync checkout SHA).
 
 ### More options
 
@@ -290,15 +297,50 @@ Recipe JSON is synced from the [Idle Fantasy](https://github.com/tristinbaker/Id
 python scripts/sync_game_data.py
 ```
 
+House tile metadata (`game_data/house_tiles.json`) and prestige paths (`game_data/prestige_paths.json`) are vendored separately from the same upstream repo (see `game_data/ATTRIBUTION.md`).
+
 API: `GET /v/<id>/api/advisor/<skill_key>` (uses latest snapshot + `game_data/recipes/`).
 
 ### Combat
 
 The **Combat** tab shows:
 
+- **Combat loadout** — food preset and eat threshold, magic/ranged/arrow/rune presets, boss coin progress, active boss/dungeon repeat runs
 - **Enemy kills** and **dungeon runs** — sorted tables with kill/run counts and optional trend sparklines
+- **Last dungeon runs** — food consumed, kills, survived per dungeon
+- **Expeditions** — unlocked skilling dungeons, notes, pity counters
 - **Recent activity** and **active sessions** from the latest save
-- Slayer task progress on the overview tab (when present in the save)
+
+Slayer task and foretold tasks appear on the **Overview** tab when present in the save.
+
+### House
+
+The **House** tab (player housing from recent game updates) shows:
+
+- Summary — room count, ground type, placements, stored furnishings
+- **Floor plan** — 18×18 grid with rooms and placed items (schematic, not in-game sprites)
+- Tables for rooms and furnishings; storage list for built-but-unplaced items
+- **Editor draft** when an unpurchased layout exists in the save
+- **Saved blueprints** (up to three slots)
+
+Data comes from `flags.house`, `flags.house_draft`, and `flags.house_blueprints`. Item names use vendored `game_data/house_tiles.json`.
+
+### Prestige
+
+The **Prestige** tab shows per-skill talent progress when the save has prestige activity:
+
+- Prestige count, points earned/spent/unspent, and point cap
+- **Talent tree paths** with node status (owned, buyable, locked, race-locked, auto XP tiers)
+- **Active bonuses** aggregated from purchased and auto nodes
+
+Uses `flags.skill_prestige`, `flags.prestige_points_earned`, `flags.prestige_nodes`, and vendored `game_data/prestige_paths.json`. Prestige stars on the **Skills** tab reflect `skill_prestige` only.
+
+### Events
+
+The **Events** tab covers:
+
+- **Seasonal events** — tokens, minigame cooldown, banners, bounty slots/progress
+- **Carnival** — skill level, tickets (from inventory), minigame cooldowns, difficulties
 
 ### Goals
 
@@ -312,7 +354,24 @@ Create targets from the **Inventory** or **Skills** tab (+ button per row), from
 
 ### Navigation
 
-Tabs support URL hashes for bookmarking, e.g. `http://127.0.0.1:5000/v/<id>/#goals`. The global search field above the KPI row jumps to matching items, skills, or goals.
+Sidebar tabs (URL hashes for bookmarking):
+
+| Tab | Hash | Focus |
+|-----|------|--------|
+| Overview | `#overview` | Character summary, import changes |
+| Skills | `#skills` | Levels, advisor |
+| Prestige | `#prestige` | Talent trees |
+| Inventory | `#inventory` | Items, categories |
+| Goals | `#goals` | Targets |
+| Equipment | `#equipment` | Gear and loadouts |
+| House | `#house` | Floor plan |
+| Quests | `#quests` | Story / daily / weekly / guild |
+| Combat | `#combat` | Kills, loadout, expeditions |
+| Events | `#events` | Seasonal, carnival |
+| History | `#history` | Charts, compare |
+| Data | `#backup` | Viewer `.db` export/import |
+
+Example: `http://127.0.0.1:5000/v/<id>/#house`. The global search field above the KPI row jumps to matching items, skills, goals, or house furnishings.
 
 ### Export / import viewer database
 
@@ -420,11 +479,14 @@ idle-fantasy-viewer/
 ├── parser.py           # Parse and normalize saves
 ├── categories.py       # Item categories (heuristics)
 ├── game_data.py        # Load vendored recipe JSON
+├── house_data.py       # House tile metadata (names, footprints)
+├── prestige_data.py    # Prestige tree metadata and node state
 ├── advisor.py          # Skill training recommendations
 ├── db.py               # SQLite snapshots, diff, timelines, goals
+├── test_parser.py      # Smoke tests for save parsing
 ├── test_db_goals.py    # Smoke tests for goals/import helpers
 ├── test_advisor.py     # Smoke tests for training advisor
-├── game_data/          # Vendored recipe JSON + manifest (see ATTRIBUTION.md)
+├── game_data/          # Vendored JSON (recipes, house_tiles, prestige_paths; see ATTRIBUTION.md)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -473,7 +535,9 @@ idle-fantasy-viewer/
 
 ## Save format
 
-The backup file contains doubly JSON-encoded fields (`skillLevels`, `inventory`, `flags`, …). The parser decodes these automatically. Current exports may also include a top-level `sig` (integrity hash) plus newer flag data such as Infinite Tower, skill prestige, armor loadouts, workers, seasonal events, titles, and monument progress — the viewer surfaces these on the overview, skills, equipment, and combat tabs.
+The backup file contains doubly JSON-encoded fields (`skillLevels`, `inventory`, `flags`, …). The parser decodes these automatically. Current exports may also include a top-level `sig` (integrity hash) plus newer flag data such as Infinite Tower, skill prestige, armor loadouts, workers, seasonal events, titles, monument progress, **player housing** (`house`, `house_draft`, `house_blueprints`), **prestige talent trees** (`prestige_points_earned`, `prestige_nodes`), and **combat loadout** fields (`equipped_food`, boss coin tracking, style presets). The viewer surfaces these on the overview, skills, prestige, equipment, house, combat, and events tabs.
+
+Item categories use heuristics in `categories.py` (including whips → melee weapons, dressers → construction, raw seafood without a `raw_` prefix → raw food).
 
 ## Notes
 
@@ -499,7 +563,7 @@ python test_advisor.py
 python test_parser.py
 ```
 
-Smoke tests for goals/import helpers, skill timeline, snapshot deletion, the training advisor (recipe loading, rankings, item goals from recipes), and save-format parsing (including current export fields such as `sig`, prestige, and tower).
+Smoke tests for goals/import helpers, skill timeline, snapshot deletion, the training advisor (recipe loading, rankings, item goals from recipes), and save-format parsing (including `sig`, house, prestige, combat loadout, tower, and item categories).
 
 ## Analytics (optional)
 
@@ -522,4 +586,4 @@ Open `~/repos/if` in your editor to work on both projects in one workspace.
 
 This project is licensed under the [MIT License](LICENSE).
 
-Vendored recipe JSON in `game_data/` remains under the Idle Fantasy [GPL-3.0](game_data/ATTRIBUTION.md).
+Vendored game data in `game_data/` (recipes, `house_tiles.json`, `prestige_paths.json`) remains under the Idle Fantasy [GPL-3.0](game_data/ATTRIBUTION.md).
