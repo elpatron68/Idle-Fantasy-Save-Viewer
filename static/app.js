@@ -317,6 +317,31 @@ function renderGlobalSearchResults() {
       });
     }
   }
+  const house = d.house;
+  if (house) {
+    for (const placement of house.placements || []) {
+      if (placement.name.toLowerCase().includes(q) || placement.item.toLowerCase().includes(q)) {
+        hits.push({
+          type: "houseItem",
+          tab: "house",
+          key: placement.item,
+          name: placement.name,
+          sub: t("house.placements"),
+        });
+      }
+    }
+    for (const stored of house.storage || []) {
+      if (stored.name.toLowerCase().includes(q) || stored.key.toLowerCase().includes(q)) {
+        hits.push({
+          type: "houseItem",
+          tab: "house",
+          key: stored.key,
+          name: stored.name,
+          sub: `${t("house.storage")} · ${fmt(stored.qty)}`,
+        });
+      }
+    }
+  }
 
   if (!hits.length) {
     el.hidden = false;
@@ -489,6 +514,7 @@ function renderAll() {
   renderInventory(d);
   renderGoals();
   renderEquipment(d);
+  renderHouse(d);
   renderQuests(d);
   renderCombat(d);
   renderEvents(d);
@@ -2042,6 +2068,212 @@ function renderEquipment(d) {
       </div>
     </div>
     ${loadouts}`;
+}
+
+function houseCategoryLabel(category) {
+  const key = `house.categoryLabel.${category}`;
+  const label = t(key);
+  return label !== key ? label : humanizeKey(category || "furniture");
+}
+
+function houseGridHtml(layout) {
+  const size = layout.grid_size || 18;
+  const scale = layout.coord_scale || 1;
+  const cells = Array.from({ length: size }, () => Array(size).fill(null));
+
+  for (const room of layout.rooms || []) {
+    for (let dy = 0; dy < room.h; dy++) {
+      for (let dx = 0; dx < room.w; dx++) {
+        const cx = room.x + dx;
+        const cy = room.y + dy;
+        if (cx >= 0 && cx < size && cy >= 0 && cy < size) {
+          cells[cy][cx] = { kind: "room", room, floor: room.floor || "dark" };
+        }
+      }
+    }
+  }
+
+  for (const placement of layout.placements || []) {
+    const fw = placement.footprint_w || 1;
+    const fh = placement.footprint_h || 1;
+    const baseX = placement.cell_x ?? Math.floor(placement.x / scale);
+    const baseY = placement.cell_y ?? Math.floor(placement.y / scale);
+    for (let dy = 0; dy < fh; dy++) {
+      for (let dx = 0; dx < fw; dx++) {
+        const cx = baseX + dx;
+        const cy = baseY + dy;
+        if (cx >= 0 && cx < size && cy >= 0 && cy < size && cells[cy][cx]) {
+          cells[cy][cx].placement = placement;
+        }
+      }
+    }
+  }
+
+  const gridCells = [];
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const cell = cells[y][x];
+      if (!cell) {
+        gridCells.push(`<div class="house-cell house-outside" title="(${x}, ${y})"></div>`);
+        continue;
+      }
+      const floorClass = cell.floor === "brick" ? "house-floor-brick" : "house-floor-dark";
+      const itemClass = cell.placement ? " house-has-item" : "";
+      const title = cell.placement
+        ? `${cell.placement.name} (${x}, ${y})`
+        : `${t("house.room")} ${cell.room.index} (${x}, ${y})`;
+      const label = cell.placement ? "•" : String(cell.room.index);
+      gridCells.push(
+        `<div class="house-cell house-room ${floorClass}${itemClass}" title="${esc(title)}">${esc(label)}</div>`
+      );
+    }
+  }
+
+  return `<div class="house-map-wrap">
+    <div class="house-map" style="--house-grid:${size}">${gridCells.join("")}</div>
+    <ul class="house-legend">
+      <li><span class="house-legend-swatch house-outside"></span>${esc(t("house.legendOutside"))}</li>
+      <li><span class="house-legend-swatch house-floor-dark"></span>${esc(t("house.legendRoom"))}</li>
+      <li><span class="house-legend-swatch house-has-item house-floor-dark"></span>${esc(t("house.legendItem"))}</li>
+    </ul>
+  </div>`;
+}
+
+function houseSummaryHtml(layout) {
+  const stats = layout.stats || {};
+  return `<ul class="list-compact">
+    <li><span>${esc(t("house.ground"))}</span><span>${esc(layout.ground_name || layout.ground || "—")}</span></li>
+    <li><span>${esc(t("house.roomCount"))}</span><span>${stats.room_count || 0} / ${stats.max_rooms || "—"}</span></li>
+    <li><span>${esc(t("house.roomCells"))}</span><span>${fmt(stats.room_cells || 0)}</span></li>
+    <li><span>${esc(t("house.placementCount"))}</span><span>${fmt(stats.placement_count || 0)}</span></li>
+    <li><span>${esc(t("house.storageItems"))}</span><span>${fmt(stats.storage_items || 0)}</span></li>
+    <li><span>${esc(t("house.coordScale"))}</span><span>${esc(t("house.coordScaleValue", { scale: layout.coord_scale || 1 }))}</span></li>
+  </ul>`;
+}
+
+function houseRoomsTableHtml(layout) {
+  const rows = (layout.rooms || []).map((room) => `<tr>
+    <td>${room.index}</td>
+    <td>(${room.x}, ${room.y})</td>
+    <td>${esc(t("house.cells", { w: room.w, h: room.h }))}</td>
+    <td>${esc(room.floor_name || humanizeKey(room.floor || "dark"))}</td>
+  </tr>`).join("");
+  return `<div class="table-wrap">
+    <table class="combat-table">
+      <thead><tr>
+        <th>#</th>
+        <th>${esc(t("house.position"))}</th>
+        <th>${esc(t("house.size"))}</th>
+        <th>${esc(t("house.floor"))}</th>
+      </tr></thead>
+      <tbody>${rows || `<tr><td colspan="4">${esc(t("empty.none"))}</td></tr>`}</tbody>
+    </table>
+  </div>`;
+}
+
+function housePlacementsTableHtml(layout) {
+  const rows = (layout.placements || []).map((placement) => `<tr>
+    <td>${esc(placement.name)}</td>
+    <td>${esc(houseCategoryLabel(placement.category))}</td>
+    <td>(${placement.x}, ${placement.y})</td>
+    <td>${esc(t("house.cells", { w: placement.footprint_w || 1, h: placement.footprint_h || 1 }))}</td>
+    <td>${placement.wall_mounted ? esc(t("house.yes")) : esc(t("house.no"))}</td>
+  </tr>`).join("");
+  return `<div class="table-wrap">
+    <table class="combat-table">
+      <thead><tr>
+        <th>${esc(t("house.item"))}</th>
+        <th>${esc(t("house.category"))}</th>
+        <th>${esc(t("house.position"))}</th>
+        <th>${esc(t("house.footprint"))}</th>
+        <th>${esc(t("house.wallMounted"))}</th>
+      </tr></thead>
+      <tbody>${rows || `<tr><td colspan="5">${esc(t("empty.none"))}</td></tr>`}</tbody>
+    </table>
+  </div>`;
+}
+
+function houseStorageListHtml(layout) {
+  const items = (layout.storage || []).map((entry) =>
+    `<li><span>${esc(entry.name)}</span><span>${fmt(entry.qty)}</span></li>`
+  ).join("");
+  return `<ul class="list-compact">${items || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>`;
+}
+
+function houseDraftHtml(draft) {
+  if (!draft?.layout) return "";
+  const layout = draft.layout;
+  const roomNotes = (draft.built_room_index || []).map((idx, i) => {
+    const label = idx == null
+      ? t("house.newRoom")
+      : t("house.builtFrom", { n: Number(idx) + 1 });
+    return `<li><span>${esc(t("house.room"))} ${i + 1}</span><span>${esc(label)}</span></li>`;
+  }).join("");
+  return `<div class="card house-draft-card">
+    <h3>${esc(t("house.draft"))}</h3>
+    <p class="house-draft-hint">${esc(t("house.draftHint"))}</p>
+    ${houseSummaryHtml(layout)}
+    ${roomNotes ? `<h4>${esc(t("house.rooms"))}</h4><ul class="list-compact">${roomNotes}</ul>` : ""}
+    <h4>${esc(t("house.mapTitle"))}</h4>
+    ${houseGridHtml(layout)}
+  </div>`;
+}
+
+function houseBlueprintsHtml(blueprints) {
+  if (!blueprints?.length) return "";
+  const cards = blueprints.map((bp) => {
+    const layout = bp.layout || {};
+    const stats = layout.stats || {};
+    return `<div class="card house-blueprint-card">
+      <h3>${esc(bp.name)} <span class="house-blueprint-slot">${esc(t("house.blueprintSlot", { slot: bp.slot + 1 }))}</span></h3>
+      <ul class="list-compact">
+        <li><span>${esc(t("house.roomCount"))}</span><span>${stats.room_count || 0}</span></li>
+        <li><span>${esc(t("house.placementCount"))}</span><span>${stats.placement_count || 0}</span></li>
+        <li><span>${esc(t("house.storageItems"))}</span><span>${stats.storage_items || 0}</span></li>
+      </ul>
+    </div>`;
+  }).join("");
+  return `<div class="house-blueprints-wrap">
+    <h3 class="house-section-title">${esc(t("house.blueprints"))}</h3>
+    <div class="grid-2">${cards}</div>
+  </div>`;
+}
+
+function renderHouse(d) {
+  const panel = document.getElementById("tab-house");
+  if (!panel) return;
+
+  const house = d.house;
+  if (!house) {
+    panel.innerHTML = `<div class="card"><p class="empty-state">${esc(t("house.noHouse"))}</p></div>`;
+    return;
+  }
+
+  panel.innerHTML = `
+    <div class="grid-2">
+      <div class="card">
+        <h3>${esc(t("house.summary"))}</h3>
+        ${houseSummaryHtml(house)}
+      </div>
+      ${d.house_draft ? houseDraftHtml(d.house_draft) : ""}
+      <div class="card house-map-card">
+        <h3>${esc(t("house.mapTitle"))}</h3>
+        ${houseGridHtml(house)}
+      </div>
+      <div class="card">
+        <h3>${esc(t("house.rooms"))}</h3>
+        ${houseRoomsTableHtml(house)}
+      </div>
+      <div class="card">
+        <h3>${esc(t("house.placements"))}</h3>
+        ${housePlacementsTableHtml(house)}
+      </div>
+      <div class="card">
+        <h3>${esc(t("house.storage"))}</h3>
+        ${houseStorageListHtml(house)}
+      </div>
+    </div>
+    ${houseBlueprintsHtml(d.house_blueprints)}`;
 }
 
 function renderQuests(d) {

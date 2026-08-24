@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from categories import categorize_item
+from house_data import house_ground_name, house_item_meta, house_item_name, house_max_rooms
 from validation import Issue, analyze_save, has_errors, issue
 
 
@@ -194,6 +195,161 @@ def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str
         })
     result.sort(key=lambda row: row["kill_count"], reverse=True)
     return result
+
+
+HOUSE_GRID_SIZE = 18
+
+
+def _normalize_house_layout(
+    raw: Any,
+    issues: list[Issue],
+    field_prefix: str,
+) -> dict[str, Any] | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        issues.append(issue(
+            "warning", "invalid_house_layout",
+            f'Field "{field_prefix}" is not an object – house layout ignored.',
+            field=field_prefix,
+        ))
+        return None
+
+    rooms_raw = _ensure_list(raw.get("rooms"), f"{field_prefix}.rooms", issues)
+    rooms: list[dict[str, Any]] = []
+    for idx, room in enumerate(rooms_raw):
+        if not isinstance(room, dict):
+            issues.append(issue(
+                "warning", "invalid_house_room",
+                f"House room #{idx + 1} was skipped.",
+                field=f"{field_prefix}.rooms[{idx}]",
+            ))
+            continue
+        w = _safe_int(room.get("w"), f"{field_prefix}.rooms[{idx}].w", issues, default=1)
+        h = _safe_int(room.get("h"), f"{field_prefix}.rooms[{idx}].h", issues, default=1)
+        floor = str(room.get("floor") or "dark")
+        rooms.append({
+            "index": idx + 1,
+            "x": _safe_int(room.get("x"), f"{field_prefix}.rooms[{idx}].x", issues),
+            "y": _safe_int(room.get("y"), f"{field_prefix}.rooms[{idx}].y", issues),
+            "w": max(w, 1),
+            "h": max(h, 1),
+            "floor": floor,
+            "floor_name": format_key(floor),
+            "cells": max(w, 1) * max(h, 1),
+        })
+
+    coord_scale = _safe_int(raw.get("coord_scale"), f"{field_prefix}.coord_scale", issues, default=1)
+    if coord_scale < 1:
+        coord_scale = 1
+
+    placements_raw = _ensure_list(raw.get("placements"), f"{field_prefix}.placements", issues)
+    placements: list[dict[str, Any]] = []
+    for idx, placement in enumerate(placements_raw):
+        if not isinstance(placement, dict):
+            issues.append(issue(
+                "warning", "invalid_house_placement",
+                f"House placement #{idx + 1} was skipped.",
+                field=f"{field_prefix}.placements[{idx}]",
+            ))
+            continue
+        item_key = str(placement.get("item") or "")
+        meta = house_item_meta(item_key)
+        px = _safe_int(placement.get("x"), f"{field_prefix}.placements[{idx}].x", issues)
+        py = _safe_int(placement.get("y"), f"{field_prefix}.placements[{idx}].y", issues)
+        placements.append({
+            "item": item_key,
+            "name": house_item_name(item_key),
+            "x": px,
+            "y": py,
+            "cell_x": px // coord_scale,
+            "cell_y": py // coord_scale,
+            "category": meta["category"],
+            "footprint_w": meta["footprint_w"],
+            "footprint_h": meta["footprint_h"],
+            "wall_mounted": meta["wall_mounted"],
+            "anchor": meta["anchor"],
+            "level_required": meta["level_required"],
+        })
+
+    storage_raw = _ensure_dict(raw.get("storage"), f"{field_prefix}.storage", issues)
+    storage: list[dict[str, Any]] = []
+    for key, qty in sorted(storage_raw.items()):
+        count = _safe_int(qty, f"{field_prefix}.storage.{key}", issues)
+        if count <= 0:
+            continue
+        storage.append({
+            "key": str(key),
+            "name": house_item_name(str(key)),
+            "qty": count,
+        })
+
+    ground = str(raw.get("ground") or "ground_1")
+    room_cells = sum(room["cells"] for room in rooms)
+
+    return {
+        "rooms": rooms,
+        "placements": placements,
+        "storage": storage,
+        "ground": ground,
+        "ground_name": house_ground_name(ground),
+        "coord_scale": coord_scale,
+        "grid_size": HOUSE_GRID_SIZE,
+        "stats": {
+            "room_count": len(rooms),
+            "room_cells": room_cells,
+            "placement_count": len(placements),
+            "storage_items": sum(entry["qty"] for entry in storage),
+            "storage_kinds": len(storage),
+            "max_rooms": house_max_rooms(),
+        },
+    }
+
+
+def _normalize_house_bundle(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    layout = _normalize_house_layout(flags.get("house"), issues, "flags.house")
+
+    draft: dict[str, Any] | None = None
+    draft_raw = flags.get("house_draft")
+    if isinstance(draft_raw, dict):
+        draft_layout = _normalize_house_layout(
+            draft_raw.get("layout"), issues, "flags.house_draft.layout",
+        )
+        built_room_index = _ensure_list(
+            draft_raw.get("built_room_index"), "flags.house_draft.built_room_index", issues,
+        )
+        if draft_layout is not None:
+            draft = {
+                "layout": draft_layout,
+                "built_room_index": built_room_index,
+            }
+
+    blueprints: list[dict[str, Any]] = []
+    for idx, blueprint in enumerate(_ensure_list(flags.get("house_blueprints"), "flags.house_blueprints", issues)):
+        if not isinstance(blueprint, dict):
+            issues.append(issue(
+                "warning", "invalid_house_blueprint",
+                f"House blueprint #{idx + 1} was skipped.",
+                field=f"flags.house_blueprints[{idx}]",
+            ))
+            continue
+        blueprint_layout = _normalize_house_layout(
+            blueprint.get("layout"), issues, f"flags.house_blueprints[{idx}].layout",
+        )
+        if blueprint_layout is None:
+            continue
+        blueprints.append({
+            "slot": _safe_int(blueprint.get("slot"), f"flags.house_blueprints[{idx}].slot", issues, default=idx),
+            "name": str(blueprint.get("name") or f"Blueprint {idx + 1}"),
+            "layout": blueprint_layout,
+        })
+    blueprints.sort(key=lambda row: row["slot"])
+
+    return {
+        "layout": layout,
+        "draft": draft,
+        "blueprints": blueprints,
+    }
 
 
 def _normalize_seasonal(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
@@ -476,6 +632,7 @@ def normalize_save(
     session_queue = _ensure_list(flags.get("session_queue"), "flags.session_queue", issues)
     recent_sessions = _ensure_list(flags.get("recent_sessions"), "flags.recent_sessions", issues)
     town_buildings = _ensure_dict(flags.get("town_building_tiers"), "flags.town_building_tiers", issues)
+    house_bundle = _normalize_house_bundle(flags, issues)
     coins = _safe_int(raw.get("coins"), "coins", issues)
     inventory_coins = _safe_int(inventory.get("coins"), "inventory.coins", issues)
 
@@ -648,6 +805,9 @@ def normalize_save(
         "recent_sessions": recent_sessions,
         "sessions": sessions,
         "town_buildings": town_buildings,
+        "house": house_bundle["layout"],
+        "house_draft": house_bundle["draft"],
+        "house_blueprints": house_bundle["blueprints"],
         "meta": {
             "source_file": source_file,
             "exported_at": raw.get("exported_at"),

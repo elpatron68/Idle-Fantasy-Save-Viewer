@@ -58,6 +58,36 @@ def _save(**overrides) -> dict:
             "seasonal_bounty_slots": ["sunspire_firewood"],
             "seasonal_bounty_progress": {"sunspire_firewood": 20},
             "player_notes": "  next: willow logs  ",
+            "house": {
+                "rooms": [{"x": 7, "y": 7, "w": 4, "h": 4, "floor": "dark"}],
+                "placements": [{"item": "bed_default", "x": 30, "y": 30}],
+                "storage": {"lamp": 2},
+                "ground": "ground_1",
+                "coord_scale": 2,
+            },
+            "house_draft": {
+                "layout": {
+                    "rooms": [{"x": 7, "y": 7, "w": 5, "h": 4, "floor": "brick"}],
+                    "placements": [],
+                    "storage": {},
+                    "ground": "ground_2",
+                    "coord_scale": 2,
+                },
+                "built_room_index": [0],
+            },
+            "house_blueprints": [
+                {
+                    "slot": 0,
+                    "name": "Cozy",
+                    "layout": {
+                        "rooms": [{"x": 8, "y": 8, "w": 3, "h": 3, "floor": "dark"}],
+                        "placements": [],
+                        "storage": {},
+                        "ground": "ground_1",
+                        "coord_scale": 2,
+                    },
+                }
+            ],
         },
         "pets": [],
         "questProgress": [],
@@ -109,6 +139,27 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(data["sessions"][0]["is_worker"])
         self.assertEqual(data["farming"][0]["cropType"], "starfruit")
 
+    def test_house_layout_draft_and_blueprints(self) -> None:
+        data = normalize_save(_save())
+        house = data["house"]
+        self.assertIsNotNone(house)
+        self.assertEqual(house["stats"]["room_count"], 1)
+        self.assertEqual(house["ground"], "ground_1")
+        self.assertEqual(house["placements"][0]["item"], "bed_default")
+        self.assertEqual(house["placements"][0]["cell_x"], 15)
+        self.assertEqual(house["storage"][0]["key"], "lamp")
+        self.assertEqual(house["storage"][0]["qty"], 2)
+
+        draft = data["house_draft"]
+        self.assertIsNotNone(draft)
+        self.assertEqual(draft["layout"]["rooms"][0]["floor"], "brick")
+        self.assertEqual(draft["built_room_index"], [0])
+
+        blueprints = data["house_blueprints"]
+        self.assertEqual(len(blueprints), 1)
+        self.assertEqual(blueprints[0]["name"], "Cozy")
+        self.assertEqual(blueprints[0]["layout"]["stats"]["room_count"], 1)
+
     def test_legacy_save_without_new_fields_still_works(self) -> None:
         data = normalize_save({
             "exported_at": 1,
@@ -121,6 +172,9 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(data["character"]["name"], "Old")
         self.assertEqual(data["tower"]["best_floor"], 0)
         self.assertEqual(data["workers"], [])
+        self.assertIsNone(data["house"])
+        self.assertIsNone(data["house_draft"])
+        self.assertEqual(data["house_blueprints"], [])
         self.assertFalse(data["meta"]["signed"])
         mining = data["skills"][0]
         self.assertEqual(mining["prestige"], 0)
