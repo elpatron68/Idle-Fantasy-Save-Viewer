@@ -1,1 +1,48 @@
-<script defer data-domain="if-viewer.elpatron.me" src="https://plausible.elpatron.me/js/script.tagged-events.js"></script>
+<script>
+  window.plausible = window.plausible || function () {
+    (window.plausible.q = window.plausible.q || []).push(arguments);
+  };
+  window.plausible.l = +new Date;
+</script>
+<script
+  defer
+  data-domain="if-viewer.elpatron.me"
+  src="https://plausible.elpatron.me/js/script.manual.tagged-events.js"
+  id="plausible-script"
+></script>
+<script>
+  (function () {
+    function redactViewerUrl(url) {
+      try {
+        var parsed = new URL(url, window.location.origin);
+        parsed.pathname = parsed.pathname.replace(/^\/v\/[^/]+\/?/, "/v/viewer/");
+        return parsed.href;
+      } catch (e) {
+        return String(url).replace(/\/v\/[^/]+\/?/, "/v/viewer/");
+      }
+    }
+
+    window.redactAnalyticsUrl = redactViewerUrl;
+
+    function transformRequest(payload) {
+      if (payload && payload.u) payload.u = redactViewerUrl(payload.u);
+      return payload;
+    }
+
+    function configurePlausible() {
+      if (typeof window.plausible !== "function") return;
+      if (typeof window.plausible.init === "function") {
+        window.plausible.init({
+          autoCapturePageviews: false,
+          transformRequest: transformRequest,
+        });
+      }
+      if (typeof window.trackAnalyticsPageview === "function") {
+        window.trackAnalyticsPageview();
+      }
+    }
+
+    var script = document.getElementById("plausible-script");
+    if (script) script.addEventListener("load", configurePlausible);
+  })();
+</script>
