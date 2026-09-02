@@ -36,6 +36,7 @@ jobs:
           python3 test_db_goals.py
           python3 test_advisor.py
           python3 test_parser.py
+          python3 -c "import app"
 
       - name: Install WireGuard tools
         run: |
