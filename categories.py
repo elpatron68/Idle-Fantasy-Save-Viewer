@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from heirloom_data import is_heirloom_item
+
 CATEGORY_ORDER = [
     "Currency",
+    "Heirlooms",
     "Ores & Mining",
     "Bars & Smithing",
     "Wood & Planks",
@@ -76,6 +79,9 @@ def categorize_item(key: str) -> str:
 
     if k == "coins" or k == "carnival_ticket" or k == "ancient_treasure":
         return "Currency"
+
+    if is_heirloom_item(k):
+        return "Heirlooms"
 
     if k.endswith("_ore") or k in ("coal", "rune_essence", "stone", "carved_stone", "tin_ore"):
         return "Ores & Mining"

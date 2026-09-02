@@ -1,0 +1,15 @@
+{
+  "heirloom_pickaxe": { "skill": "mining" },
+  "heirloom_axe": { "skill": "woodcutting" },
+  "heirloom_fishing_rod": { "skill": "fishing" },
+  "heirloom_hoe": { "skill": "farming" },
+  "heirloom_hammer": { "skill": "smithing" },
+  "heirloom_tinderbox": { "skill": "firemaking" },
+  "heirloom_grappling_hook": { "skill": "agility" },
+  "heirloom_frying_pan": { "skill": "cooking" },
+  "heirloom_lockpick": { "skill": "thieving" },
+  "heirloom_blade": { "skill": "attack" },
+  "heirloom_greathammer": { "skill": "strength" },
+  "heirloom_longbow": { "skill": "ranged" },
+  "heirloom_staff": { "skill": "magic" }
+}

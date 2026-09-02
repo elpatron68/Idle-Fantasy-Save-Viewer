@@ -235,6 +235,50 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(categorize_item("crab"), "Raw Food")
         self.assertEqual(categorize_item("sea_turtle"), "Raw Food")
         self.assertEqual(categorize_item("void_lotus"), "Herbs")
+        self.assertEqual(categorize_item("heirloom_pickaxe"), "Heirlooms")
+
+    def test_v148_features(self) -> None:
+        data = normalize_save(_save(
+            inventory={"heirloom_pickaxe": 1, "iron_ore": 10},
+            flags={
+                **_save()["flags"],
+                "session_queue": [{
+                    "skill_name": "mining",
+                    "activity_key": "iron_ore",
+                    "qty": 5,
+                    "estimated_duration_ms": 125_000,
+                    "estimated_xp_gain": 250,
+                }],
+                "hired_mercenaries": [{"merc_id": "blacksmith_boris", "expires_at": 9_999_999_999_000}],
+                "heirloom_xp": {"heirloom_pickaxe": 42_000},
+                "locked_items": ["iron_ore"],
+                "bulk_sell_receipts": [{
+                    "at_ms": 1_700_000_000_000,
+                    "coins": 500,
+                    "items": {"iron_ore": 50},
+                }],
+                "seasonal_boss_tokens_today": 3,
+                "seasonal_boss_token_day": 20260824,
+                "seasonal_market_purchases": {"sunspire_firewood": 2},
+                "seasonal_reward_tiers_claimed": {"sunspire_solstice_2026": [1, 3]},
+            },
+        ))
+        queue = data["session_queue"][0]
+        self.assertEqual(queue["estimated_duration_ms"], 125_000)
+        self.assertEqual(queue["estimated_xp_gain"], 250)
+        self.assertEqual(data["mercenaries"][0]["id"], "blacksmith_boris")
+        self.assertEqual(data["heirlooms"]["items"][0]["xp"], 42_000)
+        self.assertEqual(data["heirlooms"]["items"][0]["skill"], "mining")
+        iron = next(i for i in data["inventory"] if i["key"] == "iron_ore")
+        pickaxe = next(i for i in data["inventory"] if i["key"] == "heirloom_pickaxe")
+        self.assertTrue(iron["locked"])
+        self.assertTrue(pickaxe["heirloom"])
+        self.assertEqual(data["bulk_sell_receipts"][0]["coins"], 500)
+        seasonal = data["seasonal"]
+        self.assertEqual(seasonal["boss_tokens_today"], 3)
+        self.assertEqual(seasonal["boss_token_day_label"], "2026-08-24")
+        self.assertEqual(seasonal["market_purchases"][0]["qty"], 2)
+        self.assertEqual(seasonal["reward_tiers_claimed"]["sunspire_solstice_2026"], [1, 3])
 
     def test_real_export_if_present(self) -> None:
         path = Path(__file__).parent / ".tmp" / "fantasyidler_save (20).json"

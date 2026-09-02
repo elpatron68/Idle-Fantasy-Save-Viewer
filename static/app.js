@@ -21,7 +21,7 @@ let state = {
 };
 
 const CATEGORY_ORDER = [
-  "Currency", "Ores & Mining", "Bars & Smithing", "Wood & Planks", "Runes",
+  "Currency", "Heirlooms", "Ores & Mining", "Bars & Smithing", "Wood & Planks", "Runes",
   "Raw Food", "Cooked Food", "Seeds & Farming", "Herbs", "Melee Weapons", "Ranged",
   "Magic", "Armor", "Bones & Hides", "Gems & Jewelry", "Potions & Brews",
   "Tools", "Construction", "Misc",
@@ -29,6 +29,7 @@ const CATEGORY_ORDER = [
 
 const CATEGORY_I18N_KEYS = {
   "Currency": "category.currency",
+  "Heirlooms": "category.heirlooms",
   "Ores & Mining": "category.ores_mining",
   "Bars & Smithing": "category.bars_smithing",
   "Wood & Planks": "category.wood_planks",
@@ -559,8 +560,15 @@ function prestigeStars(level) {
 
 function renderOverview(d) {
   const c = d.character;
-  const queue = (d.session_queue || []).map((q) =>
-    `<li><span>${esc(q.skill_display_name || q.skill_name)}</span><span>${esc(q.activity_key || "—")} · ${q.qty || 0}</span></li>`
+  const queue = (d.session_queue || []).map((q) => {
+    const parts = [esc(q.activity_key || "—"), `×${q.qty || 0}`];
+    if (q.estimated_duration_ms > 0) parts.push(formatDurationMs(q.estimated_duration_ms));
+    if (q.estimated_xp_gain > 0) parts.push(`${fmt(q.estimated_xp_gain)} XP`);
+    return `<li><span>${esc(q.skill_display_name || q.skill_name)}</span><span>${parts.join(" · ")}</span></li>`;
+  }).join("");
+
+  const mercenariesHtml = (d.mercenaries || []).map((m) =>
+    `<li><span>${esc(m.name)}</span><span>${esc(formatCooldown(m.expires_at))}</span></li>`
   ).join("");
 
   const slayer = d.combat.slayer_task;
@@ -609,6 +617,13 @@ function renderOverview(d) {
   const townHtml = Object.entries(d.town_buildings || {}).map(([k, v]) =>
     `<li><span>${esc(humanizeKey(k))}</span><span>${esc(t("overview.buildingTier", { tier: v }))}</span></li>`
   ).join("");
+
+  const heirlooms = d.heirlooms?.items || [];
+  const heirloomsHtml = heirlooms.length
+    ? `<ul class="list-compact">${heirlooms.map((item) =>
+      `<li><span>${esc(item.name)}${item.equipped ? " ⚡" : ""}</span><span>${esc(item.skill_name || "—")} · ${fmt(item.xp)} XP</span></li>`
+    ).join("")}</ul>`
+    : `<p class="empty-state">${esc(t("empty.none"))}</p>`;
 
   document.getElementById("tab-overview").innerHTML = `
     ${renderImportChangesCard(state.lastImportChanges)}
@@ -667,6 +682,14 @@ function renderOverview(d) {
         <h3>${esc(t("overview.town"))}</h3>
         <ul class="list-compact">${townHtml || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>
       </div>
+      ${(d.mercenaries || []).length ? `<div class="card">
+        <h3>${esc(t("overview.mercenaries"))}</h3>
+        <ul class="list-compact">${mercenariesHtml}</ul>
+      </div>` : ""}
+      ${heirlooms.length ? `<div class="card">
+        <h3>${esc(t("overview.heirlooms"))}</h3>
+        ${heirloomsHtml}
+      </div>` : ""}
     </div>`;
 }
 
@@ -1599,7 +1622,7 @@ function renderInventoryTable(d, inv) {
       const hasGoal = openGoals.items.has(i.key);
       return `
       <tr class="inv-item-row ${i.equipped && inv.highlightEquipped ? "item-equipped" : ""} ${hasGoal ? "has-goal" : ""} ${expanded ? "" : "collapsed"}" data-group="${esc(cat)}">
-        <td class="col-name">${esc(i.name)}${i.equipped ? `<span class="equipped-mark" title="${esc(t("inventory.equipped"))}">⚡</span>` : ""}${hasGoal ? `<span class="goal-mark" title="${esc(t("goals.hasGoal"))}">🎯</span>` : ""}</td>
+        <td class="col-name">${esc(i.name)}${i.locked ? `<span class="locked-mark" title="${esc(t("inventory.locked"))}">🔒</span>` : ""}${i.heirloom ? `<span class="heirloom-mark" title="${esc(t("inventory.heirloom"))}">✦</span>` : ""}${i.equipped ? `<span class="equipped-mark" title="${esc(t("inventory.equipped"))}">⚡</span>` : ""}${hasGoal ? `<span class="goal-mark" title="${esc(t("goals.hasGoal"))}">🎯</span>` : ""}</td>
         ${showTrend ? renderItemSparkCell(i) : ""}
         <td class="col-qty">${fmt(i.qty)}</td>
         <td class="col-key"><code>${esc(i.key)}</code></td>
@@ -1710,7 +1733,8 @@ function renderInventory(d) {
         </label>
       </div>
       <div class="chip-row" id="inv-chips"></div>
-      <div class="card inv-card" id="inv-results"></div>`;
+      <div class="card inv-card" id="inv-results"></div>
+      <div id="inv-bulk-sales"></div>`;
 
     document.getElementById("inv-search").addEventListener("input", (e) => {
       state.inventory.search = e.target.value;
@@ -1737,6 +1761,26 @@ function renderInventory(d) {
   document.getElementById("inv-equipped").checked = inv.highlightEquipped;
   renderInventoryChips(d, inv);
   ensureInventoryTimeline().then(() => renderInventoryTable(d, inv));
+  renderBulkSellReceipts(d);
+}
+
+function renderBulkSellReceipts(d) {
+  const el = document.getElementById("inv-bulk-sales");
+  if (!el) return;
+  const receipts = d.bulk_sell_receipts || [];
+  if (!receipts.length) {
+    el.innerHTML = "";
+    return;
+  }
+  const rows = receipts.map((receipt) => {
+    const items = (receipt.items || []).map((item) => `${esc(item.name)} ×${fmt(item.qty)}`).join(", ");
+    return `<li><span>${esc(formatTs(receipt.at_ms))}</span><span>${fmt(receipt.coins)} ${esc(t("kpi.coins"))} · ${items}</span></li>`;
+  }).join("");
+  el.innerHTML = `
+    <div class="card">
+      <h3>${esc(t("inventory.bulkSales"))}</h3>
+      <ul class="list-compact">${rows}</ul>
+    </div>`;
 }
 
 async function loadGoals() {
@@ -2526,12 +2570,33 @@ function renderEvents(d) {
       ? `<span class="event-badge">${esc(t("events.easyMode"))}</span>`
       : "";
 
+    const bossTokensLine = seasonal.boss_tokens_today > 0 || seasonal.boss_token_day_label
+      ? `<li><span>${esc(t("events.bossTokensToday"))}</span><span>${fmt(seasonal.boss_tokens_today || 0)}${seasonal.boss_token_day_label ? ` · ${esc(seasonal.boss_token_day_label)}` : ""}</span></li>`
+      : "";
+
+    const marketPurchases = seasonal.market_purchases || [];
+    const marketHtml = marketPurchases.length
+      ? `<h4>${esc(t("events.marketPurchases"))}</h4>
+         <ul class="list-compact">${marketPurchases.map((entry) =>
+           `<li><span>${esc(entry.name)}</span><span>${fmt(entry.qty)}</span></li>`
+         ).join("")}</ul>`
+      : "";
+
+    const rewardTiers = seasonal.reward_tiers_claimed?.[eventId] || [];
+    const rewardTiersHtml = rewardTiers.length
+      ? `<h4>${esc(t("events.rewardTiers"))}</h4>
+         <p>${esc(t("events.rewardTiersClaimed", { tiers: rewardTiers.join(", ") }))}</p>`
+      : "";
+
     seasonalHtml = `
       <ul class="list-compact">
         <li><span>${esc(t("events.tokens"))}</span><span>${fmt(tokens)}</span></li>
+        ${bossTokensLine}
         <li><span>${esc(t("events.minigame"))}</span><span>${esc(minigameStatus)} ${easyBadge}</span></li>
         <li><span>${esc(t("events.banners"))}</span><span>${esc(banners)}</span></li>
       </ul>
+      ${marketHtml}
+      ${rewardTiersHtml}
       <h4>${esc(t("events.bounties"))}</h4>
       <ul class="list-compact">${bountySlots || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>`;
   }
@@ -3215,6 +3280,23 @@ function formatCooldown(ts) {
   const ms = normalizeTimeMs(ts);
   if (ms == null || ms <= 0 || ms <= Date.now()) return t("events.cooldownReady");
   return t("events.cooldownUntil", { time: formatTs(ts) });
+}
+
+function formatDurationMs(ms) {
+  const totalSec = Math.max(0, Math.round(Number(ms) / 1000));
+  if (totalSec < 60) return t("time.seconds", { n: totalSec });
+  const minutes = Math.floor(totalSec / 60);
+  const seconds = totalSec % 60;
+  if (minutes < 60) {
+    return seconds
+      ? t("time.minutesSeconds", { m: minutes, s: seconds })
+      : t("time.minutes", { n: minutes });
+  }
+  const hours = Math.floor(minutes / 60);
+  const remMin = minutes % 60;
+  return remMin
+    ? t("time.hoursMinutes", { h: hours, m: remMin })
+    : t("time.hours", { n: hours });
 }
 
 function formatTs(ts) {

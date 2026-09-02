@@ -555,18 +555,6 @@
             "cost": 2,
             "effect": "xp_pct",
             "value": 20
-          },
-          {
-            "id": "agility_xp_4",
-            "cost": 4,
-            "effect": "xp_pct",
-            "value": 30
-          },
-          {
-            "id": "agility_xp_5",
-            "cost": 4,
-            "effect": "xp_pct",
-            "value": 40
           }
         ]
       },
