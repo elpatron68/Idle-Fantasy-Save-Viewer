@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from categories import categorize_item
+from heirloom_data import heirloom_skill, is_heirloom_item
 from house_data import house_ground_name, house_item_meta, house_item_name, house_max_rooms
 from prestige_data import build_prestige_bundle
 from validation import Issue, analyze_save, has_errors, issue
@@ -275,6 +276,119 @@ def _normalize_combat_loadout(flags: dict[str, Any], issues: list[Issue]) -> dic
     }
 
 
+def _normalize_session_queue(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for idx, entry in enumerate(_ensure_list(raw, "flags.session_queue", issues)):
+        if not isinstance(entry, dict):
+            issues.append(issue(
+                "warning", "invalid_session_queue_entry",
+                f"Session queue entry #{idx + 1} is not an object and was skipped.",
+                field="flags.session_queue",
+                params={"index": idx + 1},
+            ))
+            continue
+        skill_name = str(entry.get("skill_name") or "")
+        result.append({
+            "skill_name": skill_name or None,
+            "skill_display_name": entry.get("skill_display_name") or (format_key(skill_name) if skill_name else None),
+            "activity_key": entry.get("activity_key"),
+            "qty": _safe_int(entry.get("qty"), f"flags.session_queue[{idx}].qty", issues),
+            "output_qty": _safe_int(entry.get("output_qty"), f"flags.session_queue[{idx}].output_qty", issues),
+            "estimated_xp_gain": _safe_int(
+                entry.get("estimated_xp_gain"), f"flags.session_queue[{idx}].estimated_xp_gain", issues,
+            ),
+            "estimated_duration_ms": _safe_int(
+                entry.get("estimated_duration_ms"), f"flags.session_queue[{idx}].estimated_duration_ms", issues,
+            ),
+            "level_at_queue": _safe_int(entry.get("level_at_queue"), f"flags.session_queue[{idx}].level_at_queue", issues),
+            "coin_refund": _safe_int(entry.get("coin_refund"), f"flags.session_queue[{idx}].coin_refund", issues),
+            "catalyst_key": entry.get("catalyst_key"),
+        })
+    return result
+
+
+def _normalize_hired_mercenaries(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for idx, entry in enumerate(_ensure_list(raw, "flags.hired_mercenaries", issues)):
+        if not isinstance(entry, dict):
+            continue
+        merc_id = str(entry.get("merc_id") or "")
+        if not merc_id:
+            continue
+        result.append({
+            "id": merc_id,
+            "name": format_key(merc_id),
+            "expires_at": _safe_int(entry.get("expires_at"), f"flags.hired_mercenaries[{idx}].expires_at", issues),
+        })
+    return result
+
+
+def _normalize_heirlooms(
+    flags: dict[str, Any],
+    inventory: dict[str, Any],
+    equipped_values: set[Any],
+    issues: list[Issue],
+) -> dict[str, Any]:
+    xp_map = _ensure_dict(flags.get("heirloom_xp"), "flags.heirloom_xp", issues)
+    mirror_raw = _ensure_dict(flags.get("heirloom_mirror_targets"), "flags.heirloom_mirror_targets", issues)
+    item_keys = sorted(set(inventory.keys()) | set(xp_map.keys()) | {k for k in equipped_values if k})
+    items: list[dict[str, Any]] = []
+    for key in item_keys:
+        item_key = str(key)
+        if not is_heirloom_item(item_key) and item_key not in xp_map:
+            continue
+        skill = heirloom_skill(item_key)
+        items.append({
+            "key": item_key,
+            "name": format_item_name(item_key),
+            "skill": skill,
+            "skill_name": format_key(skill) if skill else None,
+            "xp": _safe_int(xp_map.get(item_key), f"flags.heirloom_xp.{item_key}", issues),
+            "owned": _safe_int(inventory.get(item_key), f"inventory.{item_key}", issues, default=0) > 0,
+            "equipped": item_key in equipped_values,
+        })
+    mirror_sessions = []
+    for session_id, targets in mirror_raw.items():
+        if not isinstance(targets, dict):
+            continue
+        mirror_sessions.append({
+            "session_id": str(session_id),
+            "targets": {
+                str(skill): format_item_name(str(item_key))
+                for skill, item_key in targets.items()
+            },
+        })
+    return {
+        "items": items,
+        "mirror_sessions": mirror_sessions,
+        "has_data": bool(items or mirror_sessions),
+    }
+
+
+def _normalize_bulk_sell_receipts(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
+    result: list[dict[str, Any]] = []
+    for idx, entry in enumerate(_ensure_list(raw, "flags.bulk_sell_receipts", issues)):
+        if not isinstance(entry, dict):
+            continue
+        items_raw = _ensure_dict(entry.get("items"), f"flags.bulk_sell_receipts[{idx}].items", issues)
+        items = [
+            {
+                "key": str(key),
+                "name": format_item_name(str(key)),
+                "qty": _safe_int(qty, f"flags.bulk_sell_receipts[{idx}].items.{key}", issues),
+            }
+            for key, qty in sorted(items_raw.items())
+        ]
+        result.append({
+            "at_ms": _safe_int(entry.get("at_ms"), f"flags.bulk_sell_receipts[{idx}].at_ms", issues),
+            "coins": _safe_int(entry.get("coins"), f"flags.bulk_sell_receipts[{idx}].coins", issues),
+            "items": items,
+            "item_count": sum(item["qty"] for item in items),
+        })
+    result.sort(key=lambda row: row["at_ms"], reverse=True)
+    return result
+
+
 def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     stats_raw = _ensure_dict(raw, "flags.dungeon_last_run_stats", issues)
     result = []
@@ -475,11 +589,38 @@ def _normalize_seasonal(flags: dict[str, Any], issues: list[Issue]) -> dict[str,
         })
 
     tokens = _ensure_dict(flags.get("seasonal_tokens_by_event"), "flags.seasonal_tokens_by_event", issues)
+    market = _ensure_dict(flags.get("seasonal_market_purchases"), "flags.seasonal_market_purchases", issues)
+    reward_tiers = _ensure_dict(
+        flags.get("seasonal_reward_tiers_claimed"), "flags.seasonal_reward_tiers_claimed", issues,
+    )
+    reward_tiers_claimed: dict[str, list[int]] = {}
+    for event_id, tiers in reward_tiers.items():
+        if not isinstance(tiers, list):
+            continue
+        reward_tiers_claimed[str(event_id)] = sorted(
+            _safe_int(tier, f"flags.seasonal_reward_tiers_claimed.{event_id}", issues)
+            for tier in tiers
+        )
+    boss_token_day = _safe_int(flags.get("seasonal_boss_token_day"), "flags.seasonal_boss_token_day", issues)
     return {
         "event_id": flags.get("seasonal_bounty_event_id"),
         "tokens": {str(k): _safe_int(v, f"seasonal_tokens.{k}", issues) for k, v in tokens.items()},
         "bounties": bounties,
         "banners": banners,
+        "boss_tokens_today": _safe_int(
+            flags.get("seasonal_boss_tokens_today"), "flags.seasonal_boss_tokens_today", issues,
+        ),
+        "boss_token_day": boss_token_day,
+        "boss_token_day_label": _format_boss_coin_day(boss_token_day),
+        "market_purchases": [
+            {
+                "key": str(key),
+                "name": format_key(str(key)),
+                "qty": _safe_int(qty, f"flags.seasonal_market_purchases.{key}", issues),
+            }
+            for key, qty in sorted(market.items())
+        ],
+        "reward_tiers_claimed": reward_tiers_claimed,
     }
 
 
@@ -528,6 +669,9 @@ def normalize_save(
     equipped_values = {v for v in equipped.values() if v}
     prestige_map = _ensure_dict(flags.get("skill_prestige"), "flags.skill_prestige", issues)
     fertilizer = _ensure_dict(flags.get("farming_fertilizer"), "flags.farming_fertilizer", issues)
+    locked_items = {
+        str(key) for key in _ensure_list(flags.get("locked_items"), "flags.locked_items", issues)
+    }
 
     inventory_items = []
     for key, qty_raw in sorted(inventory.items()):
@@ -543,6 +687,8 @@ def normalize_save(
             "qty": qty,
             "category": categorize_item(item_key),
             "equipped": item_key in equipped_values,
+            "locked": item_key in locked_items,
+            "heirloom": is_heirloom_item(item_key),
         })
 
     all_skill_keys = set(skill_levels) | set(skill_xp)
@@ -725,7 +871,10 @@ def normalize_save(
         "fund": _safe_int(flags.get("monument_fund"), "flags.monument_fund", issues),
     }
     seasonal = _normalize_seasonal(flags, issues)
-    session_queue = _ensure_list(flags.get("session_queue"), "flags.session_queue", issues)
+    session_queue = _normalize_session_queue(flags.get("session_queue"), issues)
+    hired_mercenaries = _normalize_hired_mercenaries(flags.get("hired_mercenaries"), issues)
+    heirlooms = _normalize_heirlooms(flags, inventory, equipped_values, issues)
+    bulk_sell_receipts = _normalize_bulk_sell_receipts(flags.get("bulk_sell_receipts"), issues)
     recent_sessions = _ensure_list(flags.get("recent_sessions"), "flags.recent_sessions", issues)
     town_buildings = _ensure_dict(flags.get("town_building_tiers"), "flags.town_building_tiers", issues)
     house_bundle = _normalize_house_bundle(flags, issues)
@@ -937,7 +1086,15 @@ def normalize_save(
             },
             "bounties": seasonal.get("bounties", []),
             "banners": seasonal.get("banners", []),
+            "boss_tokens_today": seasonal.get("boss_tokens_today", 0),
+            "boss_token_day": seasonal.get("boss_token_day", 0),
+            "boss_token_day_label": seasonal.get("boss_token_day_label"),
+            "market_purchases": seasonal.get("market_purchases", []),
+            "reward_tiers_claimed": seasonal.get("reward_tiers_claimed", {}),
         },
+        "mercenaries": hired_mercenaries,
+        "heirlooms": heirlooms,
+        "bulk_sell_receipts": bulk_sell_receipts,
         "carnival": {
             "tab": _safe_int(flags.get("carnival_tab"), "flags.carnival_tab", issues),
             "difficulties": _ensure_dict(flags.get("carnival_difficulties"), "flags.carnival_difficulties", issues),

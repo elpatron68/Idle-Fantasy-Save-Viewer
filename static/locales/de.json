@@ -141,7 +141,16 @@
     "monument": "Großes Monument",
     "monumentTier": "Stufe",
     "monumentFund": "Fonds",
-    "seasonal": "Saison-Event"
+    "seasonal": "Saison-Event",
+    "mercenaries": "Angemietete Söldner",
+    "heirlooms": "Erbstücke"
+  },
+  "time": {
+    "seconds": "{n} s",
+    "minutes": "{n} Min.",
+    "minutesSeconds": "{m} Min. {s} s",
+    "hours": "{n} Std.",
+    "hoursMinutes": "{h} Std. {m} Min."
   },
   "skills": {
     "search": "Skill suchen…",
@@ -202,7 +211,10 @@
     "trendExpand": "Klicken für großes Diagramm",
     "trendExpandFor": "Mengenverlauf für {name}",
     "addGoal": "Ziel hinzufügen",
-    "addGoalFor": "Ziel für {name} hinzufügen"
+    "addGoalFor": "Ziel für {name} hinzufügen",
+    "locked": "Gesperrt",
+    "heirloom": "Erbstück",
+    "bulkSales": "Letzte Massenverkäufe"
   },
   "equipment": {
     "title": "Ausrüstung",
@@ -276,6 +288,10 @@
     "cooldownReady": "Bereit",
     "cooldownUntil": "Verfügbar ab {time}",
     "noneEquipped": "Keiner",
+    "bossTokensToday": "Boss-Tokens heute",
+    "marketPurchases": "Markt-Käufe",
+    "rewardTiers": "Belohnungsstufen",
+    "rewardTiersClaimed": "Eingelöst: {tiers}",
     "carnival": {
       "title": "Carnival",
       "skill": "Carnival-Skill",
@@ -432,6 +448,7 @@
   },
   "category": {
     "currency": "Währung",
+    "heirlooms": "Erbstücke",
     "ores_mining": "Erze & Mining",
     "bars_smithing": "Barren & Schmieden",
     "wood_planks": "Holz & Bretter",

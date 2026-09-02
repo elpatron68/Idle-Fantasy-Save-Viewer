@@ -141,7 +141,16 @@
     "monument": "Grand Monument",
     "monumentTier": "Stage",
     "monumentFund": "Fund",
-    "seasonal": "Seasonal event"
+    "seasonal": "Seasonal event",
+    "mercenaries": "Hired mercenaries",
+    "heirlooms": "Heirlooms"
+  },
+  "time": {
+    "seconds": "{n}s",
+    "minutes": "{n} min",
+    "minutesSeconds": "{m} min {s}s",
+    "hours": "{n} h",
+    "hoursMinutes": "{h} h {m} min"
   },
   "skills": {
     "search": "Search skills…",
@@ -202,7 +211,10 @@
     "trendExpand": "Click to enlarge chart",
     "trendExpandFor": "Quantity history for {name}",
     "addGoal": "Add goal",
-    "addGoalFor": "Add goal for {name}"
+    "addGoalFor": "Add goal for {name}",
+    "locked": "Locked",
+    "heirloom": "Heirloom",
+    "bulkSales": "Recent bulk sales"
   },
   "equipment": {
     "title": "Equipment",
@@ -276,6 +288,10 @@
     "cooldownReady": "Ready",
     "cooldownUntil": "Available from {time}",
     "noneEquipped": "None",
+    "bossTokensToday": "Boss tokens today",
+    "marketPurchases": "Market purchases",
+    "rewardTiers": "Reward tiers",
+    "rewardTiersClaimed": "Claimed: {tiers}",
     "carnival": {
       "title": "Carnival",
       "skill": "Carnival skill",
@@ -432,6 +448,7 @@
   },
   "category": {
     "currency": "Currency",
+    "heirlooms": "Heirlooms",
     "ores_mining": "Ores & Mining",
     "bars_smithing": "Bars & Smithing",
     "wood_planks": "Wood & Planks",

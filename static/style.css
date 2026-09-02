@@ -767,6 +767,13 @@ body.inv-chart-modal-open {
   font-size: 0.85rem;
 }
 
+.locked-mark,
+.heirloom-mark {
+  margin-left: 6px;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
 .equip-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
