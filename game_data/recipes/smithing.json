@@ -1691,7 +1691,9 @@
     "type": "tool",
     "display_name": "Bronze Hoe",
     "level_required": 1,
-    "materials": { "bronze_bar": 2 },
+    "materials": {
+      "bronze_bar": 2
+    },
     "output_quantity": 1,
     "xp_per_item": 10,
     "time_per_item": 60
@@ -1700,7 +1702,9 @@
     "type": "tool",
     "display_name": "Iron Hoe",
     "level_required": 15,
-    "materials": { "iron_bar": 2 },
+    "materials": {
+      "iron_bar": 2
+    },
     "output_quantity": 1,
     "xp_per_item": 20,
     "time_per_item": 60
@@ -1709,7 +1713,9 @@
     "type": "tool",
     "display_name": "Steel Hoe",
     "level_required": 30,
-    "materials": { "steel_bar": 2 },
+    "materials": {
+      "steel_bar": 2
+    },
     "output_quantity": 1,
     "xp_per_item": 30,
     "time_per_item": 60
@@ -1718,7 +1724,9 @@
     "type": "tool",
     "display_name": "Mithril Hoe",
     "level_required": 55,
-    "materials": { "mithril_bar": 2 },
+    "materials": {
+      "mithril_bar": 2
+    },
     "output_quantity": 1,
     "xp_per_item": 40,
     "time_per_item": 60
@@ -1727,7 +1735,9 @@
     "type": "tool",
     "display_name": "Adamantite Hoe",
     "level_required": 70,
-    "materials": { "adamantite_bar": 2 },
+    "materials": {
+      "adamantite_bar": 2
+    },
     "output_quantity": 1,
     "xp_per_item": 50,
     "time_per_item": 60
@@ -1736,7 +1746,9 @@
     "type": "tool",
     "display_name": "Runite Hoe",
     "level_required": 85,
-    "materials": { "runite_bar": 2 },
+    "materials": {
+      "runite_bar": 2
+    },
     "output_quantity": 1,
     "xp_per_item": 60,
     "time_per_item": 60
@@ -1745,7 +1757,9 @@
     "type": "component",
     "display_name": "Iron Nails",
     "level_required": 5,
-    "materials": { "iron_bar": 1 },
+    "materials": {
+      "iron_bar": 1
+    },
     "output_quantity": 15,
     "xp_per_item": 5.0,
     "time_per_item": 60
@@ -1754,7 +1768,9 @@
     "type": "component",
     "display_name": "Steel Nails",
     "level_required": 30,
-    "materials": { "steel_bar": 1 },
+    "materials": {
+      "steel_bar": 1
+    },
     "output_quantity": 20,
     "xp_per_item": 12.0,
     "time_per_item": 60
@@ -1763,7 +1779,9 @@
     "type": "component",
     "display_name": "Mithril Nails",
     "level_required": 55,
-    "materials": { "mithril_bar": 1 },
+    "materials": {
+      "mithril_bar": 1
+    },
     "output_quantity": 25,
     "xp_per_item": 25.0,
     "time_per_item": 60
@@ -1772,7 +1790,9 @@
     "type": "component",
     "display_name": "Runite Nails",
     "level_required": 85,
-    "materials": { "runite_bar": 1 },
+    "materials": {
+      "runite_bar": 1
+    },
     "output_quantity": 30,
     "xp_per_item": 45.0,
     "time_per_item": 60
@@ -1841,6 +1861,298 @@
     },
     "output_quantity": 1,
     "xp_per_item": 60,
+    "time_per_item": 60
+  },
+  "mythrite_bar": {
+    "type": "bar",
+    "display_name": "Mythrite Bar",
+    "level_required": 1,
+    "materials": {
+      "mythrite_ore": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 90,
+    "time_per_item": 60
+  },
+  "abyssal_bar": {
+    "type": "bar",
+    "display_name": "Abyssal Bar",
+    "level_required": 30,
+    "materials": {
+      "abyssal_ore": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 240,
+    "time_per_item": 60
+  },
+  "voidsteel_bar": {
+    "type": "bar",
+    "display_name": "Voidsteel Bar",
+    "level_required": 60,
+    "materials": {
+      "voidsteel_ore": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 450,
+    "time_per_item": 60
+  },
+  "starforged_bar": {
+    "type": "bar",
+    "display_name": "Starforged Bar",
+    "level_required": 85,
+    "materials": {
+      "starforged_ore": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 780,
+    "time_per_item": 60
+  },
+  "coastal_helm": {
+    "type": "armor",
+    "display_name": "Coastal Helm",
+    "level_required": 1,
+    "materials": {
+      "mythrite_bar": 5,
+      "coastal_pine_log": 3
+    },
+    "output_quantity": 1,
+    "xp_per_item": 90,
+    "time_per_item": 60
+  },
+  "coastal_platebody": {
+    "type": "armor",
+    "display_name": "Coastal Platebody",
+    "level_required": 5,
+    "materials": {
+      "mythrite_bar": 8,
+      "coastal_pine_log": 4
+    },
+    "output_quantity": 1,
+    "xp_per_item": 120,
+    "time_per_item": 60
+  },
+  "coastal_platelegs": {
+    "type": "armor",
+    "display_name": "Coastal Platelegs",
+    "level_required": 5,
+    "materials": {
+      "mythrite_bar": 7,
+      "coastal_pine_log": 4
+    },
+    "output_quantity": 1,
+    "xp_per_item": 110,
+    "time_per_item": 60
+  },
+  "coastal_boots": {
+    "type": "armor",
+    "display_name": "Coastal Boots",
+    "level_required": 3,
+    "materials": {
+      "mythrite_bar": 4,
+      "coastal_pine_log": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 80,
+    "time_per_item": 60
+  },
+  "grove_helm": {
+    "type": "armor",
+    "display_name": "Grove Helm",
+    "level_required": 30,
+    "materials": {
+      "abyssal_bar": 5,
+      "grove_oak_log": 3
+    },
+    "output_quantity": 1,
+    "xp_per_item": 180,
+    "time_per_item": 60
+  },
+  "grove_platebody": {
+    "type": "armor",
+    "display_name": "Grove Platebody",
+    "level_required": 35,
+    "materials": {
+      "abyssal_bar": 8,
+      "grove_oak_log": 4
+    },
+    "output_quantity": 1,
+    "xp_per_item": 240,
+    "time_per_item": 60
+  },
+  "grove_platelegs": {
+    "type": "armor",
+    "display_name": "Grove Platelegs",
+    "level_required": 35,
+    "materials": {
+      "abyssal_bar": 7,
+      "grove_oak_log": 4
+    },
+    "output_quantity": 1,
+    "xp_per_item": 220,
+    "time_per_item": 60
+  },
+  "grove_boots": {
+    "type": "armor",
+    "display_name": "Grove Boots",
+    "level_required": 33,
+    "materials": {
+      "abyssal_bar": 4,
+      "grove_oak_log": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 160,
+    "time_per_item": 60
+  },
+  "volcanic_helm": {
+    "type": "armor",
+    "display_name": "Volcanic Helm",
+    "level_required": 60,
+    "materials": {
+      "voidsteel_bar": 5,
+      "abyssal_log": 3
+    },
+    "output_quantity": 1,
+    "xp_per_item": 320,
+    "time_per_item": 60
+  },
+  "volcanic_platebody": {
+    "type": "armor",
+    "display_name": "Volcanic Platebody",
+    "level_required": 65,
+    "materials": {
+      "voidsteel_bar": 8,
+      "abyssal_log": 4
+    },
+    "output_quantity": 1,
+    "xp_per_item": 420,
+    "time_per_item": 60
+  },
+  "volcanic_platelegs": {
+    "type": "armor",
+    "display_name": "Volcanic Platelegs",
+    "level_required": 65,
+    "materials": {
+      "voidsteel_bar": 7,
+      "abyssal_log": 4
+    },
+    "output_quantity": 1,
+    "xp_per_item": 400,
+    "time_per_item": 60
+  },
+  "volcanic_boots": {
+    "type": "armor",
+    "display_name": "Volcanic Boots",
+    "level_required": 63,
+    "materials": {
+      "voidsteel_bar": 4,
+      "abyssal_log": 2
+    },
+    "output_quantity": 1,
+    "xp_per_item": 300,
+    "time_per_item": 60
+  },
+  "elder_helm": {
+    "type": "armor",
+    "display_name": "Elder Helm",
+    "level_required": 85,
+    "materials": {
+      "starforged_bar": 5,
+      "starwood_log": 3,
+      "ancient_sigil": 5
+    },
+    "output_quantity": 1,
+    "xp_per_item": 600,
+    "time_per_item": 60
+  },
+  "elder_platebody": {
+    "type": "armor",
+    "display_name": "Elder Platebody",
+    "level_required": 90,
+    "materials": {
+      "starforged_bar": 8,
+      "starwood_log": 4,
+      "ancient_sigil": 5
+    },
+    "output_quantity": 1,
+    "xp_per_item": 800,
+    "time_per_item": 60
+  },
+  "elder_platelegs": {
+    "type": "armor",
+    "display_name": "Elder Platelegs",
+    "level_required": 90,
+    "materials": {
+      "starforged_bar": 7,
+      "starwood_log": 4,
+      "ancient_sigil": 5
+    },
+    "output_quantity": 1,
+    "xp_per_item": 760,
+    "time_per_item": 60
+  },
+  "elder_boots": {
+    "type": "armor",
+    "display_name": "Elder Boots",
+    "level_required": 88,
+    "materials": {
+      "starforged_bar": 4,
+      "starwood_log": 2,
+      "ancient_sigil": 5
+    },
+    "output_quantity": 1,
+    "xp_per_item": 560,
+    "time_per_item": 60
+  },
+  "elder_cape": {
+    "type": "armor",
+    "display_name": "Elder Cape",
+    "level_required": 88,
+    "materials": {
+      "abyssal_log": 20,
+      "starforged_bar": 2,
+      "ancient_sigil": 5
+    },
+    "output_quantity": 1,
+    "xp_per_item": 540,
+    "time_per_item": 60
+  },
+  "elder_shield": {
+    "type": "armor",
+    "display_name": "Elder Shield",
+    "level_required": 88,
+    "materials": {
+      "starforged_bar": 6,
+      "abyssal_log": 4,
+      "ancient_sigil": 5
+    },
+    "output_quantity": 1,
+    "xp_per_item": 580,
+    "time_per_item": 60
+  },
+  "elder_signet_ring": {
+    "type": "jewelry",
+    "display_name": "Elder Ring",
+    "level_required": 90,
+    "materials": {
+      "starforged_bar": 3,
+      "elder_ruby": 1,
+      "ancient_sigil": 5
+    },
+    "output_quantity": 1,
+    "xp_per_item": 700,
+    "time_per_item": 60
+  },
+  "elder_amulet": {
+    "type": "jewelry",
+    "display_name": "Elder Amulet",
+    "level_required": 90,
+    "materials": {
+      "starforged_bar": 3,
+      "elder_sapphire": 1,
+      "ancient_sigil": 5
+    },
+    "output_quantity": 1,
+    "xp_per_item": 700,
     "time_per_item": 60
   }
 }

@@ -151,5 +151,41 @@
     "xp_per_item": 216,
     "healing_value": 22,
     "time_per_item": 60
+  },
+  "tidepool_crab": {
+    "raw_item": "raw_tidepool_crab",
+    "cooked_item": "tidepool_crab",
+    "display_name": "Cooked Tidepool Crab",
+    "level_required": 1,
+    "xp_per_item": 90,
+    "healing_value": 10,
+    "time_per_item": 60
+  },
+  "grove_bass": {
+    "raw_item": "raw_grove_bass",
+    "cooked_item": "grove_bass",
+    "display_name": "Cooked Grove Bass",
+    "level_required": 30,
+    "xp_per_item": 270,
+    "healing_value": 18,
+    "time_per_item": 60
+  },
+  "lavafin": {
+    "raw_item": "raw_lavafin",
+    "cooked_item": "lavafin",
+    "display_name": "Cooked Lavafin",
+    "level_required": 60,
+    "xp_per_item": 540,
+    "healing_value": 26,
+    "time_per_item": 60
+  },
+  "deepwater_ray": {
+    "raw_item": "raw_deepwater_ray",
+    "cooked_item": "deepwater_ray",
+    "display_name": "Cooked Deepwater Ray",
+    "level_required": 85,
+    "xp_per_item": 900,
+    "healing_value": 34,
+    "time_per_item": 60
   }
 }
