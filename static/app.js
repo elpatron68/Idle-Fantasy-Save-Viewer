@@ -584,15 +584,31 @@ function renderOverview(d) {
     `<li><span>${esc((p.id || "").replace(/_/g, " "))}</span><span>+${p.boost_percent}%</span></li>`
   ).join("");
 
+  const farmingMeta = d.farming_meta || {};
+  const farmingExtra = [
+    farmingMeta.magic_bean_planted
+      ? `<li><span>${esc(t("overview.magicBean"))}</span><span>${esc(t("overview.magicBeanPlanted"))}</span></li>`
+      : "",
+    farmingMeta.last_fertilizer_name
+      ? `<li><span>${esc(t("overview.lastFertilizer"))}</span><span>${esc(farmingMeta.last_fertilizer_name)}</span></li>`
+      : "",
+    ...(farmingMeta.last_crops_by_patch || []).map((row) =>
+      `<li><span>${esc(t("overview.lastCropPatch", { n: row.patch }))}</span><span>${esc(row.crop_name)}</span></li>`
+    ),
+  ].filter(Boolean).join("");
+
   const farming = (d.farming || []).map((p) => {
     const fert = p.fertilizer ? ` · ${esc(String(p.fertilizer).replace(/_/g, " "))}` : "";
     return `<li><span>${esc(t("overview.patch", { n: p.patchNumber }))}</span><span>${esc(p.cropType || "—")}${fert}</span></li>`;
   }).join("");
 
   const monument = d.monument || {};
-  const monumentRows = monument.tier
-    ? `<li><span>${esc(t("overview.monumentTier"))}</span><span>${monument.tier}</span></li>
-       <li><span>${esc(t("overview.monumentFund"))}</span><span>${fmt(monument.fund || 0)}</span></li>`
+  const monumentRows = monument.tier || monument.touch_day_label
+    ? [
+      monument.tier ? `<li><span>${esc(t("overview.monumentTier"))}</span><span>${monument.tier}</span></li>` : "",
+      monument.fund != null && monument.tier ? `<li><span>${esc(t("overview.monumentFund"))}</span><span>${fmt(monument.fund || 0)}</span></li>` : "",
+      monument.touch_day_label ? `<li><span>${esc(t("overview.monumentTouchDay"))}</span><span>${esc(monument.touch_day_label)}</span></li>` : "",
+    ].filter(Boolean).join("")
     : "";
 
   const tower = d.tower || {};
@@ -657,11 +673,13 @@ function renderOverview(d) {
       <div class="card">
         <h3>${esc(t("overview.farming"))}</h3>
         <ul class="list-compact">${farming || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>
+        ${farmingExtra ? `<ul class="list-compact farming-meta-list">${farmingExtra}</ul>` : ""}
       </div>
       <div class="card">
         <h3>${esc(t("overview.guildRep"))}</h3>
         <ul class="list-compact">${Object.entries(d.guild_reputation || {}).map(([k, v]) =>
           `<li><span>${esc(k)}</span><span>${fmt(v)}</span></li>`).join("") || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>
+        ${renderGuildMetaHtml(d.guild_meta)}
       </div>
       <div class="card">
         <h3>${esc(t("overview.monument"))}</h3>
@@ -691,7 +709,32 @@ function renderOverview(d) {
         <h3>${esc(t("overview.heirlooms"))}</h3>
         ${heirloomsHtml}
       </div>` : ""}
+      ${renderPrayerPityCard(d.prayer)}
     </div>`;
+}
+
+function renderPrayerPityCard(prayer) {
+  if (!prayer?.has_data) return "";
+  return `<div class="card">
+    <h3>${esc(t("overview.prayer"))}</h3>
+    <ul class="list-compact">
+      <li><span>${esc(t("overview.divinePityMisses"))}</span><span>${fmt(prayer.divine_pity_misses || 0)}</span></li>
+      <li><span>${esc(t("overview.dwarvenPityClaims"))}</span><span>${fmt(prayer.dwarven_pity_claims || 0)}</span></li>
+    </ul>
+  </div>`;
+}
+
+function renderGuildMetaHtml(meta) {
+  if (!meta?.has_data) return "";
+  const tiers = (meta.daily_tier_counts || []).map((row) =>
+    `<li><span>${esc(row.name)}</span><span>${fmt(row.count)}</span></li>`
+  ).join("");
+  const resets = (meta.quest_reset_levels || []).map((row) =>
+    `<li><span>${esc(row.skill_name)}</span><span>${esc(t("overview.guildResetLevel", { level: row.level }))}</span></li>`
+  ).join("");
+  return `
+    ${tiers ? `<h4 class="overview-subhead">${esc(t("overview.guildDailyTiers"))}</h4><ul class="list-compact">${tiers}</ul>` : ""}
+    ${resets ? `<h4 class="overview-subhead">${esc(t("overview.guildResetLevels"))}</h4><ul class="list-compact">${resets}</ul>` : ""}`;
 }
 
 function renderImportChangesCard(changes) {
@@ -2513,6 +2556,7 @@ function renderQuests(d) {
       </select>
     </div>
     ${weeklyNote}
+    ${q.tab === "guild" ? renderGuildMetaQuestPanel(d.guild_meta) : ""}
     <div class="card">
       <table>
         <thead><tr>
@@ -2541,6 +2585,17 @@ function renderQuests(d) {
     state.quests.filter = e.target.value;
     renderQuests(state.data);
   });
+}
+
+function renderGuildMetaQuestPanel(meta) {
+  if (!meta?.has_data) return "";
+  const tiers = (meta.daily_tier_counts || []).slice(0, 12).map((row) =>
+    `<li><span>${esc(row.name)}</span><span>${fmt(row.count)}</span></li>`
+  ).join("");
+  return `<div class="card quest-meta-card">
+    <h3>${esc(t("quests.guildMeta"))}</h3>
+    ${tiers ? `<h4>${esc(t("overview.guildDailyTiers"))}</h4><ul class="list-compact">${tiers}</ul>` : ""}
+  </div>`;
 }
 
 function renderEvents(d) {

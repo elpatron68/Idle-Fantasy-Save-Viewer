@@ -1591,6 +1591,24 @@ tr.has-goal td:first-child { font-weight: 600; }
   letter-spacing: 0.03em;
 }
 
+.farming-meta-list {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.overview-subhead {
+  margin: 12px 0 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.quest-meta-card h4 {
+  margin: 12px 0 6px;
+  font-size: 0.9rem;
+}
+
 .prestige-select-label {
   display: flex;
   flex-direction: column;

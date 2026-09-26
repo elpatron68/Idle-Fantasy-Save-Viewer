@@ -444,6 +444,65 @@ def _normalize_bulk_sell_receipts(raw: Any, issues: list[Issue]) -> list[dict[st
     return result
 
 
+def _normalize_farming_meta(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    last_crop_raw = _ensure_dict(flags.get("last_crop_by_patch"), "flags.last_crop_by_patch", issues)
+    last_crops: list[dict[str, Any]] = []
+    for patch_key, crop_key in sorted(last_crop_raw.items(), key=lambda item: str(item[0])):
+        patch_num = _safe_int(patch_key, f"flags.last_crop_by_patch.{patch_key}", issues, default=0)
+        crop_str = str(crop_key)
+        last_crops.append({
+            "patch": patch_num,
+            "crop_key": crop_str,
+            "crop_name": format_item_name(crop_str),
+        })
+    fert_key = flags.get("last_fertilizer_key")
+    fert_name = format_item_name(str(fert_key)) if fert_key else None
+    magic_bean = bool(flags.get("magic_bean_planted"))
+    return {
+        "magic_bean_planted": magic_bean,
+        "last_fertilizer_key": str(fert_key) if fert_key else None,
+        "last_fertilizer_name": fert_name,
+        "last_crops_by_patch": last_crops,
+        "has_data": magic_bean or bool(fert_key) or bool(last_crops),
+    }
+
+
+def _normalize_prayer_pity(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    divine = _safe_int(flags.get("divine_pity_misses"), "flags.divine_pity_misses", issues)
+    dwarven = _safe_int(flags.get("dwarven_pity_claims"), "flags.dwarven_pity_claims", issues)
+    return {
+        "divine_pity_misses": divine,
+        "dwarven_pity_claims": dwarven,
+        "has_data": divine > 0 or dwarven > 0,
+    }
+
+
+def _normalize_guild_meta(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    tiers_raw = _ensure_dict(flags.get("guild_daily_tier_counts"), "flags.guild_daily_tier_counts", issues)
+    tier_counts = [
+        {
+            "key": str(key),
+            "name": format_key(str(key)),
+            "count": _safe_int(qty, f"flags.guild_daily_tier_counts.{key}", issues),
+        }
+        for key, qty in sorted(tiers_raw.items())
+    ]
+    reset_raw = _ensure_dict(flags.get("guild_quest_reset_levels"), "flags.guild_quest_reset_levels", issues)
+    reset_levels = [
+        {
+            "skill": str(skill),
+            "skill_name": format_key(str(skill)),
+            "level": _safe_int(level, f"flags.guild_quest_reset_levels.{skill}", issues),
+        }
+        for skill, level in sorted(reset_raw.items())
+    ]
+    return {
+        "daily_tier_counts": tier_counts,
+        "quest_reset_levels": reset_levels,
+        "has_data": bool(tier_counts or reset_levels),
+    }
+
+
 def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     stats_raw = _ensure_dict(raw, "flags.dungeon_last_run_stats", issues)
     result = []
@@ -921,10 +980,16 @@ def normalize_save(
         "hp_bonus": _safe_int(flags.get("tower_hp_bonus"), "flags.tower_hp_bonus", issues),
         "coin_bonus_pct": _safe_int(flags.get("tower_coin_bonus_pct"), "flags.tower_coin_bonus_pct", issues),
     }
+    touch_day = _safe_int(flags.get("monument_touch_day"), "flags.monument_touch_day", issues)
     monument = {
         "tier": _safe_int(flags.get("monument_tier"), "flags.monument_tier", issues),
         "fund": _safe_int(flags.get("monument_fund"), "flags.monument_fund", issues),
+        "touch_day": touch_day,
+        "touch_day_label": _format_boss_coin_day(touch_day),
     }
+    farming_meta = _normalize_farming_meta(flags, issues)
+    prayer = _normalize_prayer_pity(flags, issues)
+    guild_meta = _normalize_guild_meta(flags, issues)
     seasonal = _normalize_seasonal(flags, issues)
     session_queue = _normalize_session_queue(flags.get("session_queue"), issues)
     hired_mercenaries = _normalize_hired_mercenaries(flags.get("hired_mercenaries"), issues)
@@ -1120,9 +1185,12 @@ def normalize_save(
         "pets": pets,
         "farming": farming,
         "farming_fertilizer": fertilizer,
+        "farming_meta": farming_meta,
         "workers": workers,
         "tower": tower,
         "monument": monument,
+        "prayer": prayer,
+        "guild_meta": guild_meta,
         "seasonal": {
             "tokens_by_event": _ensure_dict(
                 flags.get("seasonal_tokens_by_event"), "flags.seasonal_tokens_by_event", issues,
