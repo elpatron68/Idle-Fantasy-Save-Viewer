@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import time
 import urllib.error
 import urllib.request
@@ -29,14 +31,22 @@ OUT_DIR = ROOT / "game_data" / "recipes"
 MANIFEST = ROOT / "game_data" / "manifest.json"
 
 
-RETRYABLE_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+RETRYABLE_HTTP_CODES = frozenset({403, 429, 500, 502, 503, 504})
 MAX_HTTP_ATTEMPTS = 5
+
+
+def _request_headers(url: str) -> dict[str, str]:
+    headers = {"User-Agent": "idle-fantasy-viewer-sync"}
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if token and "api.github.com" in url:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
 
 
 def _fetch(url: str, *, timeout: int = 60) -> bytes:
     last_error: Exception | None = None
     for attempt in range(1, MAX_HTTP_ATTEMPTS + 1):
-        req = urllib.request.Request(url, headers={"User-Agent": "idle-fantasy-viewer-sync"})
+        req = urllib.request.Request(url, headers=_request_headers(url))
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return resp.read()
@@ -55,10 +65,23 @@ def _fetch(url: str, *, timeout: int = 60) -> bytes:
 
 
 def _resolve_sha() -> str:
-    # /commits/{branch} intermittently 504s; /git/refs/heads/{branch} is reliable.
-    api = f"https://api.github.com/repos/{REPO}/git/refs/heads/{BRANCH}"
-    data = json.loads(_fetch(api, timeout=30).decode())
-    return data["object"]["sha"]
+    """Resolve upstream main SHA without the REST API (avoids shared-runner rate limits)."""
+    url = f"https://github.com/{REPO}.git"
+    try:
+        proc = subprocess.run(
+            ["git", "ls-remote", url, f"refs/heads/{BRANCH}"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        stderr = (exc.stderr or exc.stdout or "").strip()
+        raise SystemExit(f"Failed to resolve upstream ref via git ls-remote: {stderr}") from exc
+    lines = [line for line in proc.stdout.splitlines() if line.strip()]
+    if not lines:
+        raise SystemExit(f"Upstream branch {BRANCH} not found in {REPO}")
+    return lines[0].split()[0]
 
 
 def main() -> None:
