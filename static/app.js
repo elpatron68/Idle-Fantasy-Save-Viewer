@@ -646,8 +646,9 @@ function renderOverview(d) {
           <li><span>${esc(t("overview.activePotion"))}</span><span>${esc(c.active_potion || "—")}</span></li>
           <li><span>${esc(t("overview.activeSpell"))}</span><span>${esc(c.active_spell || "—")}</span></li>
           <li><span>${esc(t("overview.weaponSlot"))}</span><span>${esc(c.active_weapon_slot || "—")}</span></li>
-          <li><span>${esc(t("overview.blessing"))}</span><span>${esc(c.active_blessing || "—")}</span></li>
+          <li><span>${esc(t("overview.blessing"))}</span><span>${esc(formatBlessing(c))}</span></li>
           ${c.xp_boost_expires_at > 0 ? `<li><span>${esc(t("overview.globalXpBoost"))}</span><span>${esc(formatGlobalXpBoost(c.xp_boost_expires_at))}</span></li>` : ""}
+          ${c.xp_boost_last_purchase_at > 0 ? `<li><span>${esc(t("overview.xpBoostLastPurchase"))}</span><span>${esc(formatTs(c.xp_boost_last_purchase_at))}</span></li>` : ""}
         </ul>
         ${c.notes ? `<p class="character-notes">${esc(c.notes)}</p>` : ""}
       </div>
@@ -1001,6 +1002,51 @@ function renderSkillsBody(d) {
   });
 
   renderSkillAdvisorCard();
+  updateElderSkillsPanel(d);
+}
+
+function updateElderSkillsPanel(d) {
+  const panel = document.getElementById("tab-skills");
+  if (!panel) return;
+  let wrap = document.getElementById("elder-skills-wrap");
+  const skills = (d.elder_isle?.skills || []).filter((s) => s.level > 1 || s.xp > 0);
+  if (!skills.length) {
+    if (wrap) wrap.remove();
+    return;
+  }
+  const rows = skills.map((sk) =>
+    `<tr>
+      <td>${esc(sk.name)}</td>
+      <td>${fmt(sk.level)}</td>
+      <td>—</td>
+      <td>${fmt(sk.xp)}</td>
+      <td class="col-progress"></td>
+      <td class="col-actions"></td>
+    </tr>`
+  ).join("");
+  const html = `<div class="card inv-card elder-skills-card">
+    <h3>${esc(t("skills.elderTitle"))}</h3>
+    <p class="skill-advisor-hint">${esc(t("skills.elderHint"))}</p>
+    <div class="inv-table-wrap">
+      <table class="skills-table">
+        <thead><tr>
+          <th>${esc(t("skills.skill"))}</th>
+          <th>${esc(t("skills.level"))}</th>
+          <th>${esc(t("skills.prestige"))}</th>
+          <th>XP</th>
+          <th class="col-progress"></th>
+          <th class="col-actions"></th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.id = "elder-skills-wrap";
+    panel.appendChild(wrap);
+  }
+  wrap.innerHTML = html;
 }
 
 async function loadSkillAdvisor(skillKey) {
@@ -2608,6 +2654,7 @@ function renderQuests(d) {
       </select>
     </div>
     ${weeklyNote}
+    ${renderQuestResetsPanel(d.quests?.resets, q.tab)}
     ${q.tab === "guild" ? renderGuildMetaQuestPanel(d.guild_meta) : ""}
     <div class="card">
       <table>
@@ -2647,6 +2694,27 @@ function renderGuildMetaQuestPanel(meta) {
   return `<div class="card quest-meta-card">
     <h3>${esc(t("quests.guildMeta"))}</h3>
     ${tiers ? `<h4>${esc(t("overview.guildDailyTiers"))}</h4><ul class="list-compact">${tiers}</ul>` : ""}
+  </div>`;
+}
+
+function renderQuestResetsPanel(resets, tab) {
+  if (!resets?.has_data) return "";
+  if (tab === "story") return "";
+  const hourRow = `<li><span>${esc(t("quests.dailyResetHour"))}</span><span>${fmt(resets.daily_reset_hour)}:00</span></li>`;
+  let nextRow = "";
+  if (tab === "daily" && resets.daily_next_reset_at > 0) {
+    nextRow = `<li><span>${esc(t("quests.nextDailyReset"))}</span><span>${esc(formatTs(resets.daily_next_reset_at))}</span></li>`;
+  } else if (tab === "weekly" && resets.weekly_next_reset_at > 0) {
+    nextRow = `<li><span>${esc(t("quests.nextWeeklyReset"))}</span><span>${esc(formatTs(resets.weekly_next_reset_at))}</span></li>`;
+  } else if (tab === "guild" && resets.guild_daily_next_reset_at > 0) {
+    nextRow = `<li><span>${esc(t("quests.nextGuildReset"))}</span><span>${esc(formatTs(resets.guild_daily_next_reset_at))}</span></li>`;
+  }
+  if (tab === "weekly" || tab === "guild") {
+    if (!nextRow) return "";
+  }
+  return `<div class="card quest-meta-card">
+    <h3>${esc(t("quests.resetsTitle"))}</h3>
+    <ul class="list-compact">${hourRow}${nextRow}</ul>
   </div>`;
 }
 
@@ -3434,6 +3502,16 @@ function formatGlobalXpBoost(expiresAt) {
   if (ms == null || ms <= 0) return "—";
   if (ms <= Date.now()) return t("overview.globalXpBoostExpired");
   return t("overview.globalXpBoostUntil", { time: formatTs(ms) });
+}
+
+function formatBlessing(character) {
+  const key = character?.active_blessing;
+  if (!key) return "—";
+  const label = humanizeKey(key);
+  const expires = normalizeTimeMs(character.blessing_expires_at);
+  if (expires == null || expires <= 0) return label;
+  if (expires <= Date.now()) return `${label} (${t("overview.blessingExpired")})`;
+  return `${label} · ${t("overview.blessingUntil", { time: formatTs(expires) })}`;
 }
 
 function formatCooldown(ts) {

@@ -114,6 +114,9 @@
     "globalXpBoost": "Shop XP boost",
     "globalXpBoostUntil": "Active until {time}",
     "globalXpBoostExpired": "Expired",
+    "xpBoostLastPurchase": "Last XP boost purchase",
+    "blessingUntil": "until {time}",
+    "blessingExpired": "expired",
     "sessionQueue": "Session queue",
     "slayer": "Slayer",
     "foretold": "Foretold tasks",
@@ -195,6 +198,8 @@
     "trendExpand": "Click to enlarge chart",
     "trendExpandFor": "Level history for {name}",
     "advisorTitle": "Training advisor",
+    "elderTitle": "Elder Isle skills",
+    "elderHint": "Separate from mainland skills; persist through mainland prestige.",
     "advisorHint": "Click a skill in the table for XP training recommendations (recipe skills only).",
     "advisorLoading": "Loading recommendations…",
     "advisorUnsupported": "No recipe data for this skill yet.",
@@ -260,7 +265,12 @@
     "done": "Done",
     "open": "Open",
     "weeklyBonusClaimed": "Weekly bonus chest claimed",
-    "guildMeta": "Guild daily meta"
+    "guildMeta": "Guild daily meta",
+    "resetsTitle": "Quest resets",
+    "dailyResetHour": "Daily reset hour (local)",
+    "nextDailyReset": "Next daily reset",
+    "nextWeeklyReset": "Next weekly reset",
+    "nextGuildReset": "Next guild daily reset"
   },
   "combat": {
     "enemyKills": "Enemy kills",

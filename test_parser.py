@@ -266,6 +266,22 @@ class ParserTests(unittest.TestCase):
         by_skill = {row["skill"]: row["item_key"] for row in mirror["targets"]}
         self.assertEqual(by_skill["mining"], "heirloom_pickaxe")
 
+    def test_quest_resets_package4(self) -> None:
+        data = normalize_save(_save(
+            flags={
+                **_save()["flags"],
+                "daily_reset_hour": 8,
+                "daily_quest_next_reset_at": 1_700_000_000_000,
+                "weekly_quest_next_reset_at": 1_800_000_000_000,
+                "guild_daily_next_reset_at": 1_750_000_000_000,
+            },
+        ))
+        resets = data["quests"]["resets"]
+        self.assertTrue(resets["has_data"])
+        self.assertEqual(resets["daily_reset_hour"], 8)
+        self.assertEqual(resets["daily_next_reset_at"], 1_700_000_000_000)
+        self.assertEqual(resets["guild_daily_next_reset_at"], 1_750_000_000_000)
+
     def test_prestige_talent_tree(self) -> None:
         data = normalize_save(_save())
         prestige = data["prestige"]
