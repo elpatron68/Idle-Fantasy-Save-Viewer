@@ -32,6 +32,8 @@ jobs:
           python-version: "3.12"
 
       - name: Sync recipe JSON from upstream IdleFantasy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 scripts/sync_game_data.py
 
       - name: Smoke tests
