@@ -12,37 +12,17 @@
 ></script>
 <script>
   (function () {
+    /** Replace secret viewer id in paths; keep tab hash for aggregate usage stats. */
     function redactViewerUrl(url) {
       try {
         var parsed = new URL(url, window.location.origin);
         parsed.pathname = parsed.pathname.replace(/^\/v\/[^/]+\/?/, "/v/viewer/");
-        return parsed.href;
+        parsed.search = "";
+        return parsed.pathname + parsed.hash;
       } catch (e) {
-        return String(url).replace(/\/v\/[^/]+\/?/, "/v/viewer/");
+        return String(url).replace(/\/v\/[^/]+\/?/, "/v/viewer/").split("?")[0];
       }
     }
-
     window.redactAnalyticsUrl = redactViewerUrl;
-
-    function transformRequest(payload) {
-      if (payload && payload.u) payload.u = redactViewerUrl(payload.u);
-      return payload;
-    }
-
-    function configurePlausible() {
-      if (typeof window.plausible !== "function") return;
-      if (typeof window.plausible.init === "function") {
-        window.plausible.init({
-          autoCapturePageviews: false,
-          transformRequest: transformRequest,
-        });
-      }
-      if (typeof window.trackAnalyticsPageview === "function") {
-        window.trackAnalyticsPageview();
-      }
-    }
-
-    var script = document.getElementById("plausible-script");
-    if (script) script.addEventListener("load", configurePlausible);
   })();
 </script>
