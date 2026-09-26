@@ -309,6 +309,20 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(carnival["tab_key"], "prize_shop")
         self.assertEqual(len(carnival["difficulty_settings"]), 2)
 
+    def test_ui_preferences_feintuning(self) -> None:
+        data = normalize_save(_save(
+            flags={
+                **_save()["flags"],
+                "theme_preference": "light",
+                "compact_numbers": True,
+                "font_scale": 1.25,
+            },
+        ))
+        prefs = data["preferences"]
+        self.assertEqual(prefs["theme"], "light")
+        self.assertTrue(prefs["compact_numbers"])
+        self.assertAlmostEqual(prefs["font_scale"], 1.25)
+
     def test_prestige_talent_tree(self) -> None:
         data = normalize_save(_save())
         prestige = data["prestige"]

@@ -15,6 +15,7 @@ from pathlib import Path
 REPO = "tristinbaker/IdleFantasy"
 BRANCH = "main"
 DATA_PREFIX = f"app/src/main/assets/data/recipes"
+ASSETS_PREFIX = "app/src/main/assets/data"
 RAW_BASE = f"https://raw.githubusercontent.com/{REPO}/{BRANCH}"
 
 RECIPE_FILES = (
@@ -28,6 +29,7 @@ RECIPE_FILES = (
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "game_data" / "recipes"
+HEIRLOOMS_PATH = ROOT / "game_data" / "heirlooms.json"
 MANIFEST = ROOT / "game_data" / "manifest.json"
 
 
@@ -84,6 +86,18 @@ def _resolve_sha() -> str:
     return lines[0].split()[0]
 
 
+def _heirlooms_from_equipment(equipment: dict[str, object]) -> dict[str, dict[str, str]]:
+    result: dict[str, dict[str, str]] = {}
+    for key, entry in equipment.items():
+        if not isinstance(entry, dict):
+            continue
+        skill = entry.get("heirloom_skill")
+        if not skill:
+            continue
+        result[str(key)] = {"skill": str(skill)}
+    return dict(sorted(result.items()))
+
+
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     sha = _resolve_sha()
@@ -100,6 +114,21 @@ def main() -> None:
         synced.append(name)
         print(f"  {name}")
 
+    equipment_url = f"{RAW_BASE}/{ASSETS_PREFIX}/equipment.json"
+    try:
+        equipment_payload = _fetch(equipment_url)
+    except urllib.error.HTTPError as exc:
+        raise SystemExit(f"Failed to download equipment.json: HTTP {exc.code}") from exc
+    equipment = json.loads(equipment_payload)
+    if not isinstance(equipment, dict):
+        raise SystemExit("equipment.json is not an object")
+    heirlooms = _heirlooms_from_equipment(equipment)
+    HEIRLOOMS_PATH.write_text(
+        json.dumps(heirlooms, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(f"  heirlooms.json ({len(heirlooms)} items)")
+
     manifest_body = (
         json.dumps(
             {
@@ -108,6 +137,8 @@ def main() -> None:
                 "source_sha": sha,
                 "synced_at": datetime.now(timezone.utc).isoformat(),
                 "files": synced,
+                "heirlooms_file": "heirlooms.json",
+                "heirlooms_count": len(heirlooms),
             },
             indent=2,
         )
@@ -115,7 +146,8 @@ def main() -> None:
     )
     with MANIFEST.open("w", encoding="utf-8", newline="\n") as manifest_file:
         manifest_file.write(manifest_body)
-    print(f"Synced {len(synced)} files -> {OUT_DIR}")
+    print(f"Synced {len(synced)} recipe files -> {OUT_DIR}")
+    print(f"Heirlooms -> {HEIRLOOMS_PATH}")
     print(f"Manifest: {MANIFEST} (sha {sha[:12]})")
 
 

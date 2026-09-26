@@ -2,7 +2,7 @@
   "source_repo": "https://github.com/tristinbaker/IdleFantasy",
   "source_ref": "main",
   "source_sha": "972812a82b26630ead99888e2b64bf6972ecd991",
-  "synced_at": "2026-09-25T13:09:12.732381+00:00",
+  "synced_at": "2026-09-26T13:40:29.437023+00:00",
   "files": [
     "smithing.json",
     "crafting.json",
@@ -10,5 +10,7 @@
     "fletching.json",
     "herblore.json",
     "construction.json"
-  ]
+  ],
+  "heirlooms_file": "heirlooms.json",
+  "heirlooms_count": 14
 }

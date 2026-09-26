@@ -10,6 +10,8 @@ Recipe JSON files in `recipes/` are synced from the Idle Fantasy open-source gam
 
 `prestige_paths.json` is copied from `app/src/main/assets/data/prestige_paths.json` under the same license.
 
-Refresh recipes with: `python scripts/sync_game_data.py`
+`heirlooms.json` is generated from `app/src/main/assets/data/equipment.json` (items with `heirloom_skill`) under the same license.
+
+Refresh recipes and heirlooms with: `python scripts/sync_game_data.py`
 
 The `manifest.json` file records the upstream git ref used for the last sync.
