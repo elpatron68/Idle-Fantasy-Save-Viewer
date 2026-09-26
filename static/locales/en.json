@@ -144,7 +144,18 @@
     "monument": "Grand Monument",
     "monumentTier": "Stage",
     "monumentFund": "Fund",
+    "monumentTouchDay": "Last touch day",
     "seasonal": "Seasonal event",
+    "magicBean": "Magic bean",
+    "magicBeanPlanted": "Planted",
+    "lastFertilizer": "Last fertilizer used",
+    "lastCropPatch": "Last crop (patch {n})",
+    "prayer": "Prayer",
+    "divinePityMisses": "Divine pity misses",
+    "dwarvenPityClaims": "Dwarven pity claims",
+    "guildDailyTiers": "Guild daily tier counts",
+    "guildResetLevels": "Quest reset levels",
+    "guildResetLevel": "Resets at level {level}",
     "mercenaries": "Hired mercenaries",
     "heirlooms": "Heirlooms"
   },
@@ -236,7 +247,8 @@
     "status": "Status",
     "done": "Done",
     "open": "Open",
-    "weeklyBonusClaimed": "Weekly bonus chest claimed"
+    "weeklyBonusClaimed": "Weekly bonus chest claimed",
+    "guildMeta": "Guild daily meta"
   },
   "combat": {
     "enemyKills": "Enemy kills",

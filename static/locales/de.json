@@ -144,7 +144,18 @@
     "monument": "Großes Monument",
     "monumentTier": "Stufe",
     "monumentFund": "Fonds",
+    "monumentTouchDay": "Letzter Berührungstag",
     "seasonal": "Saison-Event",
+    "magicBean": "Magische Bohne",
+    "magicBeanPlanted": "Gepflanzt",
+    "lastFertilizer": "Zuletzt genutzter Dünger",
+    "lastCropPatch": "Letzte Ernte (Patch {n})",
+    "prayer": "Prayer",
+    "divinePityMisses": "Divine-Pity-Fehlschläge",
+    "dwarvenPityClaims": "Dwarven-Pity-Ansprüche",
+    "guildDailyTiers": "Gilden-Daily-Stufen",
+    "guildResetLevels": "Quest-Reset-Level",
+    "guildResetLevel": "Reset bei Level {level}",
     "mercenaries": "Angemietete Söldner",
     "heirlooms": "Erbstücke"
   },
@@ -236,7 +247,8 @@
     "status": "Status",
     "done": "Erledigt",
     "open": "Offen",
-    "weeklyBonusClaimed": "Wöchentliche Bonus-Truhe abgeholt"
+    "weeklyBonusClaimed": "Wöchentliche Bonus-Truhe abgeholt",
+    "guildMeta": "Gilden-Daily-Meta"
   },
   "combat": {
     "enemyKills": "Gegner-Kills",

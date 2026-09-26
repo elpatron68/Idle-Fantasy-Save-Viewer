@@ -211,6 +211,31 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(len(loadout["dungeon_repeat"]["snapshot"]["equipped"]), 2)
         self.assertEqual(data["character"]["xp_boost_expires_at"], 9_999_999_999_000)
 
+    def test_farming_guild_package2(self) -> None:
+        data = normalize_save(_save(
+            flags={
+                **_save()["flags"],
+                "magic_bean_planted": True,
+                "last_fertilizer_key": "magic_ashes",
+                "last_crop_by_patch": {"1": "cabbage", "2": "starfruit"},
+                "monument_touch_day": 20260826,
+                "divine_pity_misses": 2,
+                "dwarven_pity_claims": 33,
+                "guild_daily_tier_counts": {"mining:0": 4, "fishing:1": 6},
+                "guild_quest_reset_levels": {"mining": 10, "agility": 3},
+            },
+        ))
+        meta = data["farming_meta"]
+        self.assertTrue(meta["magic_bean_planted"])
+        self.assertEqual(meta["last_fertilizer_key"], "magic_ashes")
+        self.assertEqual(len(meta["last_crops_by_patch"]), 2)
+        self.assertEqual(data["monument"]["touch_day_label"], "2026-08-26")
+        self.assertEqual(data["prayer"]["dwarven_pity_claims"], 33)
+        self.assertTrue(data["guild_meta"]["has_data"])
+        tiers = {row["key"]: row["count"] for row in data["guild_meta"]["daily_tier_counts"]}
+        self.assertEqual(tiers["mining:0"], 4)
+        self.assertEqual(tiers["fishing:1"], 6)
+
     def test_prestige_talent_tree(self) -> None:
         data = normalize_save(_save())
         prestige = data["prestige"]
