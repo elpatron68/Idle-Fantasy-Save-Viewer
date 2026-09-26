@@ -605,7 +605,7 @@ Smoke tests for goals/import helpers, skill timeline, snapshot deletion, the tra
 
 ## Analytics (optional)
 
-The demo at [if-viewer.elpatron.me](https://if-viewer.elpatron.me/) may include [Plausible](https://plausible.io/) analytics via `templates/_analytics.html` (privacy-friendly, no cookies). Before any event is sent, paths like `/v/<secret>/…` are replaced with **`/v/viewer/`** (query strings stripped; `#tab` hashes kept so you can see which tabs are used without seeing player links). Custom tagged events (import, goals, etc.) never include the viewer id. Self-hosted instances can omit or replace this partial; CSP in `security.py` allows `plausible.elpatron.me` when enabled.
+The demo at [if-viewer.elpatron.me](https://if-viewer.elpatron.me/) may include [Plausible](https://plausible.io/) analytics via `templates/_analytics.html` (privacy-friendly, no cookies). Direct links such as `/v/<secret>/` are **never** sent to Plausible; they are recorded as **`/v/viewer/#tab`** plus custom events **`Viewer Open`** and **`Viewer Tab`**. Query strings are stripped. Self-hosted instances can omit or replace this partial; CSP in `security.py` allows `plausible.elpatron.me` when enabled.
 
 ## Repository layout
 

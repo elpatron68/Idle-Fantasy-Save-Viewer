@@ -17,6 +17,7 @@
       try {
         var parsed = new URL(url, window.location.origin);
         parsed.pathname = parsed.pathname.replace(/^\/v\/[^/]+\/?/, "/v/viewer/");
+        if (parsed.pathname === "/v/viewer") parsed.pathname = "/v/viewer/";
         parsed.search = "";
         return parsed.pathname + parsed.hash;
       } catch (e) {
