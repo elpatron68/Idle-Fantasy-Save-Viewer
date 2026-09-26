@@ -1597,6 +1597,12 @@ tr.has-goal td:first-child { font-weight: 600; }
   border-top: 1px solid var(--border);
 }
 
+.elder-skill-list {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
 .overview-subhead {
   margin: 12px 0 6px;
   font-size: 0.82rem;

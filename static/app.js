@@ -634,13 +634,6 @@ function renderOverview(d) {
     `<li><span>${esc(humanizeKey(k))}</span><span>${esc(t("overview.buildingTier", { tier: v }))}</span></li>`
   ).join("");
 
-  const heirlooms = d.heirlooms?.items || [];
-  const heirloomsHtml = heirlooms.length
-    ? `<ul class="list-compact">${heirlooms.map((item) =>
-      `<li><span>${esc(item.name)}${item.equipped ? " ⚡" : ""}</span><span>${esc(item.skill_name || "—")} · ${fmt(item.xp)} XP</span></li>`
-    ).join("")}</ul>`
-    : `<p class="empty-state">${esc(t("empty.none"))}</p>`;
-
   document.getElementById("tab-overview").innerHTML = `
     ${renderImportChangesCard(state.lastImportChanges)}
     <div class="grid-2">
@@ -705,12 +698,71 @@ function renderOverview(d) {
         <h3>${esc(t("overview.mercenaries"))}</h3>
         <ul class="list-compact">${mercenariesHtml}</ul>
       </div>` : ""}
-      ${heirlooms.length ? `<div class="card">
-        <h3>${esc(t("overview.heirlooms"))}</h3>
-        ${heirloomsHtml}
-      </div>` : ""}
+      ${renderHeirloomsCard(d.heirlooms)}
+      ${renderElderIsleCard(d.elder_isle)}
       ${renderPrayerPityCard(d.prayer)}
     </div>`;
+}
+
+function renderHeirloomsCard(heirlooms) {
+  if (!heirlooms?.has_data) return "";
+  const items = heirlooms.items || [];
+  const itemsHtml = items.length
+    ? `<ul class="list-compact">${items.map((item) =>
+      `<li><span>${esc(item.name)}${item.equipped ? " ⚡" : ""}</span><span>${esc(item.skill_name || "—")} · ${fmt(item.xp)} XP</span></li>`
+    ).join("")}</ul>`
+    : "";
+  const mirrors = heirlooms.mirror_sessions || [];
+  const mirrorHtml = mirrors.map((session) => {
+    const rows = (session.targets || []).map((row) =>
+      `<li><span>${esc(row.skill_name || row.skill)}</span><span>${esc(row.item_name || row.item_key)}</span></li>`
+    ).join("");
+    const head = session.session_id
+      ? t("overview.heirloomMirrorSession", { id: session.session_id })
+      : t("overview.heirloomMirror");
+    return `<h4 class="overview-subhead">${esc(head)}</h4><ul class="list-compact">${rows}</ul>`;
+  }).join("");
+  return `<div class="card">
+    <h3>${esc(t("overview.heirlooms"))}</h3>
+    ${itemsHtml}
+    ${mirrorHtml}
+  </div>`;
+}
+
+function renderElderIsleCard(elder) {
+  if (!elder?.has_data) return "";
+  const locationLabel = elder.on_elder_isle ? t("overview.elderIsleOnIsle") : t("overview.elderIsleMainland");
+  const skills = (elder.skills || []).filter((s) => s.level > 1 || s.xp > 0);
+  const skillsHtml = skills.length
+    ? `<ul class="list-compact elder-skill-list">${skills.map((s) =>
+      `<li><span>${esc(s.name)}</span><span>Lv ${fmt(s.level)} · ${fmt(s.xp)} XP</span></li>`
+    ).join("")}</ul>`
+    : "";
+  const craftHtml = (elder.craft_queue || []).length
+    ? `<h4 class="overview-subhead">${esc(t("overview.elderCraftQueue"))}</h4><ul class="list-compact">${elder.craft_queue.map((p) =>
+      `<li><span>${esc(p.name)}</span></li>`).join("")}</ul>`
+    : "";
+  const sigilHtml = (elder.embedded_sigils || []).length
+    ? `<h4 class="overview-subhead">${esc(t("overview.embeddedSigils"))}</h4><ul class="list-compact">${elder.embedded_sigils.map((row) =>
+      `<li><span>${esc(row.piece_name)}</span><span>${esc(row.sigil_name)}</span></li>`).join("")}</ul>`
+    : "";
+  const quests = elder.quests_completed || [];
+  const questsSummary = quests.length
+    ? `<li><span>${esc(t("overview.elderQuestsCompleted"))}</span><span>${fmt(quests.length)}</span></li>`
+    : "";
+  return `<div class="card">
+    <h3>${esc(t("overview.elderIsle"))}</h3>
+    <ul class="list-compact">
+      <li><span>${esc(t("overview.elderIsleUnlocked"))}</span><span>${elder.unlocked ? "✓" : "—"}</span></li>
+      <li><span>${esc(t("overview.elderIsleLocation"))}</span><span>${esc(locationLabel)}</span></li>
+      ${elder.sea_serpent_defeated ? `<li><span>${esc(t("overview.seaSerpentDefeated"))}</span><span>✓</span></li>` : ""}
+      ${elder.total_level > 0 ? `<li><span>${esc(t("overview.elderTotalLevel"))}</span><span>${fmt(elder.total_level)}</span></li>` : ""}
+      ${questsSummary}
+    </ul>
+    ${skillsHtml}
+    ${craftHtml}
+    ${sigilHtml}
+  </div>`;
 }
 
 function renderPrayerPityCard(prayer) {

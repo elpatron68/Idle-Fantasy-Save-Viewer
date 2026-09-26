@@ -408,10 +408,15 @@ def _normalize_heirlooms(
             continue
         mirror_sessions.append({
             "session_id": str(session_id),
-            "targets": {
-                str(skill): format_item_name(str(item_key))
-                for skill, item_key in targets.items()
-            },
+            "targets": [
+                {
+                    "skill": str(skill),
+                    "skill_name": format_key(str(skill)),
+                    "item_key": str(item_key),
+                    "item_name": format_item_name(str(item_key)),
+                }
+                for skill, item_key in sorted(targets.items(), key=lambda item: str(item[0]))
+            ],
         })
     return {
         "items": items,
@@ -500,6 +505,95 @@ def _normalize_guild_meta(flags: dict[str, Any], issues: list[Issue]) -> dict[st
         "daily_tier_counts": tier_counts,
         "quest_reset_levels": reset_levels,
         "has_data": bool(tier_counts or reset_levels),
+    }
+
+
+ELDER_SKILL_ORDER: tuple[str, ...] = (
+    "mining", "fishing", "woodcutting",
+    "smithing", "cooking",
+    "agility",
+    "attack", "strength", "defense", "ranged", "magic", "hitpoints",
+)
+
+
+def _normalize_elder_isle(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    levels_raw = _ensure_dict(flags.get("elder_skill_levels"), "flags.elder_skill_levels", issues)
+    xp_raw = _ensure_dict(flags.get("elder_skill_xp"), "flags.elder_skill_xp", issues)
+    explicit_keys = set(levels_raw.keys()) | set(xp_raw.keys())
+    skill_keys = sorted(
+        explicit_keys,
+        key=lambda key: (
+            ELDER_SKILL_ORDER.index(key) if key in ELDER_SKILL_ORDER else len(ELDER_SKILL_ORDER),
+            str(key),
+        ),
+    )
+    skills: list[dict[str, Any]] = []
+    for skill_key in skill_keys:
+        level = _safe_int(
+            levels_raw.get(skill_key),
+            f"flags.elder_skill_levels.{skill_key}",
+            issues,
+            default=1,
+        )
+        xp = _safe_int(xp_raw.get(skill_key), f"flags.elder_skill_xp.{skill_key}", issues)
+        skills.append({
+            "key": skill_key,
+            "name": format_key(skill_key),
+            "level": level,
+            "xp": xp,
+        })
+    craft_queue_raw = _ensure_list(flags.get("elder_craft_queue"), "flags.elder_craft_queue", issues)
+    craft_queue = [
+        {"key": str(piece), "name": format_item_name(str(piece))}
+        for piece in craft_queue_raw
+    ]
+    sigils_raw = _ensure_dict(flags.get("embedded_sigils"), "flags.embedded_sigils", issues)
+    embedded_sigils = [
+        {
+            "piece_key": str(piece),
+            "piece_name": format_item_name(str(piece)),
+            "sigil_key": str(sigil),
+            "sigil_name": format_item_name(str(sigil)),
+        }
+        for piece, sigil in sorted(sigils_raw.items(), key=lambda item: str(item[0]))
+    ]
+    quests_raw = flags.get("elder_quests_completed")
+    if quests_raw is None:
+        quest_keys: list[str] = []
+    elif isinstance(quests_raw, list):
+        quest_keys = [str(q) for q in quests_raw]
+    elif isinstance(quests_raw, set):
+        quest_keys = [str(q) for q in quests_raw]
+    else:
+        issues.append(issue(
+            "warning", "invalid_elder_quests",
+            "Field flags.elder_quests_completed is not a list or set.",
+            field="flags.elder_quests_completed",
+        ))
+        quest_keys = []
+    quests_completed = [
+        {"key": qid, "name": format_key(qid)}
+        for qid in sorted(quest_keys)
+    ]
+    unlocked = bool(flags.get("elder_isle_unlocked"))
+    on_isle = bool(flags.get("on_elder_isle"))
+    welcomed = bool(flags.get("elder_isle_welcomed"))
+    sea_serpent = bool(flags.get("sea_serpent_defeated"))
+    total_level = sum(skill["level"] for skill in skills) if skills else 0
+    return {
+        "unlocked": unlocked,
+        "on_elder_isle": on_isle,
+        "welcomed": welcomed,
+        "sea_serpent_defeated": sea_serpent,
+        "skills": skills,
+        "total_level": total_level,
+        "craft_queue": craft_queue,
+        "embedded_sigils": embedded_sigils,
+        "quests_completed": quests_completed,
+        "has_data": (
+            unlocked or on_isle or sea_serpent or welcomed
+            or bool(skills) or bool(craft_queue) or bool(embedded_sigils) or bool(quests_completed)
+        ),
     }
 
 
@@ -990,6 +1084,7 @@ def normalize_save(
     farming_meta = _normalize_farming_meta(flags, issues)
     prayer = _normalize_prayer_pity(flags, issues)
     guild_meta = _normalize_guild_meta(flags, issues)
+    elder_isle = _normalize_elder_isle(flags, issues)
     seasonal = _normalize_seasonal(flags, issues)
     session_queue = _normalize_session_queue(flags.get("session_queue"), issues)
     hired_mercenaries = _normalize_hired_mercenaries(flags.get("hired_mercenaries"), issues)
@@ -1191,6 +1286,7 @@ def normalize_save(
         "monument": monument,
         "prayer": prayer,
         "guild_meta": guild_meta,
+        "elder_isle": elder_isle,
         "seasonal": {
             "tokens_by_event": _ensure_dict(
                 flags.get("seasonal_tokens_by_event"), "flags.seasonal_tokens_by_event", issues,

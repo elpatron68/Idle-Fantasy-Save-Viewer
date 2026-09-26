@@ -236,6 +236,36 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(tiers["mining:0"], 4)
         self.assertEqual(tiers["fishing:1"], 6)
 
+    def test_elder_isle_package3(self) -> None:
+        data = normalize_save(_save(
+            flags={
+                **_save()["flags"],
+                "elder_isle_unlocked": True,
+                "on_elder_isle": True,
+                "sea_serpent_defeated": True,
+                "elder_skill_levels": {"mining": 45, "smithing": 30},
+                "elder_skill_xp": {"mining": 100_000},
+                "elder_craft_queue": ["elder_helm", "elder_boots"],
+                "embedded_sigils": {"elder_helm": "sigil_of_power"},
+                "elder_quests_completed": ["elder_intro", "elder_mine"],
+                "heirloom_mirror_targets": {
+                    "sess-1": {"mining": "heirloom_pickaxe", "fishing": "heirloom_fishing_rod"},
+                },
+            },
+            inventory={"heirloom_pickaxe": 1},
+        ))
+        elder = data["elder_isle"]
+        self.assertTrue(elder["unlocked"])
+        self.assertTrue(elder["on_elder_isle"])
+        self.assertEqual(elder["total_level"], 75)
+        self.assertEqual(len(elder["craft_queue"]), 2)
+        self.assertEqual(elder["embedded_sigils"][0]["sigil_key"], "sigil_of_power")
+        self.assertEqual(len(elder["quests_completed"]), 2)
+        mirror = data["heirlooms"]["mirror_sessions"][0]
+        self.assertEqual(len(mirror["targets"]), 2)
+        by_skill = {row["skill"]: row["item_key"] for row in mirror["targets"]}
+        self.assertEqual(by_skill["mining"], "heirloom_pickaxe")
+
     def test_prestige_talent_tree(self) -> None:
         data = normalize_save(_save())
         prestige = data["prestige"]
