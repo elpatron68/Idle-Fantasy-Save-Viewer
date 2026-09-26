@@ -645,6 +645,7 @@ function renderOverview(d) {
           ${c.ironman ? `<li><span>${esc(t("overview.mode"))}</span><span>${esc(t("overview.ironman"))}</span></li>` : ""}
           ${c.character_created_at > 0 ? `<li><span>${esc(t("overview.characterCreated"))}</span><span>${esc(formatTs(c.character_created_at))}</span></li>` : ""}
           ${c.shop_keep_one_of_each ? `<li><span>${esc(t("overview.shopKeepOne"))}</span><span>✓</span></li>` : ""}
+          ${renderPreferencesLines(d.preferences)}
           <li><span>${esc(t("overview.activePotion"))}</span><span>${esc(c.active_potion || "—")}</span></li>
           <li><span>${esc(t("overview.activeSpell"))}</span><span>${esc(c.active_spell || "—")}</span></li>
           <li><span>${esc(t("overview.weaponSlot"))}</span><span>${esc(c.active_weapon_slot || "—")}</span></li>
@@ -708,6 +709,23 @@ function renderOverview(d) {
     </div>`;
 }
 
+function renderPreferencesLines(preferences) {
+  if (!preferences?.has_data) return "";
+  const themeKey = preferences.theme || "dark";
+  const themeLabelKey = `overview.theme.${themeKey}`;
+  const themeLabel = I18n.t(themeLabelKey) !== themeLabelKey ? t(themeLabelKey) : humanizeKey(themeKey);
+  const lines = [
+    `<li><span>${esc(t("overview.gameTheme"))}</span><span>${esc(themeLabel)}</span></li>`,
+  ];
+  if (preferences.compact_numbers) {
+    lines.push(`<li><span>${esc(t("overview.compactNumbers"))}</span><span>✓</span></li>`);
+  }
+  if (preferences.font_scale && Math.abs(preferences.font_scale - 1) > 0.01) {
+    lines.push(`<li><span>${esc(t("overview.fontScale"))}</span><span>${esc(String(preferences.font_scale))}×</span></li>`);
+  }
+  return lines.join("");
+}
+
 function renderHeirloomsCard(heirlooms) {
   if (!heirlooms?.has_data) return "";
   const items = heirlooms.items || [];
@@ -751,8 +769,12 @@ function renderElderIsleCard(elder) {
       `<li><span>${esc(row.piece_name)}</span><span>${esc(row.sigil_name)}</span></li>`).join("")}</ul>`
     : "";
   const quests = elder.quests_completed || [];
-  const questsSummary = quests.length
-    ? `<li><span>${esc(t("overview.elderQuestsCompleted"))}</span><span>${fmt(quests.length)}</span></li>`
+  const questLimit = 24;
+  const questSlice = quests.slice(0, questLimit);
+  const questsHtml = questSlice.length
+    ? `<h4 class="overview-subhead">${esc(t("overview.elderQuestsCompleted"))} (${fmt(quests.length)})</h4><ul class="list-compact">${questSlice.map((q) =>
+      `<li><span>${esc(q.name)}</span></li>`
+    ).join("")}${quests.length > questLimit ? `<li><span>…</span><span>${esc(t("overview.elderQuestsMore", { n: quests.length - questLimit }))}</span></li>` : ""}</ul>`
     : "";
   return `<div class="card">
     <h3>${esc(t("overview.elderIsle"))}</h3>
@@ -761,8 +783,8 @@ function renderElderIsleCard(elder) {
       <li><span>${esc(t("overview.elderIsleLocation"))}</span><span>${esc(locationLabel)}</span></li>
       ${elder.sea_serpent_defeated ? `<li><span>${esc(t("overview.seaSerpentDefeated"))}</span><span>✓</span></li>` : ""}
       ${elder.total_level > 0 ? `<li><span>${esc(t("overview.elderTotalLevel"))}</span><span>${fmt(elder.total_level)}</span></li>` : ""}
-      ${questsSummary}
     </ul>
+    ${questsHtml}
     ${skillsHtml}
     ${craftHtml}
     ${sigilHtml}
@@ -3517,7 +3539,31 @@ async function runDiff() {
 
 function fmt(n) {
   if (n == null) return "—";
-  return Number(n).toLocaleString(I18n.localeTag());
+  const num = Number(n);
+  if (!Number.isFinite(num)) return "—";
+  if (state.data?.preferences?.compact_numbers) {
+    return fmtCompactNumber(num);
+  }
+  return num.toLocaleString(I18n.localeTag());
+}
+
+function fmtCompactNumber(num) {
+  const sign = num < 0 ? "-" : "";
+  const abs = Math.abs(num);
+  if (abs >= 1_000_000_000) {
+    return `${sign}${trimCompactDecimals(abs / 1_000_000_000)}B`;
+  }
+  if (abs >= 1_000_000) {
+    return `${sign}${trimCompactDecimals(abs / 1_000_000)}M`;
+  }
+  if (abs >= 10_000) {
+    return `${sign}${trimCompactDecimals(abs / 1_000)}K`;
+  }
+  return num.toLocaleString(I18n.localeTag());
+}
+
+function trimCompactDecimals(value) {
+  return value.toFixed(2).replace(/\.?0+$/, "");
 }
 
 function humanizeKey(key) {

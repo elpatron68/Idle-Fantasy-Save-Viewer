@@ -668,6 +668,35 @@ def _normalize_carnival(
     }
 
 
+def _normalize_ui_preferences(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    theme_raw = str(flags.get("theme_preference") or "dark").strip().lower()
+    if theme_raw not in {"dark", "light", "system"}:
+        issues.append(issue(
+            "info", "unknown_theme",
+            f'Unknown theme "{theme_raw}" – showing as custom.',
+            field="flags.theme_preference",
+        ))
+    theme = theme_raw if theme_raw in {"dark", "light", "system"} else theme_raw
+    font_scale_raw = flags.get("font_scale")
+    font_scale = 1.0
+    if font_scale_raw is not None:
+        try:
+            font_scale = float(font_scale_raw)
+        except (TypeError, ValueError):
+            issues.append(issue(
+                "warning", "invalid_font_scale",
+                "Field flags.font_scale is not a number.",
+                field="flags.font_scale",
+            ))
+    compact = bool(flags.get("compact_numbers"))
+    return {
+        "theme": theme,
+        "compact_numbers": compact,
+        "font_scale": font_scale,
+        "has_data": theme not in {"dark", ""} or compact or abs(font_scale - 1.0) > 0.01,
+    }
+
+
 def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     stats_raw = _ensure_dict(raw, "flags.dungeon_last_run_stats", issues)
     result = []
@@ -1158,6 +1187,7 @@ def normalize_save(
     elder_isle = _normalize_elder_isle(flags, issues)
     quest_resets = _normalize_quest_resets(flags, issues)
     game_backup = _normalize_game_backup(flags, issues)
+    ui_preferences = _normalize_ui_preferences(flags, issues)
     seasonal = _normalize_seasonal(flags, issues)
     session_queue = _normalize_session_queue(flags.get("session_queue"), issues)
     hired_mercenaries = _normalize_hired_mercenaries(flags.get("hired_mercenaries"), issues)
@@ -1399,6 +1429,7 @@ def normalize_save(
         "heirlooms": heirlooms,
         "bulk_sell_receipts": bulk_sell_receipts,
         "game_backup": game_backup,
+        "preferences": ui_preferences,
         "carnival": _normalize_carnival(flags, carnival_cooldowns, issues),
         "titles": {
             "unlocked": unlocked_title_keys,

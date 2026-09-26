@@ -115,16 +115,16 @@ Gallery for the [live demo](https://if-viewer.elpatron.me/). Thumbnails below li
 
 ## Features
 
-- **Overview** — character, KPIs, session queue, slayer, pets, farming, guild reputation, monument, tower, workers, titles, town buildings, import summary
-- **Skills** — sortable table with level/XP progress, prestige stars, per-skill level sparklines, and **training advisor** (XP/min rankings from recipe data)
+- **Overview** — character, KPIs, session queue, slayer, pets, farming (meta), guild reputation & daily meta, monument, tower, workers, titles, town buildings, **heirlooms & mirror sessions**, **Elder Isle**, prayer pity, **in-game backup**, mercenaries, import summary, **in-game UI prefs** (theme, compact numbers, font scale)
+- **Skills** — sortable table with level/XP progress, prestige stars, per-skill level sparklines, **training advisor** (XP/min rankings from recipe data), **Elder Isle skills** (separate track when present)
 - **Prestige** — talent trees for all skills with purchased nodes, unspent points, auto XP paths, and active bonus summary
 - **Inventory** — text search, category filters, sorting, grouped tables, equipped-item highlighting, quantity sparklines (click to enlarge)
 - **Goals** — item and skill targets in groups (absolute or relative), progress/ETA, completion on import; **one-click goals** from the training advisor
 - **Equipment** — equipped gear by slot and per-style armor loadouts (attack, strength, ranged, magic)
 - **House** — floor plan grid, rooms, furnishings, storage, editor draft, and saved blueprints
-- **Quests** — story, daily, weekly, and guild quest lists with open/done filters
+- **Quests** — story, daily, weekly, and guild quest lists with open/done filters; **reset hour and next reset times** on daily/weekly/guild tabs
 - **Combat** — kills, dungeon runs, last-run stats, expeditions, **combat loadout** (food preset, style presets, boss coins), recent activity, active sessions
-- **Events** — seasonal bounties/tokens/minigame and carnival cooldowns
+- **Events** — seasonal bounties/tokens/minigame and carnival cooldowns, **minigame difficulties**, last carnival tab
 - **History** — coins and total level over time, top-skills chart, snapshot comparison (inventory/skill deltas), delete snapshots
 - **Data** — export/import the viewer SQLite database (snapshots, history, goals) or delete the viewer
 - **Global search** across items, skills, goals, and house furnishings; deep links to tabs (`#overview`, `#house`, `#prestige`, …)
@@ -312,7 +312,7 @@ On the **Skills** tab, click a skill row to load **training recommendations** (r
 - **Level as goal** — button to create an absolute skill goal for the next level
 - **+ per row** — create a relative item goal (craft count until next level for that activity)
 
-Recipe JSON is synced from the [Idle Fantasy](https://github.com/tristinbaker/IdleFantasy) open-source repo (`app/src/main/assets/data/recipes/`). See `game_data/ATTRIBUTION.md`. Refresh with:
+Recipe JSON is synced from the [Idle Fantasy](https://github.com/tristinbaker/IdleFantasy) open-source repo (`app/src/main/assets/data/recipes/`). **Heirloom item → skill mapping** (`game_data/heirlooms.json`) is rebuilt from upstream `equipment.json` on the same run. See `game_data/ATTRIBUTION.md`. Refresh with:
 
 ```bash
 python scripts/sync_game_data.py
@@ -321,6 +321,19 @@ python scripts/sync_game_data.py
 House tile metadata (`game_data/house_tiles.json`) and prestige paths (`game_data/prestige_paths.json`) are vendored separately from the same upstream repo (see `game_data/ATTRIBUTION.md`).
 
 API: `GET /v/<id>/api/advisor/<skill_key>` (uses latest snapshot + `game_data/recipes/`).
+
+### Overview (extended save fields)
+
+When the game export includes newer `flags`, the **Overview** tab also shows:
+
+- **Combat loadout extras** (from save flags used by the Combat tab): shop XP boost timer, blessing with expiry, food eat order/threshold
+- **Farming meta** — magic bean, last fertilizer, last crop per patch
+- **Guild meta** — daily tier counts, quest reset levels
+- **Prayer** — divine/dwarven pity counters
+- **Heirlooms** — XP per heirloom, equipped state, **mirror targets** for active sessions
+- **Elder Isle** — unlock/sail state, sea serpent, elder skills, craft queue, sigils, **completed main quests by name**
+- **In-game auto backup** — enabled/frequency/last run (folder URI is not shown)
+- **Character** — creation time, shop “keep one of each”, **theme / compact numbers / font scale** (compact numbers also affect number formatting in the viewer when enabled in the save)
 
 ### Combat
 
@@ -356,12 +369,16 @@ The **Prestige** tab shows per-skill talent progress when the save has prestige 
 
 Uses `flags.skill_prestige`, `flags.prestige_points_earned`, `flags.prestige_nodes`, and vendored `game_data/prestige_paths.json`. Prestige stars on the **Skills** tab reflect `skill_prestige` only.
 
+### Quests
+
+The **Quests** tab lists story, daily, weekly, and guild quests with filters. Daily, weekly, and guild tabs show **reset hour** and **next reset time** when the save stores them.
+
 ### Events
 
 The **Events** tab covers:
 
 - **Seasonal events** — tokens, minigame cooldown, banners, bounty slots/progress
-- **Carnival** — skill level, tickets (from inventory), minigame cooldowns, difficulties
+- **Carnival** — skill level, tickets (from inventory), minigame cooldowns, per-minigame difficulties, last selected tab
 
 ### Goals
 
@@ -515,7 +532,7 @@ idle-fantasy-viewer/
 │   ├── deploy.sh           # Local: push + remote Docker deploy
 │   ├── deploy-ci.sh        # CI: WireGuard + SSH + deploy-remote.sh
 │   ├── deploy-remote.sh    # Runs on the server (git pull, compose)
-│   └── sync_game_data.py   # Pull recipe JSON from IdleFantasy repo
+│   └── sync_game_data.py   # Pull recipe JSON + heirlooms from IdleFantasy repo
 ├── static/
 │   ├── vendor/           # chart.umd.min.js (bundled)
 │   ├── i18n.js           # Locale loading, t(), en fallback

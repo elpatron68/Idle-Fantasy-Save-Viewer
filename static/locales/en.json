@@ -181,7 +181,16 @@
     "gameBackupCount": "Keep count",
     "gameBackupLast": "Last backup",
     "gameBackupFailed": "failed",
-    "gameBackupError": "Last error"
+    "gameBackupError": "Last error",
+    "gameTheme": "In-game theme",
+    "compactNumbers": "Compact numbers",
+    "fontScale": "Font scale",
+    "elderQuestsMore": "+{n} more",
+    "theme": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    }
   },
   "time": {
     "seconds": "{n}s",
