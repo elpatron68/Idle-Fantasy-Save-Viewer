@@ -1576,6 +1576,21 @@ tr.has-goal td:first-child { font-weight: 600; }
   font-size: 0.86rem;
 }
 
+.combat-repeat-snapshot {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.combat-loadout-subhead {
+  margin: 10px 0 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .prestige-select-label {
   display: flex;
   flex-direction: column;

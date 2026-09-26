@@ -111,6 +111,9 @@
     "activeSpell": "Aktiver Zauber",
     "weaponSlot": "Waffenslot",
     "blessing": "Segen",
+    "globalXpBoost": "Shop-XP-Boost",
+    "globalXpBoostUntil": "Aktiv bis {time}",
+    "globalXpBoostExpired": "Abgelaufen",
     "sessionQueue": "Session-Warteschlange",
     "slayer": "Slayer",
     "foretold": "Vorhergesagte Aufgaben",
@@ -263,6 +266,9 @@
       "title": "Kampf-Loadout",
       "foodPreset": "Nahrungs-Preset",
       "eatThreshold": "Essen unter {pct}% HP",
+      "eatOrder": "Ess-Reihenfolge",
+      "eatOrderDescending": "Höchste Heilung zuerst",
+      "eatOrderAscending": "Niedrigste Heilung zuerst",
       "combatStyles": "Stil-Presets",
       "magicSpell": "Magie-Zauber",
       "rangedArrow": "Fernkampf-Pfeil",
@@ -272,7 +278,12 @@
       "bossCoinDay": "Tracking-Tag",
       "repeatRuns": "Wiederholungs-Läufe",
       "bossRepeat": "Boss-Wiederholung",
-      "dungeonRepeat": "Dungeon-Wiederholung"
+      "dungeonRepeat": "Dungeon-Wiederholung",
+      "repeatSnapshot": "Preset für diesen Wiederholungslauf",
+      "repeatActivity": "Aktivität",
+      "repeatPotion": "Kampftrank",
+      "repeatGear": "Ausrüstung für den Lauf",
+      "weaponSlot": "Waffenslot"
     }
   },
   "events": {
