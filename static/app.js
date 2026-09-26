@@ -643,6 +643,8 @@ function renderOverview(d) {
           <li><span>${esc(t("overview.hp"))}</span><span>${c.hp ?? "—"}</span></li>
           ${c.title_name ? `<li><span>${esc(t("overview.title"))}</span><span>${esc(c.title_name)}</span></li>` : ""}
           ${c.ironman ? `<li><span>${esc(t("overview.mode"))}</span><span>${esc(t("overview.ironman"))}</span></li>` : ""}
+          ${c.character_created_at > 0 ? `<li><span>${esc(t("overview.characterCreated"))}</span><span>${esc(formatTs(c.character_created_at))}</span></li>` : ""}
+          ${c.shop_keep_one_of_each ? `<li><span>${esc(t("overview.shopKeepOne"))}</span><span>✓</span></li>` : ""}
           <li><span>${esc(t("overview.activePotion"))}</span><span>${esc(c.active_potion || "—")}</span></li>
           <li><span>${esc(t("overview.activeSpell"))}</span><span>${esc(c.active_spell || "—")}</span></li>
           <li><span>${esc(t("overview.weaponSlot"))}</span><span>${esc(c.active_weapon_slot || "—")}</span></li>
@@ -701,6 +703,7 @@ function renderOverview(d) {
       </div>` : ""}
       ${renderHeirloomsCard(d.heirlooms)}
       ${renderElderIsleCard(d.elder_isle)}
+      ${renderGameBackupCard(d.game_backup)}
       ${renderPrayerPityCard(d.prayer)}
     </div>`;
 }
@@ -763,6 +766,27 @@ function renderElderIsleCard(elder) {
     ${skillsHtml}
     ${craftHtml}
     ${sigilHtml}
+  </div>`;
+}
+
+function renderGameBackupCard(backup) {
+  if (!backup?.has_data) return "";
+  const freq = backup.frequency ? humanizeKey(backup.frequency) : t("empty.none");
+  const lastLine = backup.last_at > 0
+    ? `<li><span>${esc(t("overview.gameBackupLast"))}</span><span>${esc(formatTs(backup.last_at))}${backup.last_ok ? "" : ` (${esc(t("overview.gameBackupFailed"))})`}</span></li>`
+    : "";
+  const errLine = backup.last_error
+    ? `<li><span>${esc(t("overview.gameBackupError"))}</span><span>${esc(backup.last_error)}</span></li>`
+    : "";
+  return `<div class="card">
+    <h3>${esc(t("overview.gameBackup"))}</h3>
+    <ul class="list-compact">
+      <li><span>${esc(t("overview.gameBackupEnabled"))}</span><span>${backup.enabled ? "✓" : "—"}</span></li>
+      <li><span>${esc(t("overview.gameBackupFrequency"))}</span><span>${esc(freq)}</span></li>
+      <li><span>${esc(t("overview.gameBackupCount"))}</span><span>${fmt(backup.count)}</span></li>
+      ${lastLine}
+      ${errLine}
+    </ul>
   </div>`;
 }
 
@@ -2785,12 +2809,15 @@ function renderEvents(d) {
     })
     .join("");
 
-  const difficulties = Object.entries(carnival.difficulties || {});
+  const difficulties = carnival.difficulty_settings || [];
   const diffHtml = difficulties.length
-    ? `<h4>${esc(t("events.carnival.difficulties"))}</h4><ul class="list-compact">${difficulties.map(([k, v]) =>
-      `<li><span>${esc(humanizeKey(k))}</span><span>${esc(String(v))}</span></li>`
+    ? `<h4>${esc(t("events.carnival.difficulties"))}</h4><ul class="list-compact">${difficulties.map((row) =>
+      `<li><span>${esc(row.name)}</span><span>${esc(row.difficulty_label || row.difficulty)}</span></li>`
     ).join("")}</ul>`
     : "";
+  const tabKey = carnival.tab_key;
+  const tabLabelKey = tabKey ? `events.carnival.tab.${tabKey}` : "";
+  const tabLabel = tabLabelKey && I18n.t(tabLabelKey) !== tabLabelKey ? t(tabLabelKey) : humanizeKey(tabKey || carnival.tab);
 
   document.getElementById("tab-events").innerHTML = `
     <div class="grid-2">
@@ -2803,6 +2830,7 @@ function renderEvents(d) {
         <ul class="list-compact">
           ${carnivalSkill ? `<li><span>${esc(t("events.carnival.skill"))}</span><span>${esc(t("events.carnival.level", { level: carnivalSkill.level }))}</span></li>` : ""}
           ${carnivalTickets ? `<li><span>${esc(t("events.carnival.tickets"))}</span><span>${fmt(carnivalTickets.qty)}</span></li>` : ""}
+          ${carnival.tab_key != null ? `<li><span>${esc(t("events.carnival.lastTab"))}</span><span>${esc(tabLabel)}</span></li>` : ""}
         </ul>
         <h4>${esc(t("events.carnival.cooldowns"))}</h4>
         <ul class="list-compact">${carnivalCooldowns || `<li><span>${esc(t("empty.none"))}</span></li>`}</ul>

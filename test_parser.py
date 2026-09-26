@@ -282,6 +282,33 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(resets["daily_next_reset_at"], 1_700_000_000_000)
         self.assertEqual(resets["guild_daily_next_reset_at"], 1_750_000_000_000)
 
+    def test_character_prefs_package5(self) -> None:
+        data = normalize_save(_save(
+            flags={
+                **_save()["flags"],
+                "character_created_at": 1_600_000_000_000,
+                "shop_keep_one_of_each": True,
+                "backup_folder_uri": "content://backup",
+                "backup_frequency": "daily",
+                "backup_count": 3,
+                "last_backup_at": 1_700_000_000_000,
+                "last_backup_ok": False,
+                "last_backup_error": "disk full",
+                "carnival_tab": 2,
+                "carnival_difficulties": {"ring_toss": "hard", "shell_game": "easy"},
+            },
+        ))
+        c = data["character"]
+        self.assertEqual(c["character_created_at"], 1_600_000_000_000)
+        self.assertTrue(c["shop_keep_one_of_each"])
+        backup = data["game_backup"]
+        self.assertTrue(backup["enabled"])
+        self.assertEqual(backup["frequency"], "daily")
+        self.assertEqual(backup["last_error"], "disk full")
+        carnival = data["carnival"]
+        self.assertEqual(carnival["tab_key"], "prize_shop")
+        self.assertEqual(len(carnival["difficulty_settings"]), 2)
+
     def test_prestige_talent_tree(self) -> None:
         data = normalize_save(_save())
         prestige = data["prestige"]

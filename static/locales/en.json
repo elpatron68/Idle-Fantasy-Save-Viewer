@@ -172,7 +172,16 @@
     "elderTotalLevel": "Elder total level",
     "elderCraftQueue": "Armor craft queue",
     "embeddedSigils": "Embedded sigils",
-    "elderQuestsCompleted": "Main quests completed"
+    "elderQuestsCompleted": "Main quests completed",
+    "characterCreated": "Character created",
+    "shopKeepOne": "Shop: keep one of each",
+    "gameBackup": "In-game auto backup",
+    "gameBackupEnabled": "Destination configured",
+    "gameBackupFrequency": "Frequency",
+    "gameBackupCount": "Keep count",
+    "gameBackupLast": "Last backup",
+    "gameBackupFailed": "failed",
+    "gameBackupError": "Last error"
   },
   "time": {
     "seconds": "{n}s",
@@ -344,6 +353,12 @@
       "tickets": "Tickets",
       "cooldowns": "Minigame cooldowns",
       "difficulties": "Difficulties",
+      "lastTab": "Last tab",
+      "tab": {
+        "idle": "Idle",
+        "active": "Active",
+        "prize_shop": "Prize shop"
+      },
       "ring_toss": "Ring toss",
       "hammer_strike": "Hammer strike",
       "potion_sequence": "Potion sequence",
