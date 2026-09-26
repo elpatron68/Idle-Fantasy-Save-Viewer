@@ -157,7 +157,19 @@
     "guildResetLevels": "Quest-Reset-Level",
     "guildResetLevel": "Reset bei Level {level}",
     "mercenaries": "Angemietete Söldner",
-    "heirlooms": "Erbstücke"
+    "heirlooms": "Erbstücke",
+    "heirloomMirror": "Erbstück-Spiegel (aktive Sessions)",
+    "heirloomMirrorSession": "Session {id}",
+    "elderIsle": "Elder Isle",
+    "elderIsleUnlocked": "Insel freigeschaltet",
+    "elderIsleLocation": "Aktueller Ort",
+    "elderIsleOnIsle": "Auf der Elder Isle",
+    "elderIsleMainland": "Festland",
+    "seaSerpentDefeated": "Seeschlange besiegt",
+    "elderTotalLevel": "Elder-Gesamtlevel",
+    "elderCraftQueue": "Rüstungs-Craft-Warteschlange",
+    "embeddedSigils": "Eingebettete Sigilsteine",
+    "elderQuestsCompleted": "Hauptquests abgeschlossen"
   },
   "time": {
     "seconds": "{n} s",

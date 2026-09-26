@@ -157,7 +157,19 @@
     "guildResetLevels": "Quest reset levels",
     "guildResetLevel": "Resets at level {level}",
     "mercenaries": "Hired mercenaries",
-    "heirlooms": "Heirlooms"
+    "heirlooms": "Heirlooms",
+    "heirloomMirror": "Heirloom mirror (active sessions)",
+    "heirloomMirrorSession": "Session {id}",
+    "elderIsle": "Elder Isle",
+    "elderIsleUnlocked": "Isle unlocked",
+    "elderIsleLocation": "Current location",
+    "elderIsleOnIsle": "On Elder Isle",
+    "elderIsleMainland": "Mainland",
+    "seaSerpentDefeated": "Sea Serpent defeated",
+    "elderTotalLevel": "Elder total level",
+    "elderCraftQueue": "Armor craft queue",
+    "embeddedSigils": "Embedded sigils",
+    "elderQuestsCompleted": "Main quests completed"
   },
   "time": {
     "seconds": "{n}s",
