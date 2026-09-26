@@ -114,6 +114,9 @@
     "globalXpBoost": "Shop-XP-Boost",
     "globalXpBoostUntil": "Aktiv bis {time}",
     "globalXpBoostExpired": "Abgelaufen",
+    "xpBoostLastPurchase": "Letzter XP-Boost-Kauf",
+    "blessingUntil": "bis {time}",
+    "blessingExpired": "abgelaufen",
     "sessionQueue": "Session-Warteschlange",
     "slayer": "Slayer",
     "foretold": "Vorhergesagte Aufgaben",
@@ -195,6 +198,8 @@
     "trendExpand": "Klicken für großes Diagramm",
     "trendExpandFor": "Level-Verlauf für {name}",
     "advisorTitle": "Trainings-Empfehlungen",
+    "elderTitle": "Elder-Isle-Skills",
+    "elderHint": "Getrennt von Festland-Skills; bleiben bei Festland-Prestige erhalten.",
     "advisorHint": "Skill in der Tabelle anklicken für XP-Empfehlungen (nur Rezept-Skills).",
     "advisorLoading": "Lade Empfehlungen…",
     "advisorUnsupported": "Für diesen Skill liegen noch keine Rezeptdaten vor.",
@@ -260,7 +265,12 @@
     "done": "Erledigt",
     "open": "Offen",
     "weeklyBonusClaimed": "Wöchentliche Bonus-Truhe abgeholt",
-    "guildMeta": "Gilden-Daily-Meta"
+    "guildMeta": "Gilden-Daily-Meta",
+    "resetsTitle": "Quest-Resets",
+    "dailyResetHour": "Tägliche Reset-Stunde (lokal)",
+    "nextDailyReset": "Nächster Daily-Reset",
+    "nextWeeklyReset": "Nächster Weekly-Reset",
+    "nextGuildReset": "Nächster Gilden-Daily-Reset"
   },
   "combat": {
     "enemyKills": "Gegner-Kills",

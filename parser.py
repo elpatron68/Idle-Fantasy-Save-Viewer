@@ -597,6 +597,30 @@ def _normalize_elder_isle(flags: dict[str, Any], issues: list[Issue]) -> dict[st
     }
 
 
+def _normalize_quest_resets(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    daily_hour = _safe_int(
+        flags.get("daily_reset_hour"), "flags.daily_reset_hour", issues, default=6,
+    )
+    daily_next = _safe_int(
+        flags.get("daily_quest_next_reset_at"), "flags.daily_quest_next_reset_at", issues,
+    )
+    weekly_next = _safe_int(
+        flags.get("weekly_quest_next_reset_at"), "flags.weekly_quest_next_reset_at", issues,
+    )
+    guild_next = _safe_int(
+        flags.get("guild_daily_next_reset_at"), "flags.guild_daily_next_reset_at", issues,
+    )
+    return {
+        "daily_reset_hour": daily_hour,
+        "daily_next_reset_at": daily_next,
+        "weekly_next_reset_at": weekly_next,
+        "guild_daily_next_reset_at": guild_next,
+        "has_data": (
+            daily_next > 0 or weekly_next > 0 or guild_next > 0 or daily_hour != 6
+        ),
+    }
+
+
 def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     stats_raw = _ensure_dict(raw, "flags.dungeon_last_run_stats", issues)
     result = []
@@ -1085,6 +1109,7 @@ def normalize_save(
     prayer = _normalize_prayer_pity(flags, issues)
     guild_meta = _normalize_guild_meta(flags, issues)
     elder_isle = _normalize_elder_isle(flags, issues)
+    quest_resets = _normalize_quest_resets(flags, issues)
     seasonal = _normalize_seasonal(flags, issues)
     session_queue = _normalize_session_queue(flags.get("session_queue"), issues)
     hired_mercenaries = _normalize_hired_mercenaries(flags.get("hired_mercenaries"), issues)
@@ -1264,6 +1289,7 @@ def normalize_save(
             "weekly": weekly_quests,
             "guild": guild_quests,
             "weekly_bonus_claimed": bool(flags.get("weekly_bonus_claimed")),
+            "resets": quest_resets,
         },
         "combat": {
             "enemy_kills": enemy_kills,

@@ -1603,6 +1603,10 @@ tr.has-goal td:first-child { font-weight: 600; }
   border-top: 1px solid var(--border);
 }
 
+.elder-skills-card {
+  margin-top: 16px;
+}
+
 .overview-subhead {
   margin: 12px 0 6px;
   font-size: 0.82rem;
