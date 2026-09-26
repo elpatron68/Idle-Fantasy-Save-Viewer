@@ -55,6 +55,8 @@ def configure_app(flask_app: Flask) -> None:
             "connect-src 'self' https://plausible.elpatron.me; "
             "frame-ancestors 'self'"
         )
+        if request.path.endswith("/analytics.js"):
+            response.headers["Cache-Control"] = "public, max-age=300, must-revalidate"
         return response
 
 

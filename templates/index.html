@@ -8,7 +8,7 @@
   {% include '_seo_head.html' %}
   {% include '_pwa_head.html' %}
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/analytics.js" defer></script>
+  <script src="/static/analytics.js{% if build_ref %}?v={{ build_ref[:8] }}{% endif %}" defer></script>
   {% include '_analytics.html' %}
   <script src="/static/vendor/chart.umd.min.js" defer></script>
   <script src="/static/i18n.js" defer></script>
