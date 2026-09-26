@@ -1,4 +1,23 @@
-/** Plausible tagged custom events (see templates/_analytics.html). */
+/** Plausible tagged custom events — all logic in this file (CSP allows no inline scripts). */
+
+window.plausible = window.plausible || function () {
+  (window.plausible.q = window.plausible.q || []).push(arguments);
+};
+window.plausible.l = +new Date;
+
+function redactViewerUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    parsed.pathname = parsed.pathname.replace(/^\/v\/[^/]+\/?/, "/v/viewer/");
+    if (parsed.pathname === "/v/viewer") parsed.pathname = "/v/viewer/";
+    parsed.search = "";
+    return parsed.pathname + parsed.hash;
+  } catch (e) {
+    return String(url).replace(/\/v\/[^/]+\/?/, "/v/viewer/").split("?")[0];
+  }
+}
+
+window.redactAnalyticsUrl = redactViewerUrl;
 
 function isViewerPathname(pathname) {
   return /^\/v\/[^/]+\/?/.test(pathname || "");
@@ -10,12 +29,12 @@ function viewerAnalyticsUrl() {
 }
 
 function plausiblePayload(extra) {
-  const redacted = typeof window.redactAnalyticsUrl === "function"
-    ? window.redactAnalyticsUrl(window.location.href)
-    : window.location.href;
-  let u = redacted.startsWith("http") ? redacted : window.location.origin + redacted;
+  let u;
   if (isViewerPathname(window.location.pathname)) {
     u = viewerAnalyticsUrl();
+  } else {
+    const redacted = redactViewerUrl(window.location.href);
+    u = redacted.startsWith("http") ? redacted : window.location.origin + redacted;
   }
   return { u, ...(extra || {}) };
 }
@@ -51,10 +70,11 @@ function bootAnalytics() {
   trackAnalyticsPageview();
 }
 
-let analyticsBootDone = false;
+let analyticsBootSent = false;
 function bootAnalyticsOnce() {
-  if (analyticsBootDone) return;
-  analyticsBootDone = true;
+  if (analyticsBootSent) return;
+  if (typeof window.plausible !== "function") return;
+  analyticsBootSent = true;
   bootAnalytics();
 }
 
@@ -65,12 +85,12 @@ document.addEventListener("DOMContentLoaded", bootAnalyticsOnce);
 window.addEventListener("load", bootAnalyticsOnce);
 
 window.addEventListener("hashchange", () => {
-  if (!isViewerPathname(window.location.pathname)) return;
+  if (isViewerPathname(window.location.pathname)) return;
   const tab = (window.location.hash || "#overview").replace(/^#/, "") || "overview";
   trackViewerTab(tab);
 });
 
-var plausibleScript = document.getElementById("plausible-script");
+const plausibleScript = document.getElementById("plausible-script");
 if (plausibleScript) {
   plausibleScript.addEventListener("load", bootAnalyticsOnce);
 }

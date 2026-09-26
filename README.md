@@ -605,7 +605,9 @@ Smoke tests for goals/import helpers, skill timeline, snapshot deletion, the tra
 
 ## Analytics (optional)
 
-The demo at [if-viewer.elpatron.me](https://if-viewer.elpatron.me/) may include [Plausible](https://plausible.io/) analytics via `templates/_analytics.html` (privacy-friendly, no cookies). Direct links such as `/v/<secret>/` are **never** sent to Plausible; they are recorded as **`/v/viewer/#tab`** plus custom events **`Viewer Open`** and **`Viewer Tab`**. Query strings are stripped. Self-hosted instances can omit or replace this partial; CSP in `security.py` allows `plausible.elpatron.me` when enabled.
+Ensure script order in templates: `analytics.js` (stub + tracking) before the Plausible script tag in `_analytics.html`. **No inline scripts** — CSP `script-src` does not allow `'unsafe-inline'`, so inline bootstrap was blocked in browsers and no `/api/event` POSTs were sent.
+
+The demo at [if-viewer.elpatron.me](https://if-viewer.elpatron.me/) may include [Plausible](https://plausible.io/) analytics (privacy-friendly, no cookies). Direct links such as `/v/<secret>/` are **never** sent to Plausible; they are recorded as **`/v/viewer/#tab`** plus custom events **`Viewer Open`** and **`Viewer Tab`**. Self-hosted instances can omit `_analytics.html`; CSP in `security.py` allows `plausible.elpatron.me` when enabled.
 
 ## Repository layout
 
