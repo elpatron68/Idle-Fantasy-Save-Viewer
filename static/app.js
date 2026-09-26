@@ -153,6 +153,7 @@ function activateTab(tab) {
   if (tab === "history") loadHistoryTab();
   if (tab === "goals") trackEvent("Goals Tab");
   if (tab === "backup") trackEvent("Data Tab");
+  if (typeof trackViewerTab === "function") trackViewerTab(tab);
 }
 
 function setupNav() {
