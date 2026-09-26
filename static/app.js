@@ -638,6 +638,7 @@ function renderOverview(d) {
           <li><span>${esc(t("overview.activeSpell"))}</span><span>${esc(c.active_spell || "—")}</span></li>
           <li><span>${esc(t("overview.weaponSlot"))}</span><span>${esc(c.active_weapon_slot || "—")}</span></li>
           <li><span>${esc(t("overview.blessing"))}</span><span>${esc(c.active_blessing || "—")}</span></li>
+          ${c.xp_boost_expires_at > 0 ? `<li><span>${esc(t("overview.globalXpBoost"))}</span><span>${esc(formatGlobalXpBoost(c.xp_boost_expires_at))}</span></li>` : ""}
         </ul>
         ${c.notes ? `<p class="character-notes">${esc(c.notes)}</p>` : ""}
       </div>
@@ -2635,8 +2636,47 @@ function renderEvents(d) {
     </div>`;
 }
 
+function renderRepeatSnapshot(snapshot) {
+  if (!snapshot?.has_data) return "";
+  const gear = (snapshot.equipped || []).map((item) =>
+    `<li><span>${esc(item.slot_name)}</span><span>${esc(item.name)}</span></li>`
+  ).join("");
+  const detailLines = [
+    snapshot.activity_name
+      ? `<li><span>${esc(t("combat.loadout.repeatActivity"))}</span><span>${esc(snapshot.activity_name)}</span></li>`
+      : "",
+    snapshot.potion
+      ? `<li><span>${esc(t("combat.loadout.repeatPotion"))}</span><span>${esc(snapshot.potion.name)}</span></li>`
+      : "",
+    snapshot.spell
+      ? `<li><span>${esc(t("combat.loadout.magicSpell"))}</span><span>${esc(snapshot.spell.name)}</span></li>`
+      : "",
+    snapshot.weapon_slot_name
+      ? `<li><span>${esc(t("combat.loadout.weaponSlot"))}</span><span>${esc(snapshot.weapon_slot_name)}</span></li>`
+      : "",
+    snapshot.arrows
+      ? `<li><span>${esc(t("combat.loadout.arrows"))}</span><span>${esc(snapshot.arrows.name)}</span></li>`
+      : "",
+    snapshot.runes
+      ? `<li><span>${esc(t("combat.loadout.runes"))}</span><span>${esc(snapshot.runes.name)}</span></li>`
+      : "",
+  ].filter(Boolean).join("");
+  return `<div class="combat-repeat-snapshot">
+    <p class="combat-loadout-meta">${esc(t("combat.loadout.repeatSnapshot"))}</p>
+    <ul class="list-compact">${detailLines}</ul>
+    ${gear ? `<h5 class="combat-loadout-subhead">${esc(t("combat.loadout.repeatGear"))}</h5><ul class="list-compact">${gear}</ul>` : ""}
+  </div>`;
+}
+
 function renderCombatLoadoutHtml(loadout) {
   if (!loadout?.has_data) return "";
+
+  const eatOrderKey = loadout.food_eat_order === "ascending"
+    ? "combat.loadout.eatOrderAscending"
+    : "combat.loadout.eatOrderDescending";
+  const eatOrderLabel = loadout.food_eat_order
+    ? t(eatOrderKey)
+    : "";
 
   const foodList = (loadout.food || []).map((item) =>
     `<li><span>${esc(item.name)}</span><span>${fmt(item.qty)}</span></li>`
@@ -2673,12 +2713,17 @@ function renderCombatLoadoutHtml(loadout) {
       : "",
   ].filter(Boolean).join("");
 
+  const repeatSnapshots = [
+    loadout.boss_repeat?.snapshot ? renderRepeatSnapshot(loadout.boss_repeat.snapshot) : "",
+    loadout.dungeon_repeat?.snapshot ? renderRepeatSnapshot(loadout.dungeon_repeat.snapshot) : "",
+  ].filter(Boolean).join("");
+
   return `<div class="card combat-loadout-card">
     <h3>${esc(t("combat.loadout.title"))}</h3>
     <div class="combat-loadout-sections">
       ${foodList ? `<div class="combat-loadout-section">
         <h4>${esc(t("combat.loadout.foodPreset"))}</h4>
-        <p class="combat-loadout-meta">${esc(t("combat.loadout.eatThreshold", { pct: loadout.food_eat_threshold_pct }))}</p>
+        <p class="combat-loadout-meta">${esc(t("combat.loadout.eatThreshold", { pct: loadout.food_eat_threshold_pct }))}${eatOrderLabel ? ` · ${esc(t("combat.loadout.eatOrder"))}: ${esc(eatOrderLabel)}` : ""}</p>
         <ul class="list-compact">${foodList}</ul>
       </div>` : ""}
       ${styleLines ? `<div class="combat-loadout-section">
@@ -2689,9 +2734,10 @@ function renderCombatLoadoutHtml(loadout) {
         <h4>${esc(t("combat.loadout.bossCoins"))}</h4>
         <ul class="list-compact">${bossDay}${bossKills}</ul>
       </div>` : ""}
-      ${repeatLines ? `<div class="combat-loadout-section">
+      ${repeatLines || repeatSnapshots ? `<div class="combat-loadout-section">
         <h4>${esc(t("combat.loadout.repeatRuns"))}</h4>
-        <ul class="list-compact">${repeatLines}</ul>
+        ${repeatLines ? `<ul class="list-compact">${repeatLines}</ul>` : ""}
+        ${repeatSnapshots}
       </div>` : ""}
     </div>
   </div>`;
@@ -3274,6 +3320,13 @@ function fmt(n) {
 function humanizeKey(key) {
   if (key == null || key === "") return "—";
   return String(key).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatGlobalXpBoost(expiresAt) {
+  const ms = normalizeTimeMs(expiresAt);
+  if (ms == null || ms <= 0) return "—";
+  if (ms <= Date.now()) return t("overview.globalXpBoostExpired");
+  return t("overview.globalXpBoostUntil", { time: formatTs(ms) });
 }
 
 function formatCooldown(ts) {

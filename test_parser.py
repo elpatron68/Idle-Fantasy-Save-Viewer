@@ -183,6 +183,34 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(loadout["boss_repeat"]["active"])
         self.assertEqual(loadout["boss_repeat"]["label"], "2/5")
 
+    def test_combat_loadout_package1(self) -> None:
+        snapshot = {
+            "skill_name": "combat",
+            "activity_key": "goblin_cave",
+            "skill_display_name": "Goblin Cave",
+            "potion_key": "ranging_potion",
+            "spell_name": "blood_wave",
+            "weapon_slot": "weapon_ranged",
+            "equipped_snapshot": {"head": "slayer_helm", "body": "slayer_platebody"},
+        }
+        data = normalize_save(_save(
+            flags={
+                **_save()["flags"],
+                "food_eat_order": "ascending",
+                "xp_boost_expires_at": 9_999_999_999_000,
+                "active_dungeon_repeat_index": 1,
+                "active_dungeon_repeat_total": 5,
+                "active_dungeon_repeat_snapshot": snapshot,
+            },
+        ))
+        loadout = data["combat"]["loadout"]
+        self.assertEqual(loadout["food_eat_order"], "ascending")
+        self.assertTrue(loadout["dungeon_repeat"]["snapshot"]["has_data"])
+        self.assertEqual(loadout["dungeon_repeat"]["snapshot"]["activity_name"], "Goblin Cave")
+        self.assertEqual(loadout["dungeon_repeat"]["snapshot"]["potion"]["key"], "ranging_potion")
+        self.assertEqual(len(loadout["dungeon_repeat"]["snapshot"]["equipped"]), 2)
+        self.assertEqual(data["character"]["xp_boost_expires_at"], 9_999_999_999_000)
+
     def test_prestige_talent_tree(self) -> None:
         data = normalize_save(_save())
         prestige = data["prestige"]

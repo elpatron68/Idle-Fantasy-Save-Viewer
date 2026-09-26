@@ -203,6 +203,55 @@ def _normalize_repeat_progress(index: Any, total: Any, label: str, issues: list[
     }
 
 
+def _optional_loadout_item(key: Any, field: str, issues: list[Issue]) -> dict[str, Any] | None:
+    if key is None or key == "":
+        return None
+    text = str(key)
+    return {"key": text, "name": format_item_name(text)}
+
+
+def _normalize_repeat_snapshot(raw: Any, issues: list[Issue], field: str) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    equipped_raw = _ensure_dict(raw.get("equipped_snapshot"), f"{field}.equipped_snapshot", issues)
+    equipped: list[dict[str, Any]] = []
+    for slot, key in sorted(equipped_raw.items()):
+        if key is None or key == "":
+            continue
+        slot_key = str(slot)
+        equipped.append({
+            "slot": slot_key,
+            "slot_name": format_key(slot_key),
+            "key": str(key),
+            "name": format_item_name(str(key)),
+        })
+    activity_key = str(raw.get("activity_key") or "")
+    display = raw.get("skill_display_name") or (format_key(activity_key) if activity_key else None)
+    potion = _optional_loadout_item(raw.get("potion_key"), f"{field}.potion_key", issues)
+    spell = _optional_loadout_item(raw.get("spell_name"), f"{field}.spell_name", issues)
+    arrows = _optional_loadout_item(raw.get("arrows_key"), f"{field}.arrows_key", issues)
+    runes = _optional_loadout_item(raw.get("runes_key"), f"{field}.runes_key", issues)
+    weapon_slot = raw.get("weapon_slot")
+    weapon_slot_name = format_key(str(weapon_slot)) if weapon_slot else None
+    repeat_count = _safe_int(raw.get("repeat_count"), f"{field}.repeat_count", issues)
+    has_data = bool(display or potion or spell or arrows or runes or equipped or weapon_slot or repeat_count)
+    if not has_data:
+        return None
+    return {
+        "activity_key": activity_key or None,
+        "activity_name": display,
+        "potion": potion,
+        "spell": spell,
+        "arrows": arrows,
+        "runes": runes,
+        "weapon_slot": str(weapon_slot) if weapon_slot else None,
+        "weapon_slot_name": weapon_slot_name,
+        "equipped": equipped,
+        "repeat_count": repeat_count,
+        "has_data": True,
+    }
+
+
 def _normalize_combat_loadout(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
     food_raw = _ensure_dict(flags.get("equipped_food"), "flags.equipped_food", issues)
     food: list[dict[str, Any]] = []
@@ -234,17 +283,14 @@ def _normalize_combat_loadout(flags: dict[str, Any], issues: list[Issue]) -> dic
     magic_spell = flags.get("magic_loadout_spell_name") or flags.get("active_spell")
     ranged_arrow = flags.get("ranged_loadout_arrow_key")
 
-    def _optional_item(key: Any) -> dict[str, Any] | None:
-        if key is None or key == "":
-            return None
-        text = str(key)
-        return {"key": text, "name": format_item_name(text)}
-
     boss_repeat = _normalize_repeat_progress(
         flags.get("active_boss_repeat_index"),
         flags.get("active_boss_repeat_total"),
         "active_boss_repeat",
         issues,
+    )
+    boss_repeat["snapshot"] = _normalize_repeat_snapshot(
+        flags.get("active_boss_repeat_snapshot"), issues, "flags.active_boss_repeat_snapshot",
     )
     dungeon_repeat = _normalize_repeat_progress(
         flags.get("active_dungeon_repeat_index"),
@@ -252,6 +298,13 @@ def _normalize_combat_loadout(flags: dict[str, Any], issues: list[Issue]) -> dic
         "active_dungeon_repeat",
         issues,
     )
+    dungeon_repeat["snapshot"] = _normalize_repeat_snapshot(
+        flags.get("active_dungeon_repeat_snapshot"), issues, "flags.active_dungeon_repeat_snapshot",
+    )
+
+    food_eat_order = str(flags.get("food_eat_order") or "descending").strip().lower()
+    if food_eat_order not in ("ascending", "descending"):
+        food_eat_order = "descending"
 
     return {
         "food": food,
@@ -259,10 +312,11 @@ def _normalize_combat_loadout(flags: dict[str, Any], issues: list[Issue]) -> dic
         "food_eat_threshold_pct": _safe_int(
             flags.get("food_eat_threshold_pct"), "flags.food_eat_threshold_pct", issues, default=50,
         ),
-        "arrows": _optional_item(arrows_key),
-        "runes": _optional_item(runes_key),
-        "magic_spell": _optional_item(magic_spell),
-        "ranged_arrow": _optional_item(ranged_arrow),
+        "food_eat_order": food_eat_order,
+        "arrows": _optional_loadout_item(arrows_key, "flags.equipped_arrows", issues),
+        "runes": _optional_loadout_item(runes_key, "flags.equipped_runes", issues),
+        "magic_spell": _optional_loadout_item(magic_spell, "flags.magic_loadout_spell_name", issues),
+        "ranged_arrow": _optional_loadout_item(ranged_arrow, "flags.ranged_loadout_arrow_key", issues),
         "boss_coin_day": boss_coin_day,
         "boss_coin_day_label": _format_boss_coin_day(boss_coin_day),
         "boss_coin_kills": boss_kills,
@@ -272,6 +326,7 @@ def _normalize_combat_loadout(flags: dict[str, Any], issues: list[Issue]) -> dic
             food or boss_kills or boss_coin_day > 0
             or arrows_key or runes_key or magic_spell or ranged_arrow
             or boss_repeat["active"] or dungeon_repeat["active"]
+            or boss_repeat.get("snapshot") or dungeon_repeat.get("snapshot")
         ),
     }
 
@@ -1023,6 +1078,12 @@ def normalize_save(
             "active_weapon_slot": flags.get("active_weapon_slot"),
             "active_blessing": flags.get("active_blessing_key"),
             "blessing_expires_at": flags.get("active_blessing_expires_at"),
+            "xp_boost_expires_at": _safe_int(
+                flags.get("xp_boost_expires_at"), "flags.xp_boost_expires_at", issues,
+            ),
+            "xp_boost_last_purchase_at": _safe_int(
+                flags.get("xp_boost_last_purchase_at"), "flags.xp_boost_last_purchase_at", issues,
+            ),
             "theme": flags.get("theme_preference"),
             "ironman": bool(flags.get("ironman")),
             "title": flags.get("equipped_title"),

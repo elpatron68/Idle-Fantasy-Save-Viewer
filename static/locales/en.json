@@ -111,6 +111,9 @@
     "activeSpell": "Active spell",
     "weaponSlot": "Weapon slot",
     "blessing": "Blessing",
+    "globalXpBoost": "Shop XP boost",
+    "globalXpBoostUntil": "Active until {time}",
+    "globalXpBoostExpired": "Expired",
     "sessionQueue": "Session queue",
     "slayer": "Slayer",
     "foretold": "Foretold tasks",
@@ -263,6 +266,9 @@
       "title": "Combat loadout",
       "foodPreset": "Food preset",
       "eatThreshold": "Eat when HP below {pct}%",
+      "eatOrder": "Eat order",
+      "eatOrderDescending": "Highest healing first",
+      "eatOrderAscending": "Lowest healing first",
       "combatStyles": "Style presets",
       "magicSpell": "Magic spell",
       "rangedArrow": "Ranged arrow",
@@ -272,7 +278,12 @@
       "bossCoinDay": "Tracking day",
       "repeatRuns": "Repeat runs",
       "bossRepeat": "Boss repeat",
-      "dungeonRepeat": "Dungeon repeat"
+      "dungeonRepeat": "Dungeon repeat",
+      "repeatSnapshot": "Preset for this repeat run",
+      "repeatActivity": "Activity",
+      "repeatPotion": "Combat potion",
+      "repeatGear": "Equipped for run",
+      "weaponSlot": "Weapon slot"
     }
   },
   "events": {
