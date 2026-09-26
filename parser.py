@@ -621,6 +621,53 @@ def _normalize_quest_resets(flags: dict[str, Any], issues: list[Issue]) -> dict[
     }
 
 
+def _normalize_game_backup(flags: dict[str, Any], issues: list[Issue]) -> dict[str, Any]:
+    folder_uri = str(flags.get("backup_folder_uri") or "").strip()
+    frequency = str(flags.get("backup_frequency") or "").strip()
+    last_at = _safe_int(flags.get("last_backup_at"), "flags.last_backup_at", issues)
+    last_ok = bool(flags.get("last_backup_ok", True))
+    last_error = str(flags.get("last_backup_error") or "").strip()
+    enabled = bool(folder_uri)
+    return {
+        "enabled": enabled,
+        "frequency": frequency or None,
+        "count": _safe_int(flags.get("backup_count"), "flags.backup_count", issues, default=1),
+        "last_at": last_at,
+        "last_ok": last_ok,
+        "last_error": last_error if not last_ok and last_error else None,
+        "has_data": enabled or last_at > 0 or bool(frequency),
+    }
+
+
+CARNIVAL_TAB_KEYS: tuple[str, ...] = ("idle", "active", "prize_shop")
+
+
+def _normalize_carnival(
+    flags: dict[str, Any],
+    cooldowns: dict[str, Any],
+    issues: list[Issue],
+) -> dict[str, Any]:
+    diff_raw = _ensure_dict(flags.get("carnival_difficulties"), "flags.carnival_difficulties", issues)
+    difficulty_settings = [
+        {
+            "key": str(game_key),
+            "name": format_key(str(game_key)),
+            "difficulty": str(level),
+            "difficulty_label": format_key(str(level)),
+        }
+        for game_key, level in sorted(diff_raw.items(), key=lambda item: str(item[0]))
+    ]
+    tab = _safe_int(flags.get("carnival_tab"), "flags.carnival_tab", issues)
+    tab_key = CARNIVAL_TAB_KEYS[tab] if 0 <= tab < len(CARNIVAL_TAB_KEYS) else str(tab)
+    return {
+        "tab": tab,
+        "tab_key": tab_key,
+        "difficulty_settings": difficulty_settings,
+        "cooldowns": cooldowns,
+        "has_data": bool(difficulty_settings) or tab > 0 or any(cooldowns.values()),
+    }
+
+
 def _normalize_dungeon_last_runs(raw: Any, issues: list[Issue]) -> list[dict[str, Any]]:
     stats_raw = _ensure_dict(raw, "flags.dungeon_last_run_stats", issues)
     result = []
@@ -1110,6 +1157,7 @@ def normalize_save(
     guild_meta = _normalize_guild_meta(flags, issues)
     elder_isle = _normalize_elder_isle(flags, issues)
     quest_resets = _normalize_quest_resets(flags, issues)
+    game_backup = _normalize_game_backup(flags, issues)
     seasonal = _normalize_seasonal(flags, issues)
     session_queue = _normalize_session_queue(flags.get("session_queue"), issues)
     hired_mercenaries = _normalize_hired_mercenaries(flags.get("hired_mercenaries"), issues)
@@ -1278,6 +1326,10 @@ def normalize_save(
             "unlocked_title_keys": unlocked_title_keys,
             "notes": notes,
             "player_notes": notes or flags.get("player_notes"),
+            "character_created_at": _safe_int(
+                flags.get("character_created_at"), "flags.character_created_at", issues,
+            ),
+            "shop_keep_one_of_each": bool(flags.get("shop_keep_one_of_each")),
         },
         "skills": skills,
         "inventory": inventory_items,
@@ -1346,11 +1398,8 @@ def normalize_save(
         "mercenaries": hired_mercenaries,
         "heirlooms": heirlooms,
         "bulk_sell_receipts": bulk_sell_receipts,
-        "carnival": {
-            "tab": _safe_int(flags.get("carnival_tab"), "flags.carnival_tab", issues),
-            "difficulties": _ensure_dict(flags.get("carnival_difficulties"), "flags.carnival_difficulties", issues),
-            "cooldowns": carnival_cooldowns,
-        },
+        "game_backup": game_backup,
+        "carnival": _normalize_carnival(flags, carnival_cooldowns, issues),
         "titles": {
             "unlocked": unlocked_title_keys,
             "equipped": flags.get("equipped_title"),

@@ -172,7 +172,16 @@
     "elderTotalLevel": "Elder-Gesamtlevel",
     "elderCraftQueue": "Rüstungs-Craft-Warteschlange",
     "embeddedSigils": "Eingebettete Sigilsteine",
-    "elderQuestsCompleted": "Hauptquests abgeschlossen"
+    "elderQuestsCompleted": "Hauptquests abgeschlossen",
+    "characterCreated": "Charakter erstellt",
+    "shopKeepOne": "Shop: je eins behalten",
+    "gameBackup": "Spiel-Auto-Backup",
+    "gameBackupEnabled": "Zielordner gesetzt",
+    "gameBackupFrequency": "Intervall",
+    "gameBackupCount": "Anzahl behalten",
+    "gameBackupLast": "Letztes Backup",
+    "gameBackupFailed": "fehlgeschlagen",
+    "gameBackupError": "Letzter Fehler"
   },
   "time": {
     "seconds": "{n} s",
@@ -344,6 +353,12 @@
       "tickets": "Tickets",
       "cooldowns": "Minigame-Cooldowns",
       "difficulties": "Schwierigkeiten",
+      "lastTab": "Letzter Tab",
+      "tab": {
+        "idle": "Idle",
+        "active": "Aktiv",
+        "prize_shop": "Preis-Shop"
+      },
       "ring_toss": "Ring Toss",
       "hammer_strike": "Hammer Strike",
       "potion_sequence": "Potion Sequence",
